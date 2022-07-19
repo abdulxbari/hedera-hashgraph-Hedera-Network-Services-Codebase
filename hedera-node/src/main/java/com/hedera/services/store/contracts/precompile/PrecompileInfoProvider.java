@@ -1,11 +1,6 @@
-package com.hedera.services.store.contracts.precompile;
-
-/*-
- * ‌
- * Hedera Services Node
- * ​
- * Copyright (C) 2018 - 2022 Hedera Hashgraph, LLC
- * ​
+/*
+ * Copyright (C) 2022 Hedera Hashgraph, LLC
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,38 +12,37 @@ package com.hedera.services.store.contracts.precompile;
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * ‍
  */
+package com.hedera.services.store.contracts.precompile;
 
 import com.hedera.services.ledger.accounts.ContractAliases;
+import javax.annotation.Nullable;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.log.Log;
 
-import javax.annotation.Nullable;
-
 public interface PrecompileInfoProvider {
 
-	Wei getValue();
+    Wei getValue();
 
-	long getRemainingGas();
+    long getRemainingGas();
 
-	boolean isDirectTokenCall();
+    boolean isDirectTokenCall();
 
-	long getTimestamp();
+    long getTimestamp();
 
-	Address getSenderAddress();
+    Address getSenderAddress();
 
-	Bytes getInputData();
+    Bytes getInputData();
 
-	void setState(MessageFrame.State state);
+    void setState(MessageFrame.State state);
 
-	void setRevertReason(Bytes revertReason);
+    void setRevertReason(Bytes revertReason);
 
-	void addLog(Log log);
+    void addLog(Log log);
 
-	@Nullable
-	ContractAliases aliases();
+    @Nullable
+    ContractAliases aliases();
 }

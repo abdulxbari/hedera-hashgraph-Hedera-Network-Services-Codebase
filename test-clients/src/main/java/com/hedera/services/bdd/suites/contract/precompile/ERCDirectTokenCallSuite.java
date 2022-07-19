@@ -1,22 +1,19 @@
+/*
+ * Copyright (C) 2022 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.hedera.services.bdd.suites.contract.precompile;
-
-import com.google.protobuf.ByteString;
-import com.hedera.services.bdd.spec.HapiApiSpec;
-import com.hedera.services.bdd.spec.HapiSpecOperation;
-import com.hedera.services.bdd.spec.utilops.UtilVerbs;
-import com.hedera.services.bdd.suites.HapiApiSuite;
-import com.hedera.services.bdd.suites.contract.Utils;
-import com.hedera.services.bdd.suites.utils.contracts.precompile.HTSPrecompileResult;
-import com.hederahashgraph.api.proto.java.AccountID;
-import com.hederahashgraph.api.proto.java.TokenSupplyType;
-import com.hederahashgraph.api.proto.java.TokenType;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.IntStream;
 
 import static com.hedera.services.bdd.spec.HapiApiSpec.defaultHapiSpec;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asHexedSolidityAddress;
@@ -29,6 +26,7 @@ import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCallWithFunctionAbi;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoTransfer;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.fileUpdate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.mintToken;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenAssociate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenCreate;
@@ -46,6 +44,7 @@ import static com.hedera.services.bdd.suites.contract.Utils.asAddress;
 import static com.hedera.services.bdd.suites.contract.Utils.asToken;
 import static com.hedera.services.bdd.suites.contract.Utils.getABIFor;
 import static com.hedera.services.bdd.suites.utils.contracts.precompile.HTSPrecompileResult.htsPrecompileResult;
+import static com.hedera.services.bdd.suites.utils.sysfiles.serdes.ThrottleDefsLoader.protoDefsFromResource;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.CONTRACT_REVERT_EXECUTED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INSUFFICIENT_TOKEN_BALANCE;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ACCOUNT_AMOUNTS;
@@ -53,6 +52,23 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ACCOUN
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_TOKEN_NFT_SERIAL_NUMBER;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SPENDER_DOES_NOT_HAVE_ALLOWANCE;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS;
+
+import com.google.protobuf.ByteString;
+import com.hedera.services.bdd.spec.HapiApiSpec;
+import com.hedera.services.bdd.spec.HapiSpecOperation;
+import com.hedera.services.bdd.spec.utilops.UtilVerbs;
+import com.hedera.services.bdd.suites.HapiApiSuite;
+import com.hedera.services.bdd.suites.contract.Utils;
+import com.hedera.services.bdd.suites.utils.contracts.precompile.HTSPrecompileResult;
+import com.hederahashgraph.api.proto.java.AccountID;
+import com.hederahashgraph.api.proto.java.TokenSupplyType;
+import com.hederahashgraph.api.proto.java.TokenType;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.IntStream;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class ERCDirectTokenCallSuite extends HapiApiSuite {
     private static final Logger log = LogManager.getLogger(ERCDirectTokenCallSuite.class);
@@ -77,13 +93,13 @@ public class ERCDirectTokenCallSuite extends HapiApiSuite {
     public List<HapiApiSpec> getSpecsInSuite() {
         return List.of(
                 new HapiApiSpec[] {
-                    directCallsWorkForERC20(),
-                    directCallsWorkForERC721(),
-                    erc20DirectTokenCallsWithEOA(),
-                    erc721DirectTokenCallsWithEOA(),
-                    negativeTransferForDirectCallsERC20(),
-                    negativeTransferForDirectCallsERC721(),
-                    //                    directTokenCallsPerformance()
+                    //                    directCallsWorkForERC20(),
+                    //                    directCallsWorkForERC721(),
+                    //                    erc20DirectTokenCallsWithEOA(),
+                    //                    erc721DirectTokenCallsWithEOA(),
+                    //                    negativeTransferForDirectCallsERC20(),
+                    //                    negativeTransferForDirectCallsERC721(),
+                    directTokenCallsPerformance()
                 });
     }
 
@@ -990,16 +1006,18 @@ public class ERCDirectTokenCallSuite extends HapiApiSuite {
     private HapiApiSpec directTokenCallsPerformance() {
         final AtomicReference<String> tokenNum = new AtomicReference<>();
 
+        var defaultThrottles = protoDefsFromResource("testSystemFiles/throttles-dev.json");
+
         final var tokenName = "TokenA";
         final var tokenSymbol = "FDFGF";
         final var tokenDecimals = 10;
-        final var tokenTotalSupply = 5000;
+        final var tokenTotalSupply = 3000;
         final var tokenTransferAmount = 1;
 
         return defaultHapiSpec("directTokenCallsPerformanceTest")
                 .given(
                         newKeyNamed(MULTI_KEY),
-                        cryptoCreate(ACCOUNT).balance(100 * ONE_HUNDRED_HBARS),
+                        cryptoCreate(ACCOUNT).balance(ONE_MILLION_HBARS),
                         cryptoCreate(RECIPIENT).balance(100 * ONE_HUNDRED_HBARS),
                         cryptoCreate(TOKEN_TREASURY),
                         tokenCreate(FUNGIBLE_TOKEN)
@@ -1016,8 +1034,13 @@ public class ERCDirectTokenCallSuite extends HapiApiSuite {
                         tokenAssociate(ACCOUNT, FUNGIBLE_TOKEN),
                         tokenAssociate(RECIPIENT, FUNGIBLE_TOKEN),
                         cryptoTransfer(
-                                moving(1000, FUNGIBLE_TOKEN).between(TOKEN_TREASURY, ACCOUNT)),
-                        UtilVerbs.overriding("contracts.throttle.throttleByGas", "false"))
+                                moving(tokenTotalSupply, FUNGIBLE_TOKEN)
+                                        .between(TOKEN_TREASURY, ACCOUNT)),
+                        UtilVerbs.overriding("contracts.throttle.throttleByGas", "false"),
+                        fileUpdate(THROTTLE_DEFS)
+                                .fee(ONE_HUNDRED_HBARS)
+                                .payingWith(EXCHANGE_RATE_CONTROL)
+                                .contents(defaultThrottles.toByteArray()))
                 .when(
                         UtilVerbs.startThroughputObs("contractCallWithFunctionAbi")
                                 .msToSaturateQueues(50L),
@@ -1028,7 +1051,7 @@ public class ERCDirectTokenCallSuite extends HapiApiSuite {
                                     allRunFor(
                                             spec,
                                             inParallel(
-                                                    IntStream.range(0, 1000)
+                                                    IntStream.range(0, tokenTotalSupply)
                                                             .mapToObj(
                                                                     i ->
                                                                             sourcing(
@@ -1048,7 +1071,9 @@ public class ERCDirectTokenCallSuite extends HapiApiSuite {
                                                                                                             tokenTransferAmount)
                                                                                                     .deferStatusResolution()
                                                                                                     .payingWith(
-                                                                                                            ACCOUNT)))
+                                                                                                            ACCOUNT)
+                                                                                                    .fee(
+                                                                                                            ONE_HUNDRED_HBARS)))
                                                             .toArray(HapiSpecOperation[]::new)));
                                 }))
                 .then(
@@ -1056,7 +1081,11 @@ public class ERCDirectTokenCallSuite extends HapiApiSuite {
                                 .gatedByQuery(
                                         () ->
                                                 getAccountBalance(RECIPIENT)
-                                                        .hasTokenBalance(FUNGIBLE_TOKEN, 1000)));
+                                                        .hasTokenBalance(
+                                                                FUNGIBLE_TOKEN, tokenTotalSupply)
+                                                        .payingWith(ACCOUNT)
+                                                        .fee(ONE_HBAR)),
+                        getAccountBalance(RECIPIENT).logged());
     }
 
     @Override
