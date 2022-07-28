@@ -85,6 +85,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+
+import com.swirlds.virtualmap.VirtualMap;
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.collections.impl.factory.primitive.LongLists;
 import org.junit.jupiter.api.BeforeEach;
@@ -128,14 +130,14 @@ class HederaScheduleStoreTest {
                     new RichInstant(expectedExpiry, 0).toGrpc(),
                     waitForExpiry);
 
-    private EntityIdSource ids;
-    private MerkleScheduledTransactions schedules;
-    private MerkleMap<EntityNumVirtualKey, ScheduleVirtualValue> byId;
-    private MerkleMap<SecondSinceEpocVirtualKey, ScheduleSecondVirtualValue> byExpirationSecond;
-    private MerkleMap<ScheduleEqualityVirtualKey, ScheduleEqualityVirtualValue> byEquality;
-    private TransactionalLedger<AccountID, AccountProperty, MerkleAccount> accountsLedger;
-    private HederaLedger hederaLedger;
-    private GlobalDynamicProperties globalDynamicProperties;
+	private EntityIdSource ids;
+	private MerkleScheduledTransactions schedules;
+	private VirtualMap<EntityNumVirtualKey, ScheduleVirtualValue> byId;
+	private VirtualMap<SecondSinceEpocVirtualKey, ScheduleSecondVirtualValue> byExpirationSecond;
+	private VirtualMap<ScheduleEqualityVirtualKey, ScheduleEqualityVirtualValue> byEquality;
+	private TransactionalLedger<AccountID, AccountProperty, MerkleAccount> accountsLedger;
+	private HederaLedger hederaLedger;
+	private GlobalDynamicProperties globalDynamicProperties;
 
     private ScheduleVirtualValue schedule;
     private ScheduleVirtualValue anotherSchedule;
@@ -174,14 +176,14 @@ class HederaScheduleStoreTest {
         given(accountsLedger.get(payerId, IS_DELETED)).willReturn(false);
         given(accountsLedger.get(schedulingAccount, IS_DELETED)).willReturn(false);
 
-        schedules = mock(MerkleScheduledTransactions.class);
-        byId = mock(MerkleMap.class);
-        byExpirationSecond = mock(MerkleMap.class);
-        byEquality = mock(MerkleMap.class);
-        given(schedules.byId()).willReturn(byId);
-        given(schedules.byExpirationSecond()).willReturn(byExpirationSecond);
-        given(schedules.byEquality()).willReturn(byEquality);
-        given(schedules.getCurrentMinSecond()).willReturn(Long.MAX_VALUE);
+		schedules = mock(MerkleScheduledTransactions.class);
+		byId = mock(VirtualMap.class);
+		byExpirationSecond = mock(VirtualMap.class);
+		byEquality = mock(VirtualMap.class);
+		given(schedules.byId()).willReturn(byId);
+		given(schedules.byExpirationSecond()).willReturn(byExpirationSecond);
+		given(schedules.byEquality()).willReturn(byEquality);
+		given(schedules.getCurrentMinSecond()).willReturn(Long.MAX_VALUE);
 
         given(byId.get(new EntityNumVirtualKey(fromScheduleId(created)))).willReturn(schedule);
         given(byId.containsKey(new EntityNumVirtualKey(fromScheduleId(created)))).willReturn(true);
