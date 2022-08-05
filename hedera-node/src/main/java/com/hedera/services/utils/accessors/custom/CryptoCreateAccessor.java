@@ -63,7 +63,8 @@ public class CryptoCreateAccessor extends SignedTxnAccessor {
             final GlobalDynamicProperties properties,
             final OptionValidator validator,
             final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts,
-            final NodeInfo nodeInfo)
+            final NodeInfo nodeInfo
+    )
             throws InvalidProtocolBufferException {
         super(signedTxnWrapperBytes, transaction);
         this.body = getTxn().getCryptoCreateAccount();

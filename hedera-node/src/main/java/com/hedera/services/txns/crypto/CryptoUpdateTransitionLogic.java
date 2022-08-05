@@ -49,6 +49,8 @@ import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.txns.TransitionLogic;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
+import com.hedera.services.utils.accessors.custom.CryptoTransferAccessor;
+import com.hedera.services.utils.accessors.custom.CryptoUpdateAccessor;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.CryptoUpdateTransactionBody;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
@@ -81,8 +83,6 @@ public class CryptoUpdateTransitionLogic implements TransitionLogic {
     private final SigImpactHistorian sigImpactHistorian;
     private final TransactionContext txnCtx;
     private final GlobalDynamicProperties dynamicProperties;
-    private final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts;
-    private final NodeInfo nodeInfo;
 
     @Inject
     public CryptoUpdateTransitionLogic(
@@ -90,26 +90,24 @@ public class CryptoUpdateTransitionLogic implements TransitionLogic {
             final OptionValidator validator,
             final SigImpactHistorian sigImpactHistorian,
             final TransactionContext txnCtx,
-            final GlobalDynamicProperties dynamicProperties,
-            final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts,
-            final NodeInfo nodeInfo) {
+            final GlobalDynamicProperties dynamicProperties) {
         this.ledger = ledger;
         this.validator = validator;
         this.txnCtx = txnCtx;
         this.sigImpactHistorian = sigImpactHistorian;
         this.dynamicProperties = dynamicProperties;
-        this.accounts = accounts;
-        this.nodeInfo = nodeInfo;
     }
 
     @Override
     public void doStateTransition() {
         try {
-            final var op = txnCtx.accessor().getTxn().getCryptoUpdateAccount();
-            final var target = op.getAccountIDToUpdate();
-            final var customizer = asCustomizer(op);
+            final var accessor = (CryptoUpdateAccessor) txnCtx.specializedAccessor();
+            final var target = accessor.accountIdToUpdate();
+            final var customizer = accessor.asCustomizer();
+            final var hasExpiration = accessor.hasExpirationTime();
+            final var expiration = accessor.getExpirationTime();
 
-            if (op.hasExpirationTime() && !validator.isValidExpiry(op.getExpirationTime())) {
+            if (hasExpiration && !validator.isValidExpiry(expiration)) {
                 txnCtx.setStatus(INVALID_EXPIRATION_TIME);
                 return;
             }
@@ -167,97 +165,8 @@ public class CryptoUpdateTransitionLogic implements TransitionLogic {
         return OK;
     }
 
-    private HederaAccountCustomizer asCustomizer(CryptoUpdateTransactionBody op) {
-        HederaAccountCustomizer customizer = new HederaAccountCustomizer();
-
-        if (op.hasKey()) {
-            /* Note that {@code this.validate(TransactionBody)} will have rejected any txn with an invalid key. */
-            var fcKey = asFcKeyUnchecked(op.getKey());
-            customizer.key(fcKey);
-        }
-        if (op.hasExpirationTime()) {
-            customizer.expiry(op.getExpirationTime().getSeconds());
-        }
-        if (op.hasReceiverSigRequiredWrapper()) {
-            customizer.isReceiverSigRequired(op.getReceiverSigRequiredWrapper().getValue());
-        } else if (op.getReceiverSigRequired()) {
-            customizer.isReceiverSigRequired(true);
-        }
-        if (op.hasAutoRenewPeriod()) {
-            customizer.autoRenewPeriod(op.getAutoRenewPeriod().getSeconds());
-        }
-        if (op.hasMemo()) {
-            customizer.memo(op.getMemo().getValue());
-        }
-        if (op.hasMaxAutomaticTokenAssociations()) {
-            customizer.maxAutomaticAssociations(op.getMaxAutomaticTokenAssociations().getValue());
-        }
-        if (op.hasDeclineReward()) {
-            customizer.isDeclinedReward(op.getDeclineReward().getValue());
-        }
-        if (hasStakedId(op.getStakedIdCase().name())) {
-            customizer.customizeStakedId(
-                    op.getStakedIdCase().name(), op.getStakedAccountId(), op.getStakedNodeId());
-        }
-
-        return customizer;
-    }
-
     @Override
     public Predicate<TransactionBody> applicability() {
         return TransactionBody::hasCryptoUpdateAccount;
-    }
-
-    @Override
-    public Function<TransactionBody, ResponseCodeEnum> semanticCheck() {
-        return this::validate;
-    }
-
-    private ResponseCodeEnum validate(TransactionBody cryptoUpdateTxn) {
-        CryptoUpdateTransactionBody op = cryptoUpdateTxn.getCryptoUpdateAccount();
-
-        var memoValidity = !op.hasMemo() ? OK : validator.memoCheck(op.getMemo().getValue());
-        if (memoValidity != OK) {
-            return memoValidity;
-        }
-
-        if (op.hasKey()) {
-            try {
-                JKey fcKey = JKey.mapKey(op.getKey());
-                /* Note that an empty key is never valid. */
-                if (!fcKey.isValid()) {
-                    return INVALID_ADMIN_KEY;
-                }
-            } catch (DecoderException e) {
-                return BAD_ENCODING;
-            }
-        }
-
-        if (op.hasAutoRenewPeriod() && !validator.isValidAutoRenewPeriod(op.getAutoRenewPeriod())) {
-            return AUTORENEW_DURATION_NOT_IN_RANGE;
-        }
-        if (op.hasProxyAccountID()
-                && !op.getProxyAccountID().equals(AccountID.getDefaultInstance())) {
-            return PROXY_ACCOUNT_ID_FIELD_IS_DEPRECATED;
-        }
-
-        final var stakedIdCase = op.getStakedIdCase().name();
-        final var electsStakingId = hasStakedId(stakedIdCase);
-        if (!dynamicProperties.isStakingEnabled() && (electsStakingId || op.hasDeclineReward())) {
-            return STAKING_NOT_ENABLED;
-        }
-        if (electsStakingId) {
-            if (validSentinel(stakedIdCase, op.getStakedAccountId(), op.getStakedNodeId())) {
-                return OK;
-            } else if (!validator.isValidStakedId(
-                    stakedIdCase,
-                    op.getStakedAccountId(),
-                    op.getStakedNodeId(),
-                    accounts.get(),
-                    nodeInfo)) {
-                return INVALID_STAKING_ID;
-            }
-        }
-        return OK;
     }
 }

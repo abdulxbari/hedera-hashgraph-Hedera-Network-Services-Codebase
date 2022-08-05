@@ -15,36 +15,9 @@
  */
 package com.hedera.services.utils.accessors;
 
-import static com.hedera.services.state.submerkle.FcCustomFee.fixedFee;
-import static com.hedera.services.state.submerkle.FcCustomFee.fractionalFee;
-import static com.hedera.services.txns.ethereum.TestingConstants.TRUFFLE0_PRIVATE_ECDSA_KEY;
-import static com.hedera.test.utils.IdUtils.asAccount;
-import static com.hedera.test.utils.IdUtils.asAliasAccount;
-import static com.hedera.test.utils.IdUtils.asToken;
-import static com.hedera.test.utils.IdUtils.asTopic;
-import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_TOKEN_ID;
-import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
-import static com.hederahashgraph.api.proto.java.SubType.TOKEN_FUNGIBLE_COMMON;
-import static com.hederahashgraph.api.proto.java.SubType.TOKEN_NON_FUNGIBLE_UNIQUE;
-import static java.util.stream.Collectors.toList;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.mock;
-
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.Int32Value;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.StringValue;
 import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.ethereum.EthTxData;
@@ -67,7 +40,6 @@ import com.hederahashgraph.api.proto.java.CryptoAllowance;
 import com.hederahashgraph.api.proto.java.CryptoApproveAllowanceTransactionBody;
 import com.hederahashgraph.api.proto.java.CryptoCreateTransactionBody;
 import com.hederahashgraph.api.proto.java.CryptoDeleteAllowanceTransactionBody;
-import com.hederahashgraph.api.proto.java.CryptoUpdateTransactionBody;
 import com.hederahashgraph.api.proto.java.CustomFee;
 import com.hederahashgraph.api.proto.java.Duration;
 import com.hederahashgraph.api.proto.java.EthereumTransactionBody;
@@ -97,17 +69,43 @@ import com.hederahashgraph.builder.RequestBuilder;
 import com.hederahashgraph.fee.FeeBuilder;
 import com.swirlds.common.crypto.TransactionSignature;
 import com.swirlds.common.system.transaction.SwirldTransaction;
+import org.bouncycastle.util.encoders.Hex;
+import org.junit.jupiter.api.Test;
+
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import org.bouncycastle.util.encoders.Hex;
-import org.junit.jupiter.api.Test;
+
+import static com.hedera.services.state.submerkle.FcCustomFee.fixedFee;
+import static com.hedera.services.state.submerkle.FcCustomFee.fractionalFee;
+import static com.hedera.services.txns.ethereum.TestingConstants.TRUFFLE0_PRIVATE_ECDSA_KEY;
+import static com.hedera.test.utils.IdUtils.asAccount;
+import static com.hedera.test.utils.IdUtils.asAliasAccount;
+import static com.hedera.test.utils.IdUtils.asToken;
+import static com.hedera.test.utils.IdUtils.asTopic;
+import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_TOKEN_ID;
+import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
+import static com.hederahashgraph.api.proto.java.SubType.TOKEN_FUNGIBLE_COMMON;
+import static com.hederahashgraph.api.proto.java.SubType.TOKEN_NON_FUNGIBLE_UNIQUE;
+import static java.util.stream.Collectors.toList;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.mock;
 
 public class SignedTxnAccessorTest {
-    private static final String memo = "Eternal sunshine of the spotless mind";
-    private static final String zeroByteMemo = "Eternal s\u0000nshine of the spotless mind";
+    public static final String memo = "Eternal sunshine of the spotless mind";
+    public static final String zeroByteMemo = "Eternal s\u0000nshine of the spotless mind";
     private static final byte[] memoUtf8Bytes = memo.getBytes();
     private static final byte[] zeroByteMemoUtf8Bytes = zeroByteMemo.getBytes();
 
@@ -514,22 +512,7 @@ public class SignedTxnAccessorTest {
         assertEquals(24, expandedMeta.getBpt());
     }
 
-    @Test
-    void setCryptoUpdateUsageMetaWorks() {
-        final var txn = signedCryptoUpdateTxn();
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
-        final var spanMapAccessor = accessor.getSpanMapAccessor();
 
-        final var expandedMeta = spanMapAccessor.getCryptoUpdateMeta(accessor);
-
-        assertEquals(100, expandedMeta.getKeyBytesUsed());
-        assertEquals(197, expandedMeta.getMsgBytesUsed());
-        assertEquals(now, expandedMeta.getEffectiveNow());
-        assertEquals(now + autoRenewPeriod, expandedMeta.getExpiry());
-        assertEquals(memo.getBytes().length, expandedMeta.getMemoSize());
-        assertEquals(25, expandedMeta.getMaxAutomaticAssociations());
-        assertTrue(expandedMeta.hasProxy());
-    }
 
     @Test
     void setCryptoApproveUsageMetaWorks() {
@@ -870,9 +853,6 @@ public class SignedTxnAccessorTest {
         assertEquals(EntityNum.fromLong(10L), subject.unaliased(asAliasAccount(alias)));
     }
 
-    private Transaction signedCryptoUpdateTxn() {
-        return buildTransactionFrom(cryptoUpdateOp());
-    }
 
     private Transaction signedCryptoApproveTxn() {
         return buildTransactionFrom(cryptoApproveOp());
@@ -884,22 +864,6 @@ public class SignedTxnAccessorTest {
 
     private Transaction signedEthereumTxn() {
         return buildTransactionFrom(ethereumTransactionOp());
-    }
-
-    private TransactionBody cryptoUpdateOp() {
-        final var op =
-                CryptoUpdateTransactionBody.newBuilder()
-                        .setExpirationTime(Timestamp.newBuilder().setSeconds(now + autoRenewPeriod))
-                        .setProxyAccountID(autoRenewAccount)
-                        .setMemo(StringValue.newBuilder().setValue(memo))
-                        .setMaxAutomaticTokenAssociations(Int32Value.of(25))
-                        .setKey(adminKey);
-        return TransactionBody.newBuilder()
-                .setTransactionID(
-                        TransactionID.newBuilder()
-                                .setTransactionValidStart(Timestamp.newBuilder().setSeconds(now)))
-                .setCryptoUpdateAccount(op)
-                .build();
     }
 
     private TransactionBody cryptoApproveOp() {

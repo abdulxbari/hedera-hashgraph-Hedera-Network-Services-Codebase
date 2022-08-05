@@ -27,6 +27,7 @@ import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.MiscUtils;
 import com.hedera.services.utils.accessors.custom.CryptoCreateAccessor;
 import com.hedera.services.utils.accessors.custom.CryptoTransferAccessor;
+import com.hedera.services.utils.accessors.custom.CryptoUpdateAccessor;
 import com.hedera.services.utils.accessors.custom.SubmitMessageAccessor;
 import com.hedera.services.utils.accessors.custom.TokenWipeAccessor;
 import com.hederahashgraph.api.proto.java.AccountID;
@@ -110,6 +111,12 @@ public class AccessorFactory {
                     nodeInfo);
             case ConsensusSubmitMessage -> new SubmitMessageAccessor(
                     signedTxnWrapperBytes, signedTxn);
+            case CryptoUpdate -> new CryptoUpdateAccessor(signedTxnWrapperBytes,
+                    signedTxn,
+                    dynamicProperties,
+                    validator,
+                    accounts,
+                    nodeInfo);
             default -> SignedTxnAccessor.from(signedTxnWrapperBytes, signedTxn);
         };
     }

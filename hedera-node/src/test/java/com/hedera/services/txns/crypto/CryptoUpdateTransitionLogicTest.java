@@ -53,6 +53,7 @@ import static org.mockito.BDDMockito.willThrow;
 
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.Int32Value;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.StringValue;
 import com.hedera.services.context.NodeInfo;
 import com.hedera.services.context.TransactionContext;
@@ -68,7 +69,8 @@ import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.custom.CryptoCreateAccessor;
+import com.hedera.services.utils.accessors.custom.CryptoUpdateAccessor;
 import com.hedera.test.factories.txns.SignedTxnFactory;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.CryptoUpdateTransactionBody;
@@ -78,6 +80,7 @@ import com.hederahashgraph.api.proto.java.KeyList;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.ThresholdKey;
 import com.hederahashgraph.api.proto.java.Timestamp;
+import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import com.hederahashgraph.api.proto.java.TransactionID;
 import com.swirlds.merkle.map.MerkleMap;
@@ -104,10 +107,12 @@ class CryptoUpdateTransitionLogicTest {
     private boolean useLegacyFields;
     private HederaLedger ledger;
     private OptionValidator validator;
-    private TransactionBody cryptoUpdateTxn;
+    private TransactionBody cryptoUpdateTxnBody;
+
+    private Transaction cryptoUpdateTxn;
     private SigImpactHistorian sigImpactHistorian;
     private TransactionContext txnCtx;
-    private SignedTxnAccessor accessor;
+    private CryptoUpdateAccessor accessor;
     private GlobalDynamicProperties dynamicProperties;
     private CryptoUpdateTransitionLogic subject;
     private MerkleMap<EntityNum, MerkleAccount> accounts;
@@ -120,7 +125,6 @@ class CryptoUpdateTransitionLogicTest {
         txnCtx = mock(TransactionContext.class);
         given(txnCtx.consensusTime()).willReturn(CONSENSUS_TIME);
         ledger = mock(HederaLedger.class);
-        accessor = mock(SignedTxnAccessor.class);
         validator = mock(OptionValidator.class);
         sigImpactHistorian = mock(SigImpactHistorian.class);
         dynamicProperties = mock(GlobalDynamicProperties.class);
@@ -130,13 +134,7 @@ class CryptoUpdateTransitionLogicTest {
 
         subject =
                 new CryptoUpdateTransitionLogic(
-                        ledger,
-                        validator,
-                        sigImpactHistorian,
-                        txnCtx,
-                        dynamicProperties,
-                        () -> accounts,
-                        nodeInfo);
+                        ledger, validator, sigImpactHistorian, txnCtx, dynamicProperties);
     }
 
     @Test
@@ -173,115 +171,118 @@ class CryptoUpdateTransitionLogicTest {
     @Test
     void validatesStakedId() {
         final var op = CryptoUpdateTransactionBody.newBuilder();
-        cryptoUpdateTxn =
+        cryptoUpdateTxnBody =
                 TransactionBody.newBuilder()
                         .setTransactionID(ourTxnId())
                         .setCryptoUpdateAccount(op)
                         .build();
-        cryptoUpdateTxn =
-                cryptoUpdateTxn.toBuilder()
+        cryptoUpdateTxnBody =
+                cryptoUpdateTxnBody.toBuilder()
                         .setCryptoUpdateAccount(
-                                cryptoUpdateTxn.getCryptoUpdateAccount().toBuilder()
+                                cryptoUpdateTxnBody.getCryptoUpdateAccount().toBuilder()
                                         .setStakedAccountId(
                                                 AccountID.newBuilder().setAccountNum(10).build())
                                         .build())
                         .build();
+        addToTxn();
         given(dynamicProperties.isStakingEnabled()).willReturn(true);
 
         given(validator.isValidStakedId(any(), any(), anyLong(), any(), any())).willReturn(false);
 
-        assertEquals(INVALID_STAKING_ID, subject.semanticCheck().apply(cryptoUpdateTxn));
+        assertEquals(INVALID_STAKING_ID, subject.validateSemantics(accessor));
     }
 
     @Test
     void rejectsStakedIdIfStakingDisabled() {
         final var op = CryptoUpdateTransactionBody.newBuilder();
-        cryptoUpdateTxn =
+        cryptoUpdateTxnBody =
                 TransactionBody.newBuilder()
                         .setTransactionID(ourTxnId())
                         .setCryptoUpdateAccount(op)
                         .build();
-        cryptoUpdateTxn =
-                cryptoUpdateTxn.toBuilder()
+        cryptoUpdateTxnBody =
+                cryptoUpdateTxnBody.toBuilder()
                         .setCryptoUpdateAccount(
-                                cryptoUpdateTxn.getCryptoUpdateAccount().toBuilder()
+                                cryptoUpdateTxnBody.getCryptoUpdateAccount().toBuilder()
                                         .setStakedAccountId(
                                                 AccountID.newBuilder().setAccountNum(10).build())
                                         .build())
                         .build();
-
-        assertEquals(STAKING_NOT_ENABLED, subject.semanticCheck().apply(cryptoUpdateTxn));
+        addToTxn();
+        assertEquals(STAKING_NOT_ENABLED, subject.validateSemantics(accessor));
     }
 
     @Test
     void rejectsDeclineRewardIfStakingDisabled() {
         final var op = CryptoUpdateTransactionBody.newBuilder();
-        cryptoUpdateTxn =
+        cryptoUpdateTxnBody =
                 TransactionBody.newBuilder()
                         .setTransactionID(ourTxnId())
                         .setCryptoUpdateAccount(op)
                         .build();
-        cryptoUpdateTxn =
-                cryptoUpdateTxn.toBuilder()
+        cryptoUpdateTxnBody =
+                cryptoUpdateTxnBody.toBuilder()
                         .setCryptoUpdateAccount(
-                                cryptoUpdateTxn.getCryptoUpdateAccount().toBuilder()
+                                cryptoUpdateTxnBody.getCryptoUpdateAccount().toBuilder()
                                         .setDeclineReward(BoolValue.newBuilder().setValue(false))
                                         .build())
                         .build();
-
-        assertEquals(STAKING_NOT_ENABLED, subject.semanticCheck().apply(cryptoUpdateTxn));
+        addToTxn();
+        assertEquals(STAKING_NOT_ENABLED, subject.validateSemantics(accessor));
     }
 
     @Test
     void agreesUpdatingToSentinelValues() {
         final var op = CryptoUpdateTransactionBody.newBuilder();
         given(dynamicProperties.isStakingEnabled()).willReturn(true);
-        cryptoUpdateTxn =
+        cryptoUpdateTxnBody =
                 TransactionBody.newBuilder()
                         .setTransactionID(ourTxnId())
                         .setCryptoUpdateAccount(op)
                         .build();
-        cryptoUpdateTxn =
-                cryptoUpdateTxn.toBuilder()
+        cryptoUpdateTxnBody =
+                cryptoUpdateTxnBody.toBuilder()
                         .setCryptoUpdateAccount(
-                                cryptoUpdateTxn.getCryptoUpdateAccount().toBuilder()
+                                cryptoUpdateTxnBody.getCryptoUpdateAccount().toBuilder()
                                         .setStakedAccountId(
                                                 AccountID.newBuilder().setAccountNum(0).build())
                                         .build())
                         .build();
+        addToTxn();
+        assertEquals(OK, subject.validateSemantics(accessor));
 
-        assertEquals(OK, subject.semanticCheck().apply(cryptoUpdateTxn));
-
-        cryptoUpdateTxn =
-                cryptoUpdateTxn.toBuilder()
+        cryptoUpdateTxnBody =
+                cryptoUpdateTxnBody.toBuilder()
                         .setCryptoUpdateAccount(
-                                cryptoUpdateTxn.getCryptoUpdateAccount().toBuilder()
+                                cryptoUpdateTxnBody.getCryptoUpdateAccount().toBuilder()
                                         .setStakedAccountId(
                                                 AccountID.newBuilder().setAccountNum(-2).build())
                                         .build())
                         .build();
-
+        addToTxn();
         given(validator.isValidStakedId(any(), any(), anyLong(), any(), any())).willReturn(false);
-        assertEquals(INVALID_STAKING_ID, subject.semanticCheck().apply(cryptoUpdateTxn));
+        assertEquals(INVALID_STAKING_ID, subject.validateSemantics(accessor));
 
-        cryptoUpdateTxn =
-                cryptoUpdateTxn.toBuilder()
+        cryptoUpdateTxnBody =
+                cryptoUpdateTxnBody.toBuilder()
                         .setCryptoUpdateAccount(
-                                cryptoUpdateTxn.getCryptoUpdateAccount().toBuilder()
+                                cryptoUpdateTxnBody.getCryptoUpdateAccount().toBuilder()
                                         .setStakedNodeId(-1)
                                         .build())
                         .build();
-        assertEquals(OK, subject.semanticCheck().apply(cryptoUpdateTxn));
+        addToTxn();
+        assertEquals(OK, subject.validateSemantics(accessor));
 
-        cryptoUpdateTxn =
-                cryptoUpdateTxn.toBuilder()
+        cryptoUpdateTxnBody =
+                cryptoUpdateTxnBody.toBuilder()
                         .setCryptoUpdateAccount(
-                                cryptoUpdateTxn.getCryptoUpdateAccount().toBuilder()
+                                cryptoUpdateTxnBody.getCryptoUpdateAccount().toBuilder()
                                         .setStakedNodeId(-2)
                                         .build())
                         .build();
+        addToTxn();
         given(validator.isValidStakedId(any(), any(), anyLong(), any(), any())).willReturn(false);
-        assertEquals(INVALID_STAKING_ID, subject.semanticCheck().apply(cryptoUpdateTxn));
+        assertEquals(INVALID_STAKING_ID, subject.validateSemantics(accessor));
     }
 
     @Test
@@ -379,7 +380,7 @@ class CryptoUpdateTransitionLogicTest {
 
     @Test
     void usingProxyAccountFails() {
-        cryptoUpdateTxn =
+        cryptoUpdateTxnBody =
                 TransactionBody.newBuilder()
                         .setTransactionID(ourTxnId())
                         .setCryptoUpdateAccount(
@@ -389,12 +390,10 @@ class CryptoUpdateTransitionLogicTest {
                                         .setReceiverSigRequired(true)
                                         .setKey(KEY))
                         .build();
+        addToTxn();
+        assertEquals(PROXY_ACCOUNT_ID_FIELD_IS_DEPRECATED, subject.validateSemantics(accessor));
 
-        assertEquals(
-                PROXY_ACCOUNT_ID_FIELD_IS_DEPRECATED,
-                subject.semanticCheck().apply(cryptoUpdateTxn));
-
-        cryptoUpdateTxn =
+        cryptoUpdateTxnBody =
                 TransactionBody.newBuilder()
                         .setTransactionID(ourTxnId())
                         .setCryptoUpdateAccount(
@@ -404,10 +403,8 @@ class CryptoUpdateTransitionLogicTest {
                                         .setReceiverSigRequired(true)
                                         .setKey(KEY))
                         .build();
-
-        assertNotEquals(
-                PROXY_ACCOUNT_ID_FIELD_IS_DEPRECATED,
-                subject.semanticCheck().apply(cryptoUpdateTxn));
+        addToTxn();
+        assertNotEquals(PROXY_ACCOUNT_ID_FIELD_IS_DEPRECATED, subject.validateSemantics(accessor));
     }
 
     @Test
@@ -469,17 +466,19 @@ class CryptoUpdateTransitionLogicTest {
     void hasCorrectApplicability() {
         givenTxnCtx();
 
-        assertTrue(subject.applicability().test(cryptoUpdateTxn));
+        assertTrue(subject.applicability().test(cryptoUpdateTxnBody));
         assertFalse(subject.applicability().test(TransactionBody.getDefaultInstance()));
     }
 
     @Test
     void rejectsKeyWithBadEncoding() {
+        given(dynamicProperties.isStakingEnabled()).willReturn(true);
         rejectsKey(unmappableKey(), BAD_ENCODING);
     }
 
     @Test
     void rejectsInvalidKey() {
+        given(dynamicProperties.isStakingEnabled()).willReturn(true);
         rejectsKey(emptyKey(), INVALID_ADMIN_KEY);
     }
 
@@ -488,7 +487,7 @@ class CryptoUpdateTransitionLogicTest {
         givenTxnCtx(EnumSet.of(AccountCustomizer.Option.MEMO));
         given(validator.memoCheck(MEMO)).willReturn(MEMO_TOO_LONG);
 
-        assertEquals(MEMO_TOO_LONG, subject.semanticCheck().apply(cryptoUpdateTxn));
+        assertEquals(MEMO_TOO_LONG, subject.validateSemantics(accessor));
     }
 
     @Test
@@ -496,8 +495,7 @@ class CryptoUpdateTransitionLogicTest {
         givenTxnCtx();
         given(validator.isValidAutoRenewPeriod(any())).willReturn(false);
 
-        assertEquals(
-                AUTORENEW_DURATION_NOT_IN_RANGE, subject.semanticCheck().apply(cryptoUpdateTxn));
+        assertEquals(AUTORENEW_DURATION_NOT_IN_RANGE, subject.validateSemantics(accessor));
     }
 
     @Test
@@ -505,7 +503,7 @@ class CryptoUpdateTransitionLogicTest {
         givenTxnCtx();
         given(dynamicProperties.isStakingEnabled()).willReturn(true);
 
-        assertEquals(OK, subject.semanticCheck().apply(cryptoUpdateTxn));
+        assertEquals(OK, subject.validateSemantics(accessor));
     }
 
     @Test
@@ -598,13 +596,14 @@ class CryptoUpdateTransitionLogicTest {
     @Test
     void translatesUnknownException() {
         givenTxnCtx();
-        cryptoUpdateTxn =
-                cryptoUpdateTxn.toBuilder()
+        cryptoUpdateTxnBody =
+                cryptoUpdateTxnBody.toBuilder()
                         .setCryptoUpdateAccount(
-                                cryptoUpdateTxn.getCryptoUpdateAccount().toBuilder()
+                                cryptoUpdateTxnBody.getCryptoUpdateAccount().toBuilder()
                                         .setKey(unmappableKey()))
                         .build();
-        given(accessor.getTxn()).willReturn(cryptoUpdateTxn);
+        addToTxn();
+        given(txnCtx.specializedAccessor()).willReturn(accessor);
         given(txnCtx.accessor()).willReturn(accessor);
 
         subject.doStateTransition();
@@ -627,13 +626,14 @@ class CryptoUpdateTransitionLogicTest {
 
     private void rejectsKey(final Key key, ResponseCodeEnum err) {
         givenTxnCtx();
-        cryptoUpdateTxn =
-                cryptoUpdateTxn.toBuilder()
+        cryptoUpdateTxnBody =
+                cryptoUpdateTxnBody.toBuilder()
                         .setCryptoUpdateAccount(
-                                cryptoUpdateTxn.getCryptoUpdateAccount().toBuilder().setKey(key))
+                                cryptoUpdateTxnBody.getCryptoUpdateAccount().toBuilder()
+                                        .setKey(key))
                         .build();
-
-        assertEquals(err, subject.semanticCheck().apply(cryptoUpdateTxn));
+        addToTxn();
+        assertEquals(err, subject.validateSemantics(accessor));
     }
 
     private void givenTxnCtx() {
@@ -693,13 +693,13 @@ class CryptoUpdateTransitionLogicTest {
             op.setDeclineReward(BoolValue.of(true));
         }
         op.setAccountIDToUpdate(TARGET);
-        cryptoUpdateTxn =
+        cryptoUpdateTxnBody =
                 TransactionBody.newBuilder()
                         .setTransactionID(ourTxnId())
                         .setCryptoUpdateAccount(op)
                         .build();
-        given(accessor.getTxn()).willReturn(cryptoUpdateTxn);
-        given(txnCtx.accessor()).willReturn(accessor);
+        addToTxn();
+        given(txnCtx.specializedAccessor()).willReturn(accessor);
         given(ledger.exists(TARGET)).willReturn(true);
     }
 
@@ -709,6 +709,23 @@ class CryptoUpdateTransitionLogicTest {
                 .setTransactionValidStart(
                         Timestamp.newBuilder().setSeconds(CONSENSUS_TIME.getEpochSecond()))
                 .build();
+    }
+
+    private void addToTxn() {
+        cryptoUpdateTxn =
+                Transaction.newBuilder().setBodyBytes(cryptoUpdateTxnBody.toByteString()).build();
+        try {
+            accessor =
+                    new CryptoUpdateAccessor(
+                            cryptoUpdateTxnBody.toByteArray(),
+                            cryptoUpdateTxn,
+                            dynamicProperties,
+                            validator,
+                            () -> accounts,
+                            nodeInfo);
+        } catch (InvalidProtocolBufferException ex) {
+            throw new IllegalStateException(ex);
+        }
     }
 
     private void withRubberstampingValidator() {

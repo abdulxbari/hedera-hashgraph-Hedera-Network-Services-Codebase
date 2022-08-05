@@ -140,6 +140,7 @@ public interface TransactionContext {
      *
      * @return list of all the sidecar record for the current txn.
      */
+
     List<TransactionSidecarRecord.Builder> sidecars();
 
     /**
