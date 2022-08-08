@@ -35,7 +35,7 @@ import com.hedera.services.sigs.verification.PrecheckVerifier;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.fee.FeeObject;
 import com.swirlds.merkle.map.MerkleMap;
@@ -83,15 +83,15 @@ public class SolvencyPrecheck {
         this.precheckVerifier = precheckVerifier;
     }
 
-    TxnValidityAndFeeReq assessSansSvcFees(SignedTxnAccessor accessor) {
+    TxnValidityAndFeeReq assessSansSvcFees(InProgressTransaction accessor) {
         return assess(accessor, false);
     }
 
-    TxnValidityAndFeeReq assessWithSvcFees(SignedTxnAccessor accessor) {
+    TxnValidityAndFeeReq assessWithSvcFees(InProgressTransaction accessor) {
         return assess(accessor, true);
     }
 
-    private TxnValidityAndFeeReq assess(SignedTxnAccessor accessor, boolean includeSvcFee) {
+    private TxnValidityAndFeeReq assess(InProgressTransaction accessor, boolean includeSvcFee) {
         final var payerStatus =
                 queryableAccountStatus(
                         EntityNum.fromAccountId(accessor.getPayer()), accounts.get());
@@ -112,7 +112,7 @@ public class SolvencyPrecheck {
     }
 
     private TxnValidityAndFeeReq solvencyOfVerifiedPayer(
-            SignedTxnAccessor accessor, boolean includeSvcFee) {
+            InProgressTransaction accessor, boolean includeSvcFee) {
         final var payerId = EntityNum.fromAccountId(accessor.getPayer());
         final var payerAccount = accounts.get().get(payerId);
 
@@ -156,7 +156,7 @@ public class SolvencyPrecheck {
                 + fees.getNetworkFee();
     }
 
-    private ResponseCodeEnum checkSigs(SignedTxnAccessor accessor) {
+    private ResponseCodeEnum checkSigs(InProgressTransaction accessor) {
         try {
             return precheckVerifier.hasNecessarySignatures(accessor) ? OK : INVALID_SIGNATURE;
         } catch (KeyPrefixMismatchException ignore) {

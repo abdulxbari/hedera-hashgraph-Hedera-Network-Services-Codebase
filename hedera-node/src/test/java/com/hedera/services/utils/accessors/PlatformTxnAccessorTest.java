@@ -88,7 +88,7 @@ class PlatformTxnAccessorTest {
         // given:
         PlatformTxnAccessor subject =
                 new PlatformTxnAccessor(
-                        SignedTxnAccessor.from(platformTxn.getContents()), platformTxn);
+                        InProgressTransaction.from(platformTxn.getContents()), platformTxn);
 
         // expect:
         assertThat(subject.getSpanMap(), instanceOf(HashMap.class));
@@ -104,7 +104,7 @@ class PlatformTxnAccessorTest {
         // given:
         PlatformTxnAccessor subject =
                 new PlatformTxnAccessor(
-                        SignedTxnAccessor.from(platformTxn.getContents()), platformTxn);
+                        InProgressTransaction.from(platformTxn.getContents()), platformTxn);
 
         // when:
         subject.setSigMeta(RationalizedSigMeta.noneAvailable());
@@ -126,7 +126,7 @@ class PlatformTxnAccessorTest {
                 Transaction.newBuilder().setBodyBytes(someTxn.toByteString()).build();
 
         // when:
-        SignedTxnAccessor subject = SignedTxnAccessor.from(signedTxnWithBody.toByteArray());
+        InProgressTransaction subject = InProgressTransaction.from(signedTxnWithBody.toByteArray());
 
         // then:
         assertArrayEquals(signedTxnWithBody.toByteArray(), subject.getSignedTxnWrapperBytes());
@@ -150,7 +150,7 @@ class PlatformTxnAccessorTest {
         Transaction validTxn = Transaction.getDefaultInstance();
 
         // expect:
-        assertDoesNotThrow(() -> SignedTxnAccessor.uncheckedFrom(validTxn));
+        assertDoesNotThrow(() -> InProgressTransaction.uncheckedFrom(validTxn));
     }
 
     @Test
@@ -159,7 +159,7 @@ class PlatformTxnAccessorTest {
         // expect:
         assertThrows(
                 InvalidProtocolBufferException.class,
-                () -> PlatformTxnAccessor.from(SignedTxnAccessor.from(txn.getContents()), txn));
+                () -> PlatformTxnAccessor.from(InProgressTransaction.from(txn.getContents()), txn));
     }
 
     @Test
@@ -172,7 +172,7 @@ class PlatformTxnAccessorTest {
                 InvalidProtocolBufferException.class,
                 () ->
                         new PlatformTxnAccessor(
-                                SignedTxnAccessor.from(platformTxn.getContents()), platformTxn));
+                                InProgressTransaction.from(platformTxn.getContents()), platformTxn));
     }
 
     @Test
@@ -188,7 +188,7 @@ class PlatformTxnAccessorTest {
                 InvalidProtocolBufferException.class,
                 () ->
                         PlatformTxnAccessor.from(
-                                SignedTxnAccessor.from(platformTxn.getContents()), platformTxn));
+                                InProgressTransaction.from(platformTxn.getContents()), platformTxn));
     }
 
     @Test
@@ -201,7 +201,7 @@ class PlatformTxnAccessorTest {
         // when:
         PlatformTxnAccessor subject =
                 new PlatformTxnAccessor(
-                        SignedTxnAccessor.from(platformTxn.getContents()), platformTxn);
+                        InProgressTransaction.from(platformTxn.getContents()), platformTxn);
 
         // then:
         assertEquals(someTxn, subject.getTxn());
@@ -229,7 +229,7 @@ class PlatformTxnAccessorTest {
         // when:
         PlatformTxnAccessor subject =
                 new PlatformTxnAccessor(
-                        SignedTxnAccessor.from(platformTxn.getContents()), platformTxn);
+                        InProgressTransaction.from(platformTxn.getContents()), platformTxn);
         Transaction signedTxn4Log = subject.getSignedTxnWrapper();
         Transaction asBodyBytes =
                 signedTxn4Log.toBuilder()
@@ -269,7 +269,7 @@ class PlatformTxnAccessorTest {
         // when:
         PlatformTxnAccessor subject =
                 new PlatformTxnAccessor(
-                        SignedTxnAccessor.from(platformTxn.getContents()), platformTxn);
+                        InProgressTransaction.from(platformTxn.getContents()), platformTxn);
         Transaction signedTxn4Log = subject.getSignedTxnWrapper();
 
         ByteString signedTxnBytes = signedTxn4Log.getSignedTransactionBytes();
@@ -295,7 +295,7 @@ class PlatformTxnAccessorTest {
         // when:
         PlatformTxnAccessor subject =
                 new PlatformTxnAccessor(
-                        SignedTxnAccessor.from(platformTxn.getContents()), platformTxn);
+                        InProgressTransaction.from(platformTxn.getContents()), platformTxn);
 
         // then:
         assertEquals(payer, subject.getPayer());
@@ -334,7 +334,7 @@ class PlatformTxnAccessorTest {
         final var aliasManager = mock(AliasManager.class);
         final var stateView = mock(StateView.class);
 
-        var signedAccessor = SignedTxnAccessor.from(platformTxn.getContents());
+        var signedAccessor = InProgressTransaction.from(platformTxn.getContents());
         // when:
         PlatformTxnAccessor subject = new PlatformTxnAccessor(signedAccessor, platformTxn);
         final var delegate = subject.getDelegate();
@@ -450,9 +450,9 @@ class PlatformTxnAccessorTest {
         // when:
         PlatformTxnAccessor subject =
                 new PlatformTxnAccessor(
-                        SignedTxnAccessor.from(platformTxn.getContents()), platformTxn);
+                        InProgressTransaction.from(platformTxn.getContents()), platformTxn);
         final var expectedString =
-                "PlatformTxnAccessor{delegate=SignedTxnAccessor{sigMapSize=71, numSigPairs=1,"
+                "PlatformTxnAccessor{delegate=InProgressTransaction{sigMapSize=71, numSigPairs=1,"
                     + " numAutoCreations=-1, hash=[111, -123, -70, 79, 75, -80, -114, -49, 88, -76,"
                     + " -82, -23, 43, 103, -21, 52, -31, -60, 98, -55, -26, -18, -101, -108, -51,"
                     + " 24, 49, 72, 18, -69, 21, -84, -68, -118, 31, -53, 91, -61, -71, -56, 100,"

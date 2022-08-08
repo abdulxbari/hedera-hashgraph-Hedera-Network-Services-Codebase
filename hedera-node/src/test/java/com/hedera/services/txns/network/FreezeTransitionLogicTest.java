@@ -45,7 +45,7 @@ import com.google.protobuf.ByteString;
 import com.hedera.services.context.TransactionContext;
 import com.hedera.services.state.merkle.MerkleNetworkContext;
 import com.hedera.services.state.merkle.MerkleSpecialFiles;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.FileID;
@@ -85,7 +85,7 @@ class FreezeTransitionLogicTest {
     private TransactionBody freezeTxn;
 
     @Mock private UpgradeActions upgradeActions;
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
     @Mock private TransactionContext txnCtx;
     @Mock private MerkleSpecialFiles specialFiles;
     @Mock private MerkleNetworkContext networkCtx;

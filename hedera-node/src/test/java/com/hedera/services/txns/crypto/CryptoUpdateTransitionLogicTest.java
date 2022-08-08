@@ -68,7 +68,7 @@ import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.txns.SignedTxnFactory;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.CryptoUpdateTransactionBody;
@@ -107,7 +107,7 @@ class CryptoUpdateTransitionLogicTest {
     private TransactionBody cryptoUpdateTxn;
     private SigImpactHistorian sigImpactHistorian;
     private TransactionContext txnCtx;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
     private GlobalDynamicProperties dynamicProperties;
     private CryptoUpdateTransitionLogic subject;
     private MerkleMap<EntityNum, MerkleAccount> accounts;
@@ -120,7 +120,7 @@ class CryptoUpdateTransitionLogicTest {
         txnCtx = mock(TransactionContext.class);
         given(txnCtx.consensusTime()).willReturn(CONSENSUS_TIME);
         ledger = mock(HederaLedger.class);
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         validator = mock(OptionValidator.class);
         sigImpactHistorian = mock(SigImpactHistorian.class);
         dynamicProperties = mock(GlobalDynamicProperties.class);

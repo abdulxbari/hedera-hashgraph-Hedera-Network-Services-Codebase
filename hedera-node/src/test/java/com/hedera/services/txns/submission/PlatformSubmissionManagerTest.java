@@ -30,7 +30,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.hedera.services.records.RecordCache;
 import com.hedera.services.stats.MiscSpeedometers;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.CryptoTransferTransactionBody;
 import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionBody;
@@ -79,9 +79,9 @@ class PlatformSubmissionManagerTest {
                                     .build()
                                     .toByteString())
                     .build();
-    SignedTxnAccessor accessor;
-    SignedTxnAccessor uncheckedAccessor;
-    SignedTxnAccessor invalidUncheckedAccessor;
+    InProgressTransaction accessor;
+    InProgressTransaction uncheckedAccessor;
+    InProgressTransaction invalidUncheckedAccessor;
 
     Platform platform;
     RecordCache recordCache;
@@ -95,10 +95,10 @@ class PlatformSubmissionManagerTest {
         recordCache = mock(RecordCache.class);
         speedometers = mock(MiscSpeedometers.class);
 
-        accessor = SignedTxnAccessor.from(signedTxn.toByteArray(), signedTxn);
-        uncheckedAccessor = SignedTxnAccessor.from(uncheckedSubTxn.toByteArray(), uncheckedSubTxn);
+        accessor = InProgressTransaction.from(signedTxn.toByteArray(), signedTxn);
+        uncheckedAccessor = InProgressTransaction.from(uncheckedSubTxn.toByteArray(), uncheckedSubTxn);
         invalidUncheckedAccessor =
-                SignedTxnAccessor.from(
+                InProgressTransaction.from(
                         invalidUncheckedSubTxn.toByteArray(), invalidUncheckedSubTxn);
 
         subject = new PlatformSubmissionManager(platform, recordCache, speedometers);

@@ -27,7 +27,7 @@ import com.hedera.services.ledger.accounts.staking.RewardCalculator;
 import com.hedera.services.queries.AnswerService;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.CryptoGetInfoQuery;
 import com.hederahashgraph.api.proto.java.CryptoGetInfoResponse;
@@ -115,9 +115,9 @@ public class GetAccountInfoAnswer implements AnswerService {
     }
 
     @Override
-    public Optional<SignedTxnAccessor> extractPaymentFrom(final Query query) {
+    public Optional<InProgressTransaction> extractPaymentFrom(final Query query) {
         Transaction paymentTxn = query.getCryptoGetInfo().getHeader().getPayment();
-        return Optional.of(SignedTxnAccessor.uncheckedFrom(paymentTxn));
+        return Optional.of(InProgressTransaction.uncheckedFrom(paymentTxn));
     }
 
     @Override

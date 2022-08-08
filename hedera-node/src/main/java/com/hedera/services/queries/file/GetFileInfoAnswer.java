@@ -23,7 +23,7 @@ import static com.hederahashgraph.api.proto.java.ResponseType.COST_ANSWER;
 import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.queries.AnswerService;
 import com.hedera.services.txns.validation.OptionValidator;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.FileGetInfoResponse;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.hederahashgraph.api.proto.java.Query;
@@ -106,8 +106,8 @@ public class GetFileInfoAnswer implements AnswerService {
     }
 
     @Override
-    public Optional<SignedTxnAccessor> extractPaymentFrom(Query query) {
+    public Optional<InProgressTransaction> extractPaymentFrom(Query query) {
         Transaction paymentTxn = query.getFileGetInfo().getHeader().getPayment();
-        return Optional.ofNullable(SignedTxnAccessor.uncheckedFrom(paymentTxn));
+        return Optional.ofNullable(InProgressTransaction.uncheckedFrom(paymentTxn));
     }
 }

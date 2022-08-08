@@ -62,7 +62,7 @@ import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.txns.crypto.AutoCreationLogic;
 import com.hedera.services.usage.state.UsageAccumulator;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.services.utils.accessors.TokenWipeAccessor;
 import com.hedera.services.utils.accessors.TxnAccessor;
 import com.hedera.test.factories.keys.KeyTree;
@@ -145,7 +145,7 @@ class UsageBasedFeeCalculatorTest {
     private final KeyTree complexKey = TxnHandlingScenario.COMPLEX_KEY_ACCOUNT_KT;
     private JKey payerKey;
     private Transaction signedTxn;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
     private AutoRenewCalcs autoRenewCalcs;
     private PricedUsageCalculator pricedUsageCalculator;
 
@@ -165,7 +165,7 @@ class UsageBasedFeeCalculatorTest {
                         .payerKt(complexKey)
                         .txnValidStart(at)
                         .get();
-        accessor = SignedTxnAccessor.from(signedTxn.toByteArray(), signedTxn);
+        accessor = InProgressTransaction.from(signedTxn.toByteArray(), signedTxn);
         usagePrices = mock(UsagePricesProvider.class);
         given(usagePrices.activePrices(accessor)).willReturn(currentPrices);
         correctOpEstimator = mock(TxnResourceUsageEstimator.class);
@@ -218,7 +218,7 @@ class UsageBasedFeeCalculatorTest {
                         .sending(sent)
                         .txnValidStart(at)
                         .get();
-        accessor = SignedTxnAccessor.from(signedTxn.toByteArray());
+        accessor = InProgressTransaction.from(signedTxn.toByteArray());
 
         given(exchange.rate(at)).willReturn(currentRate);
         given(usagePrices.defaultPricesGiven(ContractCall, at)).willReturn(defaultCurrentPrices);
@@ -243,7 +243,7 @@ class UsageBasedFeeCalculatorTest {
                         .sending(sent)
                         .txnValidStart(at)
                         .get();
-        accessor = Mockito.spy(SignedTxnAccessor.from(signedTxn.toByteArray()));
+        accessor = Mockito.spy(InProgressTransaction.from(signedTxn.toByteArray()));
 
         given(accessor.getFunction()).willReturn(EthereumTransaction);
 
@@ -268,7 +268,7 @@ class UsageBasedFeeCalculatorTest {
                         .initialBalance(initialBalance)
                         .txnValidStart(at)
                         .get();
-        accessor = SignedTxnAccessor.from(signedTxn.toByteArray());
+        accessor = InProgressTransaction.from(signedTxn.toByteArray());
 
         given(exchange.rate(at)).willReturn(currentRate);
         given(usagePrices.pricesGiven(ContractCreate, at)).willReturn(currentPrices);
@@ -287,7 +287,7 @@ class UsageBasedFeeCalculatorTest {
     void estimatesMiscNoNetChange() throws Throwable {
         // setup:
         signedTxn = newSignedFileCreate().payer(asAccountString(payer)).txnValidStart(at).get();
-        accessor = SignedTxnAccessor.from(signedTxn.toByteArray());
+        accessor = InProgressTransaction.from(signedTxn.toByteArray());
 
         // expect:
         assertEquals(0L, subject.estimatedNonFeePayerAdjustments(accessor, at));
@@ -305,7 +305,7 @@ class UsageBasedFeeCalculatorTest {
                                         asAccountString(payer), asAccountString(receiver), sent))
                         .txnValidStart(at)
                         .get();
-        accessor = SignedTxnAccessor.from(signedTxn.toByteArray());
+        accessor = InProgressTransaction.from(signedTxn.toByteArray());
 
         // expect:
         assertEquals(-sent, subject.estimatedNonFeePayerAdjustments(accessor, at));
@@ -733,7 +733,7 @@ class UsageBasedFeeCalculatorTest {
             final TokenType tokenType,
             final boolean isCustomAccessor) {
         if (!isCustomAccessor) {
-            accessor = SignedTxnAccessor.uncheckedFrom(signedTxn);
+            accessor = InProgressTransaction.uncheckedFrom(signedTxn);
         }
         // and:
         final var expectedFees =

@@ -26,7 +26,7 @@ import static org.mockito.Mockito.verify;
 
 import com.hedera.services.sysfiles.domain.throttling.ThrottleDefinitions;
 import com.hedera.services.throttles.GasLimitDeterministicThrottle;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.Query;
 import com.hederahashgraph.api.proto.java.Transaction;
 import java.util.List;
@@ -64,7 +64,7 @@ class HapiThrottlingTest {
     @Test
     void delegatesTxnWithSomeInstant() {
         // setup:
-        final var accessor = SignedTxnAccessor.uncheckedFrom(Transaction.getDefaultInstance());
+        final var accessor = InProgressTransaction.uncheckedFrom(Transaction.getDefaultInstance());
 
         given(delegate.shouldThrottleTxn(any(), any())).willReturn(true);
 
@@ -80,7 +80,7 @@ class HapiThrottlingTest {
     @Test
     void delegatesConsensusTxnWithSomeInstant() {
         // setup:
-        final var accessor = SignedTxnAccessor.uncheckedFrom(Transaction.getDefaultInstance());
+        final var accessor = InProgressTransaction.uncheckedFrom(Transaction.getDefaultInstance());
 
         given(delegate.shouldThrottleTxn(any(), any())).willReturn(true);
 
@@ -127,7 +127,7 @@ class HapiThrottlingTest {
     @Test
     void leakUnusedGasCallsDelegateLeakMethod() {
         // setup:
-        final var accessor = SignedTxnAccessor.uncheckedFrom(Transaction.getDefaultInstance());
+        final var accessor = InProgressTransaction.uncheckedFrom(Transaction.getDefaultInstance());
 
         // when:
         subject.leakUnusedGasPreviouslyReserved(accessor, 12345L);

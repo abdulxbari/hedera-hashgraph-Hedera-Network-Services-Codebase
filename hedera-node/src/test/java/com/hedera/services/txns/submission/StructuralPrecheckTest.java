@@ -38,7 +38,7 @@ import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.stats.HapiOpCounters;
 import com.hedera.services.stats.MiscRunningAvgs;
 import com.hedera.services.utils.accessors.AccessorFactory;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hedera.test.utils.TxnUtils;
 import com.hederahashgraph.api.proto.java.CryptoCreateTransactionBody;
@@ -72,7 +72,7 @@ class StructuralPrecheckTest {
     private SignedStateViewFactory viewFactory = mock(SignedStateViewFactory.class);
     private AccessorFactory accessorFactory = mock(AccessorFactory.class);
 
-    private SignedTxnAccessor accessor = mock(SignedTxnAccessor.class);
+    private InProgressTransaction accessor = mock(InProgressTransaction.class);
     private Transaction txn;
 
     @BeforeEach
@@ -313,7 +313,7 @@ class StructuralPrecheckTest {
 
     private void assertExpectedFail(
             final ResponseCodeEnum error,
-            final Pair<TxnValidityAndFeeReq, SignedTxnAccessor> resp) {
+            final Pair<TxnValidityAndFeeReq, InProgressTransaction> resp) {
         assertEquals(error, resp.getLeft().getValidity());
         assertNull(resp.getRight());
     }

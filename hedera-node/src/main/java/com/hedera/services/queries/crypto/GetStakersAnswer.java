@@ -21,7 +21,7 @@ import static com.hederahashgraph.api.proto.java.ResponseType.COST_ANSWER;
 
 import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.queries.AnswerService;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.CryptoGetStakersQuery;
 import com.hederahashgraph.api.proto.java.CryptoGetStakersResponse;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
@@ -71,7 +71,7 @@ public class GetStakersAnswer implements AnswerService {
     }
 
     @Override
-    public Optional<SignedTxnAccessor> extractPaymentFrom(Query query) {
+    public Optional<InProgressTransaction> extractPaymentFrom(Query query) {
         return Optional.empty();
     }
 

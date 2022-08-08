@@ -79,6 +79,6 @@ public class AccessorFactory {
         if (function == TokenAccountWipe) {
             return new TokenWipeAccessor(signedTxnWrapperBytes, signedTxn, dynamicProperties);
         }
-        return SignedTxnAccessor.from(signedTxnWrapperBytes, signedTxn);
+        return InProgressTransaction.from(signedTxnWrapperBytes, signedTxn);
     }
 }

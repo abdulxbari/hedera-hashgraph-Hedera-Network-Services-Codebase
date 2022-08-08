@@ -26,7 +26,7 @@ import com.hedera.services.store.contracts.EntityAccess;
 import com.hedera.services.store.models.Account;
 import com.hedera.services.utils.EntityIdUtils;
 import com.hedera.services.utils.ResponseCodeUtil;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.ContractCallLocalQuery;
 import com.hederahashgraph.api.proto.java.ContractCallLocalResponse;
 import com.hederahashgraph.builder.RequestBuilder;
@@ -64,7 +64,7 @@ public class CallLocalExecutor {
             final EntityAccess entityAccess) {
         try {
             final var paymentTxn =
-                    SignedTxnAccessor.uncheckedFrom(op.getHeader().getPayment()).getTxn();
+                    InProgressTransaction.uncheckedFrom(op.getHeader().getPayment()).getTxn();
             final var senderId =
                     EntityIdUtils.unaliased(
                                     op.hasSenderId()

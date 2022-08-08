@@ -33,7 +33,7 @@ import com.hedera.services.store.AccountStore;
 import com.hedera.services.store.TypedTokenStore;
 import com.hedera.services.store.models.Id;
 import com.hedera.services.store.models.Token;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hedera.test.utils.TxnUtils;
 import com.hederahashgraph.api.proto.java.CustomFee;
@@ -57,7 +57,7 @@ class TokenFeeScheduleUpdateTransitionLogicTest {
     @Mock private AccountStore accountStore;
     @Mock private TypedTokenStore tokenStore;
     @Mock private TransactionContext txnCtx;
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
     @Mock private Function<CustomFee, FcCustomFee> grpcFeeConverter;
     @Mock private GlobalDynamicProperties dynamicProperties;
     @Mock private FcCustomFee firstMockFee;

@@ -72,7 +72,7 @@ import com.hedera.services.stream.proto.TransactionSidecarRecord;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.SidecarUtils;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ContractCreateTransactionBody;
@@ -120,7 +120,7 @@ class ContractCreateTransitionLogicTest {
     @Mock private HederaFs hfs;
     @Mock private OptionValidator validator;
     @Mock private TransactionContext txnCtx;
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
     @Mock private AccountStore accountStore;
     @Mock private HederaWorldState worldState;
     @Mock private EntityCreator entityCreator;

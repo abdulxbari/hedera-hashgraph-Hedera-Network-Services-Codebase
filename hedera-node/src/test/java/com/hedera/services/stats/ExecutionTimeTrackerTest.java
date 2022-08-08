@@ -23,7 +23,7 @@ import static org.mockito.BDDMockito.given;
 
 import com.hedera.services.context.TransactionContext;
 import com.hedera.services.context.properties.NodeLocalProperties;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.Timestamp;
 import com.hederahashgraph.api.proto.java.TransactionID;
@@ -47,7 +47,7 @@ class ExecutionTimeTrackerTest {
 
     @Mock private NodeLocalProperties nodeLocalProperties;
     @Mock private TransactionContext txnCtx;
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
 
     private ExecutionTimeTracker subject;
 

@@ -48,7 +48,7 @@ import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.state.validation.UsageLimits;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.MiscUtils;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.keys.KeyTree;
 import com.hedera.test.factories.scenarios.TxnHandlingScenario;
 import com.hedera.test.utils.IdUtils;
@@ -92,7 +92,7 @@ class FileCreateTransitionLogicTest {
 
     TransactionID txnId;
     TransactionBody fileCreateTxn;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
 
     HederaFs hfs;
     OptionValidator validator;
@@ -106,7 +106,7 @@ class FileCreateTransitionLogicTest {
         hederaWacl = waclSkeleton.asJKey();
         attr = new HFileMeta(false, hederaWacl, expiry);
 
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         txnCtx = mock(TransactionContext.class);
         hfs = mock(HederaFs.class);
         sigImpactHistorian = mock(SigImpactHistorian.class);

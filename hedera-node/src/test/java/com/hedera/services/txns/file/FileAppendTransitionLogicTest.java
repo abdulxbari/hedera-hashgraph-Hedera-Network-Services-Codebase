@@ -47,7 +47,7 @@ import com.hedera.services.ledger.SigImpactHistorian;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.state.merkle.MerkleNetworkContext;
 import com.hedera.services.utils.MiscUtils;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.scenarios.TxnHandlingScenario;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.Duration;
@@ -87,7 +87,7 @@ class FileAppendTransitionLogicTest {
 
     TransactionID txnId;
     TransactionBody fileAppendTxn;
-    SignedTxnAccessor accessor;
+    InProgressTransaction accessor;
 
     HederaFs hfs;
     TransactionContext txnCtx;
@@ -104,7 +104,7 @@ class FileAppendTransitionLogicTest {
         deletedAttr = new HFileMeta(true, wacl, 2_000_000L);
         immutableAttr = new HFileMeta(false, StateView.EMPTY_WACL, 2_000_000L);
 
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         txnCtx = mock(TransactionContext.class);
         networkCtx = mock(MerkleNetworkContext.class);
         sigImpactHistorian = mock(SigImpactHistorian.class);

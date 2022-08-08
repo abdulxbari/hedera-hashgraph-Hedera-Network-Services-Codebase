@@ -16,7 +16,7 @@
 package com.hedera.services.txns.submission;
 
 import com.hedera.services.context.domain.process.TxnValidityAndFeeReq;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.services.utils.accessors.TxnAccessor;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
@@ -53,7 +53,7 @@ public final class StagedPrechecks {
         return syntaxPrecheck.validate(txn);
     }
 
-    ResponseCodeEnum systemScreen(final SignedTxnAccessor accessor) {
+    ResponseCodeEnum systemScreen(final InProgressTransaction accessor) {
         return systemPrecheck.screen(accessor);
     }
 
@@ -64,15 +64,15 @@ public final class StagedPrechecks {
         return semanticPrecheck.validate(accessor, requiredFunction, failureType);
     }
 
-    TxnValidityAndFeeReq assessSolvencySansSvcFees(final SignedTxnAccessor accessor) {
+    TxnValidityAndFeeReq assessSolvencySansSvcFees(final InProgressTransaction accessor) {
         return solvencyPrecheck.assessSansSvcFees(accessor);
     }
 
-    TxnValidityAndFeeReq assessSolvencyWithSvcFees(final SignedTxnAccessor accessor) {
+    TxnValidityAndFeeReq assessSolvencyWithSvcFees(final InProgressTransaction accessor) {
         return solvencyPrecheck.assessWithSvcFees(accessor);
     }
 
-    Pair<TxnValidityAndFeeReq, SignedTxnAccessor> assessStructure(final Transaction signedTxn) {
+    Pair<TxnValidityAndFeeReq, InProgressTransaction> assessStructure(final Transaction signedTxn) {
         return structuralPrecheck.assess(signedTxn);
     }
 }

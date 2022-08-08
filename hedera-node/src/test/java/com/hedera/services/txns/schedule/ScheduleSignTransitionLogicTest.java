@@ -45,7 +45,7 @@ import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.state.submerkle.RichInstant;
 import com.hedera.services.state.virtual.schedule.ScheduleVirtualValue;
 import com.hedera.services.store.schedule.ScheduleStore;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.ScheduleID;
 import com.hederahashgraph.api.proto.java.ScheduleSignTransactionBody;
@@ -62,7 +62,7 @@ import org.junit.jupiter.api.Test;
 
 class ScheduleSignTransitionLogicTest {
     private ScheduleStore store;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
     private TransactionContext txnCtx;
     final TransactionID scheduledTxnId =
             TransactionID.newBuilder()
@@ -90,7 +90,7 @@ class ScheduleSignTransitionLogicTest {
     @BeforeEach
     private void setup() throws InvalidProtocolBufferException {
         store = mock(ScheduleStore.class);
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         executor = mock(ScheduleExecutor.class);
         activationHelper = mock(InHandleActivationHelper.class);
         txnCtx = mock(TransactionContext.class);

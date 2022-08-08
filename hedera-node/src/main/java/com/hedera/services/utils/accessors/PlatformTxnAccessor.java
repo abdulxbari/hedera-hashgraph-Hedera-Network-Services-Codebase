@@ -136,7 +136,7 @@ public class PlatformTxnAccessor implements SwirldsTxnAccessor {
         return delegate;
     }
 
-    /* ---Delegates to SignedTxnAccessor --- */
+    /* ---Delegates to InProgressTransaction --- */
 
     @Override
     public byte[] getTxnBytes() {
@@ -327,6 +327,6 @@ public class PlatformTxnAccessor implements SwirldsTxnAccessor {
     public static PlatformTxnAccessor from(final SwirldTransaction platformTxn)
             throws InvalidProtocolBufferException {
         return new PlatformTxnAccessor(
-                SignedTxnAccessor.from(platformTxn.getContents()), platformTxn);
+                InProgressTransaction.from(platformTxn.getContents()), platformTxn);
     }
 }

@@ -83,9 +83,9 @@ import org.apache.logging.log4j.Logger;
 import org.bouncycastle.util.Arrays;
 
 /** Encapsulates access to several commonly referenced parts of a gRPC {@link Transaction}. */
-public class SignedTxnAccessor implements TxnAccessor {
+public class InProgressTransaction implements TxnAccessor {
     public static final LongPredicate IS_THROTTLE_EXEMPT = num -> num >= 1 && num <= 100L;
-    private static final Logger log = LogManager.getLogger(SignedTxnAccessor.class);
+    private static final Logger log = LogManager.getLogger(InProgressTransaction.class);
 
     private static final int UNKNOWN_NUM_AUTO_CREATIONS = -1;
     private static final String ACCESSOR_LITERAL = " accessor";
@@ -122,9 +122,9 @@ public class SignedTxnAccessor implements TxnAccessor {
     private ScheduleID scheduleRef;
     private StateView view;
 
-    public static SignedTxnAccessor uncheckedFrom(Transaction validSignedTxn) {
+    public static InProgressTransaction uncheckedFrom(Transaction validSignedTxn) {
         try {
-            return SignedTxnAccessor.from(validSignedTxn.toByteArray());
+            return InProgressTransaction.from(validSignedTxn.toByteArray());
         } catch (Exception illegal) {
             log.warn("Unexpected use of factory with invalid gRPC transaction", illegal);
             throw new IllegalArgumentException(
@@ -132,18 +132,18 @@ public class SignedTxnAccessor implements TxnAccessor {
         }
     }
 
-    public static SignedTxnAccessor from(byte[] signedTxnWrapperBytes)
+    public static InProgressTransaction from(byte[] signedTxnWrapperBytes)
             throws InvalidProtocolBufferException {
-        return new SignedTxnAccessor(signedTxnWrapperBytes, null);
+        return new InProgressTransaction(signedTxnWrapperBytes, null);
     }
 
-    public static SignedTxnAccessor from(
+    public static InProgressTransaction from(
             byte[] signedTxnWrapperBytes, final Transaction signedTxnWrapper)
             throws InvalidProtocolBufferException {
-        return new SignedTxnAccessor(signedTxnWrapperBytes, signedTxnWrapper);
+        return new InProgressTransaction(signedTxnWrapperBytes, signedTxnWrapper);
     }
 
-    protected SignedTxnAccessor(
+    protected InProgressTransaction(
             byte[] signedTxnWrapperBytes, @Nullable final Transaction transaction)
             throws InvalidProtocolBufferException {
         this.signedTxnWrapperBytes = signedTxnWrapperBytes;
@@ -598,5 +598,10 @@ public class SignedTxnAccessor implements TxnAccessor {
     @Override
     public StateView getStateView() {
         return view;
+    }
+
+    @Nullable
+    CryptographicSigs cryptoGraphicSigs() {
+        return null; // make it abstract
     }
 }

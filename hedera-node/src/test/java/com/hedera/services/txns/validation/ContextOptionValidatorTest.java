@@ -62,7 +62,7 @@ import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.state.merkle.MerkleTopic;
 import com.hedera.services.utils.EntityNum;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.accounts.MerkleAccountFactory;
 import com.hedera.test.factories.scenarios.TxnHandlingScenario;
 import com.hedera.test.factories.topics.TopicFactory;
@@ -595,7 +595,7 @@ class ContextOptionValidatorTest {
 
     @Test
     void recognizesExpiredCondition() {
-        SignedTxnAccessor accessor = mock(SignedTxnAccessor.class);
+        InProgressTransaction accessor = mock(InProgressTransaction.class);
 
         // given:
         long validDuration = 1_000L;
@@ -631,7 +631,7 @@ class ContextOptionValidatorTest {
 
     @Test
     void recognizesFutureValidStartStart() {
-        SignedTxnAccessor accessor = mock(SignedTxnAccessor.class);
+        InProgressTransaction accessor = mock(InProgressTransaction.class);
 
         // given:
         long validDuration = 1_000L;
@@ -666,7 +666,7 @@ class ContextOptionValidatorTest {
 
     @Test
     void acceptsOk() {
-        SignedTxnAccessor accessor = mock(SignedTxnAccessor.class);
+        InProgressTransaction accessor = mock(InProgressTransaction.class);
 
         // given:
         long validDuration = 1_000L;

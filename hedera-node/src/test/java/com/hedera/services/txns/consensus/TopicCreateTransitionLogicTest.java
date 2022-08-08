@@ -46,7 +46,7 @@ import com.hedera.services.store.TopicStore;
 import com.hedera.services.store.models.Account;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.txns.SignedTxnFactory;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ConsensusCreateTopicTransactionBody;
@@ -83,7 +83,7 @@ class TopicCreateTransitionLogicTest {
 
     @Mock private UsageLimits usageLimits;
     @Mock private TransactionContext transactionContext;
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
     @Mock private OptionValidator validator;
     @Mock private EntityIdSource entityIdSource;
     @Mock private TopicStore topicStore;

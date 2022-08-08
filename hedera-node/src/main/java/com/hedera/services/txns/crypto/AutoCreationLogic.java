@@ -43,7 +43,7 @@ import com.hedera.services.state.submerkle.FcAssessedCustomFee;
 import com.hedera.services.state.validation.UsageLimits;
 import com.hedera.services.store.contracts.precompile.SyntheticTxnFactory;
 import com.hedera.services.utils.EntityNum;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.Key;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
@@ -225,7 +225,7 @@ public class AutoCreationLogic {
                         .setSignedTransactionBytes(signedTxn.toByteString())
                         .build();
 
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
         final var fees =
                 feeCalculator.computeFee(accessor, EMPTY_KEY, currentView, txnCtx.consensusTime());
         return fees.getServiceFee() + fees.getNetworkFee() + fees.getNodeFee();

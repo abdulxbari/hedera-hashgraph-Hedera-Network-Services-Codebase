@@ -45,7 +45,7 @@ import com.hedera.services.state.virtual.VirtualBlobKey;
 import com.hedera.services.state.virtual.VirtualBlobValue;
 import com.hedera.services.store.models.NftId;
 import com.hedera.services.utils.EntityIdUtils;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
@@ -75,7 +75,7 @@ class MutableEntityAccessTest {
     @Mock private TransactionalLedger<NftId, NftProperty, MerkleUniqueToken> nftsLedger;
     @Mock private TransactionalLedger<TokenID, TokenProperty, MerkleToken> tokensLedger;
     @Mock private TransactionContext txnCtx;
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
     @Mock private SizeLimitedStorage storage;
     @Mock private AliasManager aliasManager;
 

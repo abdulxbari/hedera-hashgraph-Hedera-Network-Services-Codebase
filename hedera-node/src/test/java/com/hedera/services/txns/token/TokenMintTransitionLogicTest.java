@@ -38,7 +38,7 @@ import com.hedera.services.store.AccountStore;
 import com.hedera.services.store.TypedTokenStore;
 import com.hedera.services.store.models.Id;
 import com.hedera.services.txns.validation.OptionValidator;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.TokenID;
 import com.hederahashgraph.api.proto.java.TokenMintTransactionBody;
@@ -57,7 +57,7 @@ class TokenMintTransitionLogicTest {
     private final TokenID grpcId = IdUtils.asToken("1.2.3");
 
     @Mock private TransactionContext txnCtx;
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
     @Mock private TransactionBody transactionBody;
     @Mock private TokenMintTransactionBody mintTransactionBody;
     @Mock private OptionValidator validator;

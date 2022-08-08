@@ -60,7 +60,7 @@ import com.hedera.services.throttles.GasLimitDeterministicThrottle;
 import com.hedera.services.throttling.DeterministicThrottling.DeterministicThrottlingMode;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.MiscUtils;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.services.utils.accessors.TxnAccessor;
 import com.hedera.test.extensions.LogCaptor;
 import com.hedera.test.extensions.LogCaptureExtension;
@@ -1627,16 +1627,16 @@ class DeterministicThrottlingTest {
         return opsManagers;
     }
 
-    private SignedTxnAccessor scheduleCreate(final SchedulableTransactionBody inner) {
+    private InProgressTransaction scheduleCreate(final SchedulableTransactionBody inner) {
         return scheduleCreate(inner, false);
     }
 
-    private SignedTxnAccessor scheduleCreate(
+    private InProgressTransaction scheduleCreate(
             final SchedulableTransactionBody inner, boolean waitForExpiry) {
         return scheduleCreate(inner, waitForExpiry, null);
     }
 
-    private SignedTxnAccessor scheduleCreate(
+    private InProgressTransaction scheduleCreate(
             final SchedulableTransactionBody inner, boolean waitForExpiry, AccountID customPayer) {
         final var schedule =
                 ScheduleCreateTransactionBody.newBuilder()
@@ -1652,10 +1652,10 @@ class DeterministicThrottlingTest {
                 Transaction.newBuilder()
                         .setSignedTransactionBytes(signedTxn.toByteString())
                         .build();
-        return SignedTxnAccessor.uncheckedFrom(txn);
+        return InProgressTransaction.uncheckedFrom(txn);
     }
 
-    private SignedTxnAccessor scheduleSign(ScheduleID scheduleID) {
+    private InProgressTransaction scheduleSign(ScheduleID scheduleID) {
         final var schedule = ScheduleSignTransactionBody.newBuilder().setScheduleID(scheduleID);
         final var body = TransactionBody.newBuilder().setScheduleSign(schedule).build();
         final var signedTxn =
@@ -1664,7 +1664,7 @@ class DeterministicThrottlingTest {
                 Transaction.newBuilder()
                         .setSignedTransactionBytes(signedTxn.toByteString())
                         .build();
-        return SignedTxnAccessor.uncheckedFrom(txn);
+        return InProgressTransaction.uncheckedFrom(txn);
     }
 
     private static final Key aPrimitiveKey =

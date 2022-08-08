@@ -71,7 +71,7 @@ class AccessorFactoryTest {
                                 .setBodyBytes(someTxn.toByteString())
                                 .build()
                                 .toByteArray());
-        assertTrue(subject.nonTriggeredTxn(platformTxn.getContents()) instanceof SignedTxnAccessor);
+        assertTrue(subject.nonTriggeredTxn(platformTxn.getContents()) instanceof InProgressTransaction);
 
         SwirldTransaction wipeTxn =
                 new SwirldTransaction(
@@ -79,7 +79,7 @@ class AccessorFactoryTest {
                                 .setBodyBytes(tokenWipeTxn.toByteString())
                                 .build()
                                 .toByteArray());
-        assertTrue(subject.nonTriggeredTxn(wipeTxn.getContents()) instanceof SignedTxnAccessor);
+        assertTrue(subject.nonTriggeredTxn(wipeTxn.getContents()) instanceof InProgressTransaction);
     }
 
     @Test
@@ -90,7 +90,7 @@ class AccessorFactoryTest {
                                 .setBodyBytes(someTxn.toByteString())
                                 .build()
                                 .toByteArray());
-        assertTrue(subject.nonTriggeredTxn(platformTxn.getContents()) instanceof SignedTxnAccessor);
+        assertTrue(subject.nonTriggeredTxn(platformTxn.getContents()) instanceof InProgressTransaction);
 
         SwirldTransaction wipeTxn =
                 new SwirldTransaction(
@@ -102,7 +102,7 @@ class AccessorFactoryTest {
         var triggered =
                 subject.triggeredTxn(wipeTxn.getContents(), payerId, scheduleId, true, true);
 
-        assertTrue(triggered instanceof SignedTxnAccessor);
+        assertTrue(triggered instanceof InProgressTransaction);
 
         assertTrue(triggered.congestionExempt());
         assertTrue(triggered.throttleExempt());

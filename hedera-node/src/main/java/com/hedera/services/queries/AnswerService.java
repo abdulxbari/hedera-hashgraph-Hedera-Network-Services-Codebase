@@ -20,7 +20,7 @@ import static com.hederahashgraph.api.proto.java.ResponseType.ANSWER_STATE_PROOF
 import static com.hederahashgraph.api.proto.java.ResponseType.COST_ANSWER;
 
 import com.hedera.services.context.primitives.StateView;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.hederahashgraph.api.proto.java.Query;
 import com.hederahashgraph.api.proto.java.Response;
@@ -54,7 +54,7 @@ public interface AnswerService {
 
     ResponseCodeEnum extractValidityFrom(Response response);
 
-    Optional<SignedTxnAccessor> extractPaymentFrom(Query query);
+    Optional<InProgressTransaction> extractPaymentFrom(Query query);
 
     default Response responseGiven(Query query, StateView view, ResponseCodeEnum validity) {
         return responseGiven(query, view, validity, 0L);

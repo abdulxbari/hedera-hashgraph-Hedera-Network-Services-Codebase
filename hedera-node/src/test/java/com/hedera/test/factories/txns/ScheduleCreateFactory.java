@@ -16,7 +16,7 @@
 package com.hedera.test.factories.txns;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.scenarios.TxnHandlingScenario;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.SchedulableTransactionBody;
@@ -78,7 +78,7 @@ public class ScheduleCreateFactory extends SignedTxnFactory<ScheduleCreateFactor
             op.setScheduledTransactionBody(SchedulableTransactionBody.getDefaultInstance());
         } else {
             try {
-                var accessor = SignedTxnAccessor.from(scheduled.toByteArray());
+                var accessor = InProgressTransaction.from(scheduled.toByteArray());
                 var scheduled = ScheduleUtils.fromOrdinary(accessor.getTxn());
                 op.setScheduledTransactionBody(scheduled);
             } catch (InvalidProtocolBufferException e) {

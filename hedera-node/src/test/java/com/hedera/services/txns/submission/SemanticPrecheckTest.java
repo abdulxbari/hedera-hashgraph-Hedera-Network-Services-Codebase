@@ -23,7 +23,7 @@ import static org.mockito.BDDMockito.given;
 
 import com.hedera.services.txns.TransitionLogic;
 import com.hedera.services.txns.TransitionLogicLookup;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.CryptoTransferTransactionBody;
 import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionBody;
@@ -37,8 +37,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class SemanticPrecheckTest {
-    private final SignedTxnAccessor xferAccessor =
-            SignedTxnAccessor.uncheckedFrom(
+    private final InProgressTransaction xferAccessor =
+            InProgressTransaction.uncheckedFrom(
                     Transaction.newBuilder()
                             .setBodyBytes(
                                     TransactionBody.newBuilder()

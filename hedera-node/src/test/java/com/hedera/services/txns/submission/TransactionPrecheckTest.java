@@ -37,7 +37,7 @@ import static org.mockito.BDDMockito.verify;
 import com.hedera.services.context.CurrentPlatformStatus;
 import com.hedera.services.context.domain.process.TxnValidityAndFeeReq;
 import com.hedera.services.queries.validation.QueryFeeCheck;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.Transaction;
 import com.swirlds.common.system.PlatformStatus;
@@ -109,7 +109,7 @@ class TransactionPrecheckTest {
     @Test
     void abortsOnStructuralFlawWithBadAccessor() {
         givenActivePlatform();
-        final Pair<TxnValidityAndFeeReq, SignedTxnAccessor> dummyPair =
+        final Pair<TxnValidityAndFeeReq, InProgressTransaction> dummyPair =
                 Pair.of(new TxnValidityAndFeeReq(OK), null);
         given(structuralPrecheck.assess(any())).willReturn(dummyPair);
 
@@ -270,7 +270,7 @@ class TransactionPrecheckTest {
                 .willReturn(
                         Pair.of(
                                 new TxnValidityAndFeeReq(OK),
-                                SignedTxnAccessor.uncheckedFrom(Transaction.getDefaultInstance())));
+                                InProgressTransaction.uncheckedFrom(Transaction.getDefaultInstance())));
     }
 
     private void givenFullSolvency() {
@@ -292,7 +292,7 @@ class TransactionPrecheckTest {
     }
 
     private void assertSuccess(
-            final long reqFee, final Pair<TxnValidityAndFeeReq, SignedTxnAccessor> response) {
+            final long reqFee, final Pair<TxnValidityAndFeeReq, InProgressTransaction> response) {
         assertEquals(OK, response.getLeft().getValidity());
         assertEquals(reqFee, response.getLeft().getRequiredFee());
         assertNotNull(response.getRight());
@@ -300,14 +300,14 @@ class TransactionPrecheckTest {
 
     private void assertFailure(
             final ResponseCodeEnum abort,
-            final Pair<TxnValidityAndFeeReq, SignedTxnAccessor> response) {
+            final Pair<TxnValidityAndFeeReq, InProgressTransaction> response) {
         assertFailure(abort, 0L, response);
     }
 
     private void assertFailure(
             final ResponseCodeEnum abort,
             final long reqFee,
-            final Pair<TxnValidityAndFeeReq, SignedTxnAccessor> response) {
+            final Pair<TxnValidityAndFeeReq, InProgressTransaction> response) {
         final var req = response.getLeft();
         assertEquals(abort, req.getValidity());
         assertEquals(reqFee, req.getRequiredFee());

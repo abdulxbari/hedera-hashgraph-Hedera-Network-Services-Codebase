@@ -33,7 +33,7 @@ import com.hedera.services.ledger.accounts.staking.RewardCalculator;
 import com.hedera.services.records.RecordCache;
 import com.hedera.services.records.RecordsHistorian;
 import com.hedera.services.state.migration.MigrationRecordsManager;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.extensions.LogCaptor;
 import com.hedera.test.extensions.LogCaptureExtension;
 import com.hedera.test.extensions.LoggingSubject;
@@ -59,7 +59,7 @@ class ServicesTxnManagerTest {
 
     @Mock private Runnable processLogic;
     @Mock private Runnable triggeredProcessLogic;
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
     @Mock private HederaLedger ledger;
     @Mock private RecordCache recordCache;
     @Mock private TransactionContext txnCtx;

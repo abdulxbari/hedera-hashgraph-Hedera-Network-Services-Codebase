@@ -28,7 +28,7 @@ import static org.mockito.Mockito.mockStatic;
 
 import com.hedera.services.stats.HapiOpCounters;
 import com.hedera.services.txns.SubmissionFlow;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.extensions.LogCaptor;
 import com.hedera.test.extensions.LogCaptureExtension;
 import com.hedera.test.extensions.LoggingSubject;
@@ -96,12 +96,12 @@ class TxnResponseHelperTest {
 
     @Test
     void helpsWithExceptionOnSubmit() {
-        final var accessor = mock(SignedTxnAccessor.class);
+        final var accessor = mock(InProgressTransaction.class);
         given(accessor.getSignedTxnWrapper()).willReturn(null);
         final var inOrder = inOrder(submissionFlow, opCounters, accessor, observer);
 
-        try (final var accessorFactory = mockStatic(SignedTxnAccessor.class)) {
-            accessorFactory.when(() -> SignedTxnAccessor.uncheckedFrom(txn)).thenReturn(accessor);
+        try (final var accessorFactory = mockStatic(InProgressTransaction.class)) {
+            accessorFactory.when(() -> InProgressTransaction.uncheckedFrom(txn)).thenReturn(accessor);
             given(submissionFlow.submit(txn)).willThrow(IllegalArgumentException.class);
 
             subject.submit(txn, observer, CryptoTransfer);

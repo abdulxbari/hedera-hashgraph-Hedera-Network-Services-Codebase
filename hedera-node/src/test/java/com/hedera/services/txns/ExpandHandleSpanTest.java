@@ -27,7 +27,7 @@ import com.hedera.services.txns.span.ExpandHandleSpan;
 import com.hedera.services.txns.span.SpanMapManager;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.accessors.AccessorFactory;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.Timestamp;
 import com.hederahashgraph.api.proto.java.Transaction;
@@ -81,7 +81,7 @@ class ExpandHandleSpanTest {
 
     @Test
     void propagatesIpbe() {
-        final var accessor = mock(SignedTxnAccessor.class);
+        final var accessor = mock(InProgressTransaction.class);
         // expect:
         assertThrows(InvalidProtocolBufferException.class, () -> subject.track(invalidTxn));
         assertThrows(InvalidProtocolBufferException.class, () -> subject.accessorFor(invalidTxn));

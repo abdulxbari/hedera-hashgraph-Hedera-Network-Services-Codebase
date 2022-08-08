@@ -17,7 +17,7 @@ package com.hedera.services.fees.calculation;
 
 import static com.hedera.services.state.submerkle.FcCustomFee.fixedFee;
 import static com.hedera.services.state.submerkle.FcCustomFee.fractionalFee;
-import static com.hedera.services.utils.accessors.SignedTxnAccessor.uncheckedFrom;
+import static com.hedera.services.utils.accessors.InProgressTransaction.uncheckedFrom;
 import static com.hederahashgraph.api.proto.java.HederaFunctionality.ConsensusSubmitMessage;
 import static com.hederahashgraph.api.proto.java.HederaFunctionality.ContractCreate;
 import static com.hederahashgraph.api.proto.java.HederaFunctionality.CryptoApproveAllowance;
@@ -77,7 +77,7 @@ import com.hedera.services.usage.token.meta.TokenUnpauseMeta;
 import com.hedera.services.usage.token.meta.TokenWipeMeta;
 import com.hedera.services.usage.util.UtilOpsUsage;
 import com.hedera.services.usage.util.UtilPrngMeta;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.CustomFee;
 import com.hederahashgraph.api.proto.java.Key;
 import com.hederahashgraph.api.proto.java.SignedTransaction;
@@ -105,7 +105,7 @@ class AccessorBasedUsagesTest {
     private final ExpandHandleSpanMapAccessor spanMapAccessor = new ExpandHandleSpanMapAccessor();
 
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-    private SignedTxnAccessor txnAccessor;
+    private InProgressTransaction txnAccessor;
 
     @Mock private OpUsageCtxHelper opUsageCtxHelper;
     @Mock private FileOpsUsage fileOpsUsage;

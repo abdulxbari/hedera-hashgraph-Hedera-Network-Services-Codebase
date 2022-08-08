@@ -34,7 +34,7 @@ import static org.mockito.Mockito.mock;
 import com.google.protobuf.ByteString;
 import com.hedera.services.legacy.exception.KeyPrefixMismatchException;
 import com.hedera.services.legacy.proto.utils.CommonUtils;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.keys.KeyFactory;
 import com.hedera.test.factories.keys.KeyTree;
 import com.hedera.test.factories.keys.KeyTreeLeaf;
@@ -84,7 +84,7 @@ class PojoSigMapPubKeyToSigBytesTest {
                         .get();
         final var subject =
                 new PojoSigMapPubKeyToSigBytes(
-                        SignedTxnAccessor.uncheckedFrom(signedTxn).getSigMap());
+                        InProgressTransaction.uncheckedFrom(signedTxn).getSigMap());
         lookupsMatch(
                 payerKt,
                 defaultFactory,
@@ -110,7 +110,7 @@ class PojoSigMapPubKeyToSigBytesTest {
                         .get();
         final var subject =
                 new PojoSigMapPubKeyToSigBytes(
-                        SignedTxnAccessor.uncheckedFrom(signedTxn).getSigMap());
+                        InProgressTransaction.uncheckedFrom(signedTxn).getSigMap());
         lookupsMatch(
                 payerKt,
                 defaultFactory,
@@ -141,7 +141,7 @@ class PojoSigMapPubKeyToSigBytesTest {
         Transaction signedTxn = newSignedSystemDelete().payerKt(payerKt).nonPayerKts(otherKt).get();
         PubKeyToSigBytes subject =
                 new PojoSigMapPubKeyToSigBytes(
-                        SignedTxnAccessor.uncheckedFrom(signedTxn).getSigMap());
+                        InProgressTransaction.uncheckedFrom(signedTxn).getSigMap());
 
         // expect:
         lookupsMatch(

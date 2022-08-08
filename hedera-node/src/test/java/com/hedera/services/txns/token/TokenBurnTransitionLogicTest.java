@@ -35,7 +35,7 @@ import com.hedera.services.store.AccountStore;
 import com.hedera.services.store.TypedTokenStore;
 import com.hedera.services.store.models.Id;
 import com.hedera.services.txns.validation.OptionValidator;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.TokenBurnTransactionBody;
 import com.hederahashgraph.api.proto.java.TokenID;
@@ -56,7 +56,7 @@ class TokenBurnTransitionLogicTest {
     private final Id treasuryId = new Id(2, 4, 6);
 
     @Mock private TransactionContext txnCtx;
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
     @Mock private TransactionBody transactionBody;
     @Mock private TokenBurnTransactionBody burnTransactionBody;
     @Mock private OptionValidator validator;

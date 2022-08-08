@@ -27,7 +27,7 @@ import com.hedera.services.context.domain.security.HapiOpPermissions;
 import com.hedera.services.throttling.TransactionThrottling;
 import com.hedera.services.txns.auth.SystemOpAuthorization;
 import com.hedera.services.txns.auth.SystemOpPolicies;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.CryptoTransferTransactionBody;
@@ -44,8 +44,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class SystemPrecheckTest {
     private final AccountID systemPayer = IdUtils.asAccount("0.0.50");
     private final AccountID civilianPayer = IdUtils.asAccount("0.0.1234");
-    private final SignedTxnAccessor civilianXferAccessor =
-            SignedTxnAccessor.uncheckedFrom(
+    private final InProgressTransaction civilianXferAccessor =
+            InProgressTransaction.uncheckedFrom(
                     Transaction.newBuilder()
                             .setBodyBytes(
                                     TransactionBody.newBuilder()
@@ -58,8 +58,8 @@ class SystemPrecheckTest {
                                             .build()
                                             .toByteString())
                             .build());
-    private final SignedTxnAccessor systemXferAccessor =
-            SignedTxnAccessor.uncheckedFrom(
+    private final InProgressTransaction systemXferAccessor =
+            InProgressTransaction.uncheckedFrom(
                     Transaction.newBuilder()
                             .setBodyBytes(
                                     TransactionBody.newBuilder()

@@ -41,7 +41,7 @@ import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.MiscUtils;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.accounts.MerkleAccountFactory;
 import com.hedera.test.factories.scenarios.TxnHandlingScenario;
 import com.hedera.test.utils.IdUtils;
@@ -81,8 +81,8 @@ class SolvencyPrecheckTest {
                     .accountKeys(payerKey)
                     .balance(0L)
                     .get();
-    private final SignedTxnAccessor accessorCoveringAllFees =
-            SignedTxnAccessor.uncheckedFrom(
+    private final InProgressTransaction accessorCoveringAllFees =
+            InProgressTransaction.uncheckedFrom(
                     Transaction.newBuilder()
                             .setBodyBytes(
                                     TransactionBody.newBuilder()
@@ -94,8 +94,8 @@ class SolvencyPrecheckTest {
                                             .build()
                                             .toByteString())
                             .build());
-    private final SignedTxnAccessor accessorNotCoveringSvcFee =
-            SignedTxnAccessor.uncheckedFrom(
+    private final InProgressTransaction accessorNotCoveringSvcFee =
+            InProgressTransaction.uncheckedFrom(
                     Transaction.newBuilder()
                             .setBodyBytes(
                                     TransactionBody.newBuilder()

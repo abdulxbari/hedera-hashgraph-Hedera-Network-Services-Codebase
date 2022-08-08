@@ -34,7 +34,7 @@ import java.util.List;
  * Specialized accessor for TokenWipe transaction. Uses the latest signed state view for looking up
  * alias in the ServicesState.
  */
-public class TokenWipeAccessor extends SignedTxnAccessor {
+public class TokenWipeAccessor extends InProgressTransaction {
     private final TokenWipeAccountTransactionBody body;
     private final boolean areNftsEnabled;
     private final int maxBatchSizeWipe;

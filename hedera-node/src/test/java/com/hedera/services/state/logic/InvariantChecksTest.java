@@ -25,7 +25,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.hedera.services.context.NodeInfo;
 import com.hedera.services.state.merkle.MerkleNetworkContext;
 import com.hedera.services.utils.accessors.PlatformTxnAccessor;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.extensions.LogCaptor;
 import com.hedera.test.extensions.LogCaptureExtension;
 import com.hedera.test.extensions.LoggingSubject;
@@ -72,7 +72,7 @@ class InvariantChecksTest {
         final var swirldsTxn = new SwirldTransaction(mockTxn.toByteArray());
         accessor =
                 PlatformTxnAccessor.from(
-                        SignedTxnAccessor.from(swirldsTxn.getContents()), swirldsTxn);
+                        InProgressTransaction.from(swirldsTxn.getContents()), swirldsTxn);
         subject = new InvariantChecks(nodeInfo, () -> networkCtx);
     }
 

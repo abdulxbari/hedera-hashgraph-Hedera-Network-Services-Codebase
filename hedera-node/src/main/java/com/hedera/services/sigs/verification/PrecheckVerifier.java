@@ -23,7 +23,7 @@ import static com.hedera.services.sigs.PlatformSigOps.createCryptoSigsFrom;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.sigs.PlatformSigsCreationResult;
 import com.hedera.services.sigs.factories.ReusableBodySigningFactory;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.swirlds.common.crypto.TransactionSignature;
 import java.util.List;
 import java.util.function.Function;
@@ -61,7 +61,7 @@ public class PrecheckVerifier {
      * @return a flag giving the verdict on the precheck sigs for the txn.
      * @throws Exception if the txn doesn't reference valid keys or has malformed sigs.
      */
-    public boolean hasNecessarySignatures(SignedTxnAccessor accessor) throws Exception {
+    public boolean hasNecessarySignatures(InProgressTransaction accessor) throws Exception {
         try {
             List<JKey> reqKeys = precheckKeyReqs.getRequiredKeys(accessor.getTxn());
             List<TransactionSignature> availSigs = getAvailSigs(reqKeys, accessor);
@@ -73,7 +73,7 @@ public class PrecheckVerifier {
         }
     }
 
-    private List<TransactionSignature> getAvailSigs(List<JKey> reqKeys, SignedTxnAccessor accessor)
+    private List<TransactionSignature> getAvailSigs(List<JKey> reqKeys, InProgressTransaction accessor)
             throws Exception {
         final var pkToSigFn = accessor.getPkToSigsFn();
         final var sigFactory = new ReusableBodySigningFactory(accessor);

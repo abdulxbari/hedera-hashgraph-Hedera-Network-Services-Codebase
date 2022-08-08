@@ -23,7 +23,7 @@ import com.google.protobuf.ByteString;
 import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.queries.AnswerService;
 import com.hedera.services.txns.validation.OptionValidator;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.FileGetContentsResponse;
 import com.hederahashgraph.api.proto.java.FileID;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
@@ -105,8 +105,8 @@ public class GetFileContentsAnswer implements AnswerService {
     }
 
     @Override
-    public Optional<SignedTxnAccessor> extractPaymentFrom(Query query) {
+    public Optional<InProgressTransaction> extractPaymentFrom(Query query) {
         Transaction paymentTxn = query.getFileGetContents().getHeader().getPayment();
-        return Optional.ofNullable(SignedTxnAccessor.uncheckedFrom(paymentTxn));
+        return Optional.ofNullable(InProgressTransaction.uncheckedFrom(paymentTxn));
     }
 }

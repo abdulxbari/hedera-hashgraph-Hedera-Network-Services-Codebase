@@ -22,7 +22,7 @@ import com.hedera.services.fees.FeeMultiplierSource;
 import com.hedera.services.fees.charging.TxnChargingPolicyAgent;
 import com.hedera.services.throttling.FunctionalityThrottling;
 import com.hedera.services.throttling.annotations.HandleThrottle;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.services.utils.accessors.TxnAccessor;
 import com.hederahashgraph.api.proto.java.CryptoTransferTransactionBody;
 import com.hederahashgraph.api.proto.java.SignedTransaction;
@@ -46,7 +46,7 @@ public class NetworkUtilization {
     // validity
     // screen; the stand-in is a CryptoTransfer because it best reflects the work done charging fees
     static final TxnAccessor STAND_IN_CRYPTO_TRANSFER =
-            SignedTxnAccessor.uncheckedFrom(
+            InProgressTransaction.uncheckedFrom(
                     Transaction.newBuilder()
                             .setSignedTransactionBytes(
                                     SignedTransaction.newBuilder()

@@ -33,7 +33,7 @@ import com.hedera.services.exceptions.InvalidTransactionException;
 import com.hedera.services.store.TypedTokenStore;
 import com.hedera.services.store.models.Id;
 import com.hedera.services.store.models.Token;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.TokenID;
@@ -49,7 +49,7 @@ class TokenPauseTransitionLogicTest {
 
     private TypedTokenStore tokenStore;
     private TransactionContext txnCtx;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
     private Token token;
 
     private TransactionBody tokenPauseTxn;
@@ -58,7 +58,7 @@ class TokenPauseTransitionLogicTest {
     @BeforeEach
     private void setup() {
         tokenStore = mock(TypedTokenStore.class);
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         token = mock(Token.class);
 
         txnCtx = mock(TransactionContext.class);

@@ -45,7 +45,7 @@ import com.hedera.services.state.submerkle.RichInstant;
 import com.hedera.services.state.submerkle.TxnId;
 import com.hedera.services.utils.accessors.AccessorFactory;
 import com.hedera.services.utils.accessors.PlatformTxnAccessor;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.ExchangeRate;
 import com.hederahashgraph.api.proto.java.ExchangeRateSet;
@@ -258,7 +258,7 @@ class RecordCacheTest {
         given(histories.computeIfAbsent(argThat(txnId::equals), any())).willReturn(recentHistory);
         final var accessor =
                 PlatformTxnAccessor.from(
-                        SignedTxnAccessor.from(platformTxn.getContents()), platformTxn);
+                        InProgressTransaction.from(platformTxn.getContents()), platformTxn);
 
         final var expirableTxnRecordBuilder =
                 ExpirableTxnRecord.newBuilder()
@@ -303,7 +303,7 @@ class RecordCacheTest {
                 .triggeredTxn(
                         signedTxn.toByteArray(), effectivePayer, effectiveScheduleID, false, false);
         given(factory.constructSpecializedAccessor(signedTxn.toByteArray()))
-                .willReturn(SignedTxnAccessor.from(signedTxn.toByteArray()));
+                .willReturn(InProgressTransaction.from(signedTxn.toByteArray()));
         final var accessor =
                 factory.triggeredTxn(
                         signedTxn.toByteArray(), effectivePayer, effectiveScheduleID, false, false);

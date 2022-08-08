@@ -57,7 +57,7 @@ import com.hedera.services.store.models.Id;
 import com.hedera.services.txns.token.process.Creation;
 import com.hedera.services.txns.token.validators.CreateChecks;
 import com.hedera.services.txns.validation.OptionValidator;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.scenarios.TxnHandlingScenario;
 import com.hedera.test.factories.txns.SignedTxnFactory;
 import com.hedera.test.utils.IdUtils;
@@ -98,7 +98,7 @@ class TokenCreateTransitionLogicTest {
     @Mock private TypedTokenStore tokenStore;
     @Mock private OptionValidator validator;
     @Mock private TransactionContext txnCtx;
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
     @Mock private GlobalDynamicProperties dynamicProperties;
     @Mock private Creation.CreationFactory creationFactory;
     @Mock private SigImpactHistorian sigImpactHistorian;

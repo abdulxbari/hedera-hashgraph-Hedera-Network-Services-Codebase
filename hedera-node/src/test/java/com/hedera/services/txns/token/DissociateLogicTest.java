@@ -29,7 +29,7 @@ import com.hedera.services.store.models.TokenRelationship;
 import com.hedera.services.txns.token.process.Dissociation;
 import com.hedera.services.txns.token.process.DissociationFactory;
 import com.hedera.services.txns.validation.OptionValidator;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.TokenDissociateTransactionBody;
@@ -49,7 +49,7 @@ class DissociateLogicTest {
     private final Id accountId = new Id(1, 2, 3);
     private final Id tokenId = new Id(2, 3, 4);
 
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
     @Mock private TransactionContext txnCtx;
     @Mock private AccountStore accountStore;
     @Mock private Account account;

@@ -56,7 +56,7 @@ import com.hedera.services.state.submerkle.EntityId;
 import com.hedera.services.state.submerkle.RichInstant;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.txns.SignedTxnFactory;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ConsensusUpdateTopicTransactionBody;
@@ -93,7 +93,7 @@ class MerkleTopicUpdateTransitionLogicTest {
     private TransactionBody transactionBody;
     private TransactionContext transactionContext;
     private HederaLedger ledger;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
     private SigImpactHistorian sigImpactHistorian;
     private OptionValidator validator;
     private MerkleMap<EntityNum, MerkleAccount> accounts = new MerkleMap<>();
@@ -109,7 +109,7 @@ class MerkleTopicUpdateTransitionLogicTest {
 
         transactionContext = mock(TransactionContext.class);
         given(transactionContext.consensusTime()).willReturn(consensusTime);
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         validator = mock(OptionValidator.class);
         given(
                         validator.isValidAutoRenewPeriod(

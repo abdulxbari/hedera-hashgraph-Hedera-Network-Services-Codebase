@@ -20,7 +20,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.mock;
 import static org.mockito.BDDMockito.verify;
 
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.ConsensusCreateTopicTransactionBody;
 import com.hederahashgraph.api.proto.java.SignedTransaction;
 import com.hederahashgraph.api.proto.java.Transaction;
@@ -49,7 +49,7 @@ class TransactionThrottlingTest {
                                 ConsensusCreateTopicTransactionBody.newBuilder().setMemo("Hi!"))
                         .build();
         final var accessor =
-                SignedTxnAccessor.uncheckedFrom(
+                InProgressTransaction.uncheckedFrom(
                         Transaction.newBuilder()
                                 .setSignedTransactionBytes(
                                         SignedTransaction.newBuilder()

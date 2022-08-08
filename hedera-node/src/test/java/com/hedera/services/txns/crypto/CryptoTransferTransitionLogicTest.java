@@ -51,7 +51,7 @@ import com.hedera.services.state.submerkle.FcAssessedCustomFee;
 import com.hedera.services.state.submerkle.FcCustomFee;
 import com.hedera.services.store.models.Id;
 import com.hedera.services.txns.span.ExpandHandleSpanMapAccessor;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.CryptoTransferTransactionBody;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
@@ -100,7 +100,7 @@ class CryptoTransferTransitionLogicTest {
     @Mock private ImpliedTransfersMarshal impliedTransfersMarshal;
     @Mock private PureTransferSemanticChecks transferSemanticChecks;
     @Mock private ExpandHandleSpanMapAccessor spanMapAccessor;
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
 
     private TransactionBody cryptoTransferTxn;
 

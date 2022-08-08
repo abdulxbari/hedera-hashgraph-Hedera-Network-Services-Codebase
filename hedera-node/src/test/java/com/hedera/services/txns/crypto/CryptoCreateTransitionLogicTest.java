@@ -69,7 +69,7 @@ import com.hedera.services.state.submerkle.EntityId;
 import com.hedera.services.state.validation.UsageLimits;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.txns.SignedTxnFactory;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.CryptoCreateTransactionBody;
@@ -107,7 +107,7 @@ class CryptoCreateTransitionLogicTest {
     private TransactionBody cryptoCreateTxn;
     private SigImpactHistorian sigImpactHistorian;
     private TransactionContext txnCtx;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
     private GlobalDynamicProperties dynamicProperties;
     private CryptoCreateTransitionLogic subject;
     private MerkleMap<EntityNum, MerkleAccount> accounts;
@@ -120,7 +120,7 @@ class CryptoCreateTransitionLogicTest {
         usageLimits = mock(UsageLimits.class);
         given(txnCtx.consensusTime()).willReturn(consensusTime);
         ledger = mock(HederaLedger.class);
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         validator = mock(OptionValidator.class);
         sigImpactHistorian = mock(SigImpactHistorian.class);
         dynamicProperties = mock(GlobalDynamicProperties.class);

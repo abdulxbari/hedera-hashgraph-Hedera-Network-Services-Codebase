@@ -47,7 +47,7 @@ import com.hedera.services.fees.HbarCentExchange;
 import com.hedera.services.fees.calculation.UsagePricesProvider;
 import com.hedera.services.pricing.AssetsLoader;
 import com.hedera.services.store.contracts.precompile.Precompile;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.hederahashgraph.api.proto.java.Query;
 import com.hederahashgraph.api.proto.java.SignatureMap;
@@ -144,7 +144,7 @@ public class PrecompilePricingUtils {
                         .setSignedTransactionBytes(signedTxn.toByteString())
                         .build();
 
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
         precompile.addImplicitCostsIn(accessor);
         final var fees =
                 feeCalculator.get().computeFee(accessor, EMPTY_KEY, currentView, consensusTime);

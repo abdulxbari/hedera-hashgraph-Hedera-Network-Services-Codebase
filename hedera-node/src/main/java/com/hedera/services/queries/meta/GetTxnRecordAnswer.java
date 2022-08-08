@@ -26,7 +26,7 @@ import com.hedera.services.queries.AnswerService;
 import com.hedera.services.queries.answering.AnswerFunctions;
 import com.hedera.services.records.RecordCache;
 import com.hedera.services.txns.validation.OptionValidator;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.hederahashgraph.api.proto.java.Query;
@@ -181,8 +181,8 @@ public class GetTxnRecordAnswer implements AnswerService {
     }
 
     @Override
-    public Optional<SignedTxnAccessor> extractPaymentFrom(final Query query) {
+    public Optional<InProgressTransaction> extractPaymentFrom(final Query query) {
         final var paymentTxn = query.getTransactionGetRecord().getHeader().getPayment();
-        return Optional.ofNullable(SignedTxnAccessor.uncheckedFrom(paymentTxn));
+        return Optional.ofNullable(InProgressTransaction.uncheckedFrom(paymentTxn));
     }
 }

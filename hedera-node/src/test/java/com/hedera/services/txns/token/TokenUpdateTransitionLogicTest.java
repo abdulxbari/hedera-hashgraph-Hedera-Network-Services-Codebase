@@ -58,7 +58,7 @@ import com.hedera.services.state.submerkle.EntityId;
 import com.hedera.services.store.models.NftId;
 import com.hedera.services.store.tokens.TokenStore;
 import com.hedera.services.txns.validation.OptionValidator;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.Key;
@@ -93,7 +93,7 @@ class TokenUpdateTransitionLogicTest {
     private HederaLedger ledger;
     private TransactionContext txnCtx;
     private SigImpactHistorian sigImpactHistorian;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
     private Predicate<TokenUpdateTransactionBody> expiryOnlyCheck;
 
     private TokenUpdateTransitionLogic subject;
@@ -103,7 +103,7 @@ class TokenUpdateTransitionLogicTest {
         validator = mock(OptionValidator.class);
         store = mock(TokenStore.class);
         ledger = mock(HederaLedger.class);
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         sigImpactHistorian = mock(SigImpactHistorian.class);
 
         token = mock(MerkleToken.class);

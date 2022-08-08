@@ -34,7 +34,7 @@ import com.hedera.services.ledger.SigImpactHistorian;
 import com.hedera.services.legacy.core.jproto.JEd25519Key;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.store.schedule.ScheduleStore;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.ScheduleID;
 import com.hederahashgraph.fee.FeeObject;
@@ -53,7 +53,7 @@ class TriggeredTransitionTest {
     private final FeeObject fee = new FeeObject(1, 2, 3);
     private static final ScheduleID scheduleId = IdUtils.asSchedule("0.0.333333");
 
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
     @Mock private StateView currentView;
     @Mock private FeeCalculator fees;
     @Mock private FeeChargingPolicy chargingPolicy;

@@ -24,7 +24,7 @@ import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.queries.AnswerService;
 import com.hedera.services.queries.answering.AnswerFunctions;
 import com.hedera.services.txns.validation.OptionValidator;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.CryptoGetAccountRecordsQuery;
 import com.hederahashgraph.api.proto.java.CryptoGetAccountRecordsResponse;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
@@ -138,8 +138,8 @@ public class GetAccountRecordsAnswer implements AnswerService {
     }
 
     @Override
-    public Optional<SignedTxnAccessor> extractPaymentFrom(final Query query) {
+    public Optional<InProgressTransaction> extractPaymentFrom(final Query query) {
         final var paymentTxn = query.getCryptoGetAccountRecords().getHeader().getPayment();
-        return Optional.of(SignedTxnAccessor.uncheckedFrom(paymentTxn));
+        return Optional.of(InProgressTransaction.uncheckedFrom(paymentTxn));
     }
 }

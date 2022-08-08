@@ -50,8 +50,8 @@ import com.hedera.services.sigs.verification.SyncVerifier;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.txns.auth.SystemOpPolicies;
 import com.hedera.services.utils.EntityNum;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.services.utils.accessors.PlatformTxnAccessor;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
 import com.hedera.test.factories.scenarios.TxnHandlingScenario;
 import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionBody;
@@ -166,7 +166,7 @@ class SigVerifierRegressionTest {
 
     private boolean sigVerifies(Transaction signedTxn) throws Exception {
         try {
-            SignedTxnAccessor accessor = SignedTxnAccessor.from(signedTxn.toByteArray(), signedTxn);
+            InProgressTransaction accessor = InProgressTransaction.from(signedTxn.toByteArray(), signedTxn);
             return precheckVerifier.hasNecessarySignatures(accessor);
         } catch (InvalidProtocolBufferException ignore) {
             return false;

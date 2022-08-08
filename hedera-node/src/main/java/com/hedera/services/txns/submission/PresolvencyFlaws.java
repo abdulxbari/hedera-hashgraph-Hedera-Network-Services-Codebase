@@ -33,7 +33,7 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.TRANSACTION_OV
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.TRANSACTION_TOO_MANY_LAYERS;
 
 import com.hedera.services.context.domain.process.TxnValidityAndFeeReq;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import java.util.EnumMap;
 import java.util.Map;
@@ -41,7 +41,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 /** Error response factory that caches well-known responses by status code. */
 public final class PresolvencyFlaws {
-    static final Map<ResponseCodeEnum, Pair<TxnValidityAndFeeReq, SignedTxnAccessor>>
+    static final Map<ResponseCodeEnum, Pair<TxnValidityAndFeeReq, InProgressTransaction>>
             WELL_KNOWN_FLAWS = new EnumMap<>(ResponseCodeEnum.class);
 
     static {
@@ -65,19 +65,19 @@ public final class PresolvencyFlaws {
         putTo(WELL_KNOWN_FLAWS, DUPLICATE_TRANSACTION);
     }
 
-    static Pair<TxnValidityAndFeeReq, SignedTxnAccessor> responseForFlawed(
+    static Pair<TxnValidityAndFeeReq, InProgressTransaction> responseForFlawed(
             final ResponseCodeEnum status) {
         final var response = WELL_KNOWN_FLAWS.get(status);
         return (null != response) ? response : failureWithUnknownFeeReq(status);
     }
 
-    private static Pair<TxnValidityAndFeeReq, SignedTxnAccessor> failureWithUnknownFeeReq(
+    private static Pair<TxnValidityAndFeeReq, InProgressTransaction> failureWithUnknownFeeReq(
             final ResponseCodeEnum error) {
         return Pair.of(new TxnValidityAndFeeReq(error), null);
     }
 
     private static void putTo(
-            final Map<ResponseCodeEnum, Pair<TxnValidityAndFeeReq, SignedTxnAccessor>> map,
+            final Map<ResponseCodeEnum, Pair<TxnValidityAndFeeReq, InProgressTransaction>> map,
             final ResponseCodeEnum code) {
         map.put(code, failureWithUnknownFeeReq(code));
     }

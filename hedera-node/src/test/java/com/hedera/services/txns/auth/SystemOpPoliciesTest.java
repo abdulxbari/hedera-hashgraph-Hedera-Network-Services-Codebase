@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.hedera.services.config.MockEntityNumbers;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ContractDeleteTransactionBody;
@@ -673,7 +673,7 @@ class SystemOpPoliciesTest {
                 AUTHORIZED, subject.checkAccessor(accessorWithPayer(otherUpdateTxn, account(2))));
     }
 
-    private SignedTxnAccessor accessor(TransactionBody.Builder transaction)
+    private InProgressTransaction accessor(TransactionBody.Builder transaction)
             throws InvalidProtocolBufferException {
         var txn =
                 TransactionBody.newBuilder()
@@ -681,7 +681,7 @@ class SystemOpPoliciesTest {
                         .clearTransactionID()
                         .build();
         var accessor =
-                SignedTxnAccessor.from(
+                InProgressTransaction.from(
                         Transaction.newBuilder()
                                 .setBodyBytes(txn.toByteString())
                                 .build()
@@ -690,10 +690,10 @@ class SystemOpPoliciesTest {
         return accessor;
     }
 
-    private SignedTxnAccessor accessorWithPayer(TransactionBody.Builder txn, AccountID payer)
+    private InProgressTransaction accessorWithPayer(TransactionBody.Builder txn, AccountID payer)
             throws InvalidProtocolBufferException {
         var accessor =
-                SignedTxnAccessor.from(
+                InProgressTransaction.from(
                         Transaction.newBuilder()
                                 .setBodyBytes(txn.build().toByteString())
                                 .build()

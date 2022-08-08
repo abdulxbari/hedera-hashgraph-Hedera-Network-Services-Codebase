@@ -33,7 +33,7 @@ import com.hedera.services.context.SideEffectsTracker;
 import com.hedera.services.context.TransactionContext;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.stream.RecordsRunningHashLeaf;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.TxnUtils;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import com.hederahashgraph.api.proto.java.UtilPrngTransactionBody;
@@ -51,7 +51,7 @@ class UtilPrngTransitionLogicTest {
     private SideEffectsTracker tracker = new SideEffectsTracker();
     @Mock private RecordsRunningHashLeaf runningHashLeaf;
     @Mock private TransactionContext txnCtx;
-    @Mock private SignedTxnAccessor accessor;
+    @Mock private InProgressTransaction accessor;
     @Mock private GlobalDynamicProperties properties;
 
     private UtilPrngTransitionLogic subject;

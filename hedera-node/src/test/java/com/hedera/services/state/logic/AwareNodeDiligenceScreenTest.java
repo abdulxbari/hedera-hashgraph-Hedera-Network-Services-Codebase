@@ -41,7 +41,7 @@ import com.hedera.services.context.TransactionContext;
 import com.hedera.services.ledger.backing.BackingStore;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.txns.validation.OptionValidator;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.extensions.LogCaptor;
 import com.hedera.test.extensions.LogCaptureExtension;
 import com.hedera.test.extensions.LoggingSubject;
@@ -72,7 +72,7 @@ class AwareNodeDiligenceScreenTest {
     private static final Duration validDuration =
             Duration.newBuilder().setSeconds(1_234_567L).build();
 
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
 
     @Mock private TransactionContext txnCtx;
     @Mock private OptionValidator validator;
@@ -232,7 +232,7 @@ class AwareNodeDiligenceScreenTest {
         given(txnCtx.accessor()).willReturn(accessor);
     }
 
-    private SignedTxnAccessor accessorWith(final AccountID designatedNodeAccount)
+    private InProgressTransaction accessorWith(final AccountID designatedNodeAccount)
             throws InvalidProtocolBufferException {
         final var transactionId = TransactionID.newBuilder().setAccountID(payerAccountId);
 
@@ -252,7 +252,7 @@ class AwareNodeDiligenceScreenTest {
                                         .build()
                                         .toByteString())
                         .build();
-        return SignedTxnAccessor.from(signedTxn.toByteArray(), signedTxn);
+        return InProgressTransaction.from(signedTxn.toByteArray(), signedTxn);
     }
 
     /**

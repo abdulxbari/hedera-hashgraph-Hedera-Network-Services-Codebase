@@ -33,8 +33,8 @@ import com.hedera.services.legacy.exception.KeyPrefixMismatchException;
 import com.hedera.services.sigs.PlatformSigOps;
 import com.hedera.services.sigs.factories.ReusableBodySigningFactory;
 import com.hedera.services.sigs.sourcing.PubKeyToSigBytes;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.services.utils.accessors.PlatformTxnAccessor;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
 import com.hedera.test.factories.keys.KeyTree;
 import com.hedera.test.factories.txns.PlatformTxnFactory;
 import com.hedera.test.utils.IdUtils;
@@ -78,7 +78,7 @@ class PrecheckVerifierTest {
 
     private PrecheckKeyReqs precheckKeyReqs;
     private PrecheckVerifier subject;
-    private SignedTxnAccessor mockAccessor;
+    private InProgressTransaction mockAccessor;
     private static AliasManager aliasManager;
 
     @BeforeAll
@@ -86,7 +86,7 @@ class PrecheckVerifierTest {
         aliasManager = mock(AliasManager.class);
         realAccessor =
                 PlatformTxnAccessor.from(
-                        SignedTxnAccessor.from(txn.toByteArray()), PlatformTxnFactory.from(txn));
+                        InProgressTransaction.from(txn.toByteArray()), PlatformTxnFactory.from(txn));
         reqKeys =
                 List.of(
                         KeyTree.withRoot(list(ed25519(), list(ed25519(), ed25519()))).asJKey(),
@@ -102,7 +102,7 @@ class PrecheckVerifierTest {
     @BeforeEach
     void setup() {
         precheckKeyReqs = mock(PrecheckKeyReqs.class);
-        mockAccessor = mock(SignedTxnAccessor.class);
+        mockAccessor = mock(InProgressTransaction.class);
         given(mockAccessor.getTxn()).willReturn(realAccessor.getTxn());
         given(mockAccessor.getTxnBytes()).willReturn(realAccessor.getTxnBytes());
         given(mockAccessor.getPkToSigsFn()).willReturn(VALID_PROVIDER_FACTORY.get());

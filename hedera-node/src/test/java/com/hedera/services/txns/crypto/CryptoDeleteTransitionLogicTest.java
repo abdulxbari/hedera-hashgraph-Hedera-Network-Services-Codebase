@@ -43,7 +43,7 @@ import com.hedera.services.exceptions.DeletedAccountException;
 import com.hedera.services.exceptions.MissingEntityException;
 import com.hedera.services.ledger.HederaLedger;
 import com.hedera.services.ledger.SigImpactHistorian;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.extensions.LogCaptor;
 import com.hedera.test.extensions.LogCaptureExtension;
 import com.hedera.test.extensions.LoggingSubject;
@@ -70,7 +70,7 @@ class CryptoDeleteTransitionLogicTest {
     private TransactionBody cryptoDeleteTxn;
     private SigImpactHistorian sigImpactHistorian;
     private TransactionContext txnCtx;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
 
     @LoggingTarget private LogCaptor logCaptor;
     @LoggingSubject private CryptoDeleteTransitionLogic subject;
@@ -79,7 +79,7 @@ class CryptoDeleteTransitionLogicTest {
     private void setup() {
         txnCtx = mock(TransactionContext.class);
         ledger = mock(HederaLedger.class);
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         sigImpactHistorian = mock(SigImpactHistorian.class);
 
         given(ledger.allTokenBalancesVanish(target)).willReturn(true);

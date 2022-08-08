@@ -27,7 +27,7 @@ import static com.swirlds.common.system.PlatformStatus.ACTIVE;
 import com.hedera.services.context.CurrentPlatformStatus;
 import com.hedera.services.context.domain.process.TxnValidityAndFeeReq;
 import com.hedera.services.queries.validation.QueryFeeCheck;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.services.utils.accessors.TxnAccessor;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.Transaction;
@@ -67,12 +67,12 @@ public final class TransactionPrecheck {
         this.currentPlatformStatus = currentPlatformStatus;
     }
 
-    public Pair<TxnValidityAndFeeReq, SignedTxnAccessor> performForTopLevel(
+    public Pair<TxnValidityAndFeeReq, InProgressTransaction> performForTopLevel(
             final Transaction signedTxn) {
         return performance(signedTxn, TOP_LEVEL_CHARACTERISTICS);
     }
 
-    public Pair<TxnValidityAndFeeReq, SignedTxnAccessor> performForQueryPayment(
+    public Pair<TxnValidityAndFeeReq, InProgressTransaction> performForQueryPayment(
             final Transaction signedTxn) {
         final var prelim = performance(signedTxn, QUERY_PAYMENT_CHARACTERISTICS);
         final var accessor = prelim.getRight();
@@ -89,7 +89,7 @@ public final class TransactionPrecheck {
         return prelim;
     }
 
-    private Pair<TxnValidityAndFeeReq, SignedTxnAccessor> performance(
+    private Pair<TxnValidityAndFeeReq, InProgressTransaction> performance(
             final Transaction signedTxn, final Set<Characteristic> characteristics) {
         if (currentPlatformStatus.get() != ACTIVE) {
             return WELL_KNOWN_FLAWS.get(PLATFORM_NOT_ACTIVE);
@@ -132,7 +132,7 @@ public final class TransactionPrecheck {
         return Pair.of(solvencyStatus, accessor);
     }
 
-    private Pair<TxnValidityAndFeeReq, SignedTxnAccessor> failureFor(
+    private Pair<TxnValidityAndFeeReq, InProgressTransaction> failureFor(
             final TxnValidityAndFeeReq feeReqStatus) {
         return Pair.of(feeReqStatus, null);
     }

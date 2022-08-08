@@ -55,7 +55,7 @@ import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.state.merkle.MerkleNetworkContext;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.MiscUtils;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.scenarios.TxnHandlingScenario;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
@@ -102,7 +102,7 @@ class FileUpdateTransitionLogicTest {
 
     TransactionID txnId;
     TransactionBody fileUpdateTxn;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
 
     HederaFs hfs;
     OptionValidator validator;
@@ -123,7 +123,7 @@ class FileUpdateTransitionLogicTest {
         actionableNewWacl = TxnHandlingScenario.MISC_FILE_WACL_KT.asJKey();
         newAttr = new HFileMeta(false, actionableNewWacl, newExpiry, newMemo);
 
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         txnCtx = mock(TransactionContext.class);
         given(txnCtx.activePayer()).willReturn(nonSysAdmin);
 

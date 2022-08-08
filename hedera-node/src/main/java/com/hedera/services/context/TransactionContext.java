@@ -23,7 +23,7 @@ import com.hedera.services.state.submerkle.EvmFnResult;
 import com.hedera.services.state.submerkle.ExpirableTxnRecord;
 import com.hedera.services.state.submerkle.FcAssessedCustomFee;
 import com.hedera.services.stream.proto.TransactionSidecarRecord;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.services.utils.accessors.SwirldsTxnAccessor;
 import com.hedera.services.utils.accessors.TxnAccessor;
 import com.hederahashgraph.api.proto.java.AccountID;
@@ -119,7 +119,7 @@ public interface TransactionContext {
     ExpirableTxnRecord.Builder recordSoFar();
 
     /**
-     * Gets an accessor to the defined type {@link SignedTxnAccessor} currently being processed.
+     * Gets an accessor to the defined type {@link InProgressTransaction} currently being processed.
      *
      * @return accessor for the current txn.
      */

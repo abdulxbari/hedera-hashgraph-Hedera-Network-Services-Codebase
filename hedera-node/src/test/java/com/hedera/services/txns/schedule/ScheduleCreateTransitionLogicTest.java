@@ -51,7 +51,7 @@ import com.hedera.services.state.virtual.schedule.ScheduleVirtualValue;
 import com.hedera.services.store.CreationResult;
 import com.hedera.services.store.schedule.ScheduleStore;
 import com.hedera.services.txns.validation.OptionValidator;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.factories.txns.SignedTxnFactory;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
@@ -111,7 +111,7 @@ class ScheduleCreateTransitionLogicTest {
     private OptionValidator validator;
     private ScheduleStore store;
     private ScheduleVirtualValue scheduleValue;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
     private TransactionContext txnCtx;
     private SignatoryUtils.ScheduledSigningsWitness replSigningWitness;
     private ScheduleExecutor executor;
@@ -128,7 +128,7 @@ class ScheduleCreateTransitionLogicTest {
     private void setup() throws InvalidProtocolBufferException {
         validator = mock(OptionValidator.class);
         store = mock(ScheduleStore.class);
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         activationHelper = mock(InHandleActivationHelper.class);
         replSigningWitness = mock(SignatoryUtils.ScheduledSigningsWitness.class);
         executor = mock(ScheduleExecutor.class);

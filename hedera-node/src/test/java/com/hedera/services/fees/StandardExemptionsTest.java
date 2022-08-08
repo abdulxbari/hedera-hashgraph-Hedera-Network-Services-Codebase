@@ -24,7 +24,7 @@ import static org.mockito.BDDMockito.mock;
 
 import com.hedera.services.config.MockAccountNumbers;
 import com.hedera.services.txns.auth.SystemOpPolicies;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,14 +32,14 @@ import org.junit.jupiter.api.Test;
 
 class StandardExemptionsTest {
     SystemOpPolicies policies;
-    SignedTxnAccessor accessor;
+    InProgressTransaction accessor;
 
     StandardExemptions subject;
 
     @BeforeEach
     void setup() {
         policies = mock(SystemOpPolicies.class);
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
 
         subject = new StandardExemptions(new MockAccountNumbers(), policies);
     }

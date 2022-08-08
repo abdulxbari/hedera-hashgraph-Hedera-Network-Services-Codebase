@@ -20,7 +20,7 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
 
 import com.hedera.services.stats.HapiOpCounters;
 import com.hedera.services.txns.SubmissionFlow;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionResponse;
@@ -68,7 +68,7 @@ public final class TxnResponseHelper {
         try {
             response = submissionFlow.submit(signedTxn);
         } catch (final Exception surprising) {
-            final var accessor = SignedTxnAccessor.uncheckedFrom(signedTxn);
+            final var accessor = InProgressTransaction.uncheckedFrom(signedTxn);
             log.warn(
                     "Submission flow unable to submit {}!",
                     accessor.getSignedTxnWrapper(),

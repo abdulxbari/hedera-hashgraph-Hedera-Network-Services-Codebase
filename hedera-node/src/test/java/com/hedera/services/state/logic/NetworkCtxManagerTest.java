@@ -43,7 +43,8 @@ import com.hedera.services.state.submerkle.ExchangeRates;
 import com.hedera.services.stats.HapiOpCounters;
 import com.hedera.services.stats.MiscRunningAvgs;
 import com.hedera.services.throttling.FunctionalityThrottling;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
+
 import java.time.Instant;
 import java.util.Optional;
 import java.util.function.BiPredicate;
@@ -72,7 +73,7 @@ class NetworkCtxManagerTest {
     @Mock private FunctionalityThrottling handleThrottling;
     @Mock private BiPredicate<Instant, Instant> shouldUpdateMidnightRates;
     @Mock private TransactionContext txnCtx;
-    @Mock private SignedTxnAccessor txnAccessor;
+    @Mock private InProgressTransaction txnAccessor;
     @Mock private MiscRunningAvgs runningAvgs;
     @Mock private EndOfStakingPeriodCalculator endOfStakingPeriodCalculator;
     @Mock private PropertySource propertySource;

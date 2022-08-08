@@ -31,7 +31,7 @@ import static org.mockito.Mockito.verify;
 import com.hedera.services.context.TransactionContext;
 import com.hedera.services.ledger.SigImpactHistorian;
 import com.hedera.services.store.schedule.ScheduleStore;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.extensions.LogCaptor;
 import com.hedera.test.extensions.LogCaptureExtension;
 import com.hedera.test.extensions.LoggingSubject;
@@ -54,7 +54,7 @@ class ScheduleDeleteTransitionLogicTest {
 
     private ScheduleStore store;
     private SigImpactHistorian sigImpactHistorian;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
     private TransactionContext txnCtx;
 
     private TransactionBody scheduleDeleteTxn;
@@ -66,7 +66,7 @@ class ScheduleDeleteTransitionLogicTest {
     @BeforeEach
     private void setup() {
         store = mock(ScheduleStore.class);
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         txnCtx = mock(TransactionContext.class);
         sigImpactHistorian = mock(SigImpactHistorian.class);
         subject = new ScheduleDeleteTransitionLogic(store, txnCtx, sigImpactHistorian);

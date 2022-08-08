@@ -31,8 +31,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
 import com.hedera.services.context.TransactionContext;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.services.utils.accessors.PlatformTxnAccessor;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import com.swirlds.common.system.Platform;
@@ -100,7 +100,7 @@ class HapiOpCountersTest {
     void updatesAvgSubmitMessageHdlSizeForHandled() {
         final var expectedSize = 12345;
         final var txn = mock(TransactionBody.class);
-        final var accessor = mock(SignedTxnAccessor.class);
+        final var accessor = mock(InProgressTransaction.class);
         given(txn.getSerializedSize()).willReturn(expectedSize);
         given(accessor.getTxn()).willReturn(txn);
         given(txnCtx.accessor()).willReturn(accessor);

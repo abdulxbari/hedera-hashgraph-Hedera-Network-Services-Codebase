@@ -17,7 +17,7 @@ package com.hedera.services.queries.answering;
 
 import static com.hedera.services.txns.submission.SystemPrecheck.RESTRICTED_FUNCTIONALITIES;
 import static com.hedera.services.utils.MiscUtils.asTimestamp;
-import static com.hedera.services.utils.accessors.SignedTxnAccessor.IS_THROTTLE_EXEMPT;
+import static com.hedera.services.utils.accessors.InProgressTransaction.IS_THROTTLE_EXEMPT;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.BUSY;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INSUFFICIENT_TX_FEE;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.NOT_SUPPORTED;
@@ -35,7 +35,7 @@ import com.hedera.services.queries.validation.QueryFeeCheck;
 import com.hedera.services.throttling.FunctionalityThrottling;
 import com.hedera.services.txns.submission.PlatformSubmissionManager;
 import com.hedera.services.txns.submission.TransactionPrecheck;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.hederahashgraph.api.proto.java.Query;
@@ -92,7 +92,7 @@ public final class StakedAnswerFlow implements AnswerFlow {
             return service.responseGiven(query, view, headerStatus);
         }
 
-        SignedTxnAccessor optionalPayment = null;
+        InProgressTransaction optionalPayment = null;
         final var allegedPayment = service.extractPaymentFrom(query);
         final var isPaymentRequired = service.requiresNodePayment(query);
         if (isPaymentRequired && allegedPayment.isPresent()) {
@@ -138,7 +138,7 @@ public final class StakedAnswerFlow implements AnswerFlow {
         return service.responseGiven(query, view, OK, fee, queryCtx);
     }
 
-    private ResponseCodeEnum tryToPay(@Nonnull final SignedTxnAccessor payment, final long fee) {
+    private ResponseCodeEnum tryToPay(@Nonnull final InProgressTransaction payment, final long fee) {
         if (accountNums.isSuperuser(payment.getPayer().getAccountNum())) {
             return OK;
         }
@@ -156,7 +156,7 @@ public final class StakedAnswerFlow implements AnswerFlow {
             final Query query,
             final StateView view,
             final AnswerService service,
-            @Nullable final SignedTxnAccessor optionalPayment) {
+            @Nullable final InProgressTransaction optionalPayment) {
         final var isPaymentRequired = service.requiresNodePayment(query);
         if (isPaymentRequired && null == optionalPayment) {
             return INSUFFICIENT_TX_FEE;
@@ -172,7 +172,7 @@ public final class StakedAnswerFlow implements AnswerFlow {
 
     private ResponseCodeEnum systemScreen(
             final HederaFunctionality function,
-            @Nullable final SignedTxnAccessor payment,
+            @Nullable final InProgressTransaction payment,
             final Query query) {
         AccountID payer = null;
         if (null != payment) {

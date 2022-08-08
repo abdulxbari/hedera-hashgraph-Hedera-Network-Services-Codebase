@@ -28,7 +28,7 @@ import static org.mockito.BDDMockito.verify;
 
 import com.hedera.services.context.NodeInfo;
 import com.hedera.services.context.domain.process.TxnValidityAndFeeReq;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.Transaction;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
@@ -45,7 +45,7 @@ class BasicSubmissionFlowTest {
             new TxnValidityAndFeeReq(OK, someReqFee);
 
     private static final Transaction someTxn = Transaction.getDefaultInstance();
-    private static final SignedTxnAccessor someAccessor = SignedTxnAccessor.uncheckedFrom(someTxn);
+    private static final InProgressTransaction someAccessor = InProgressTransaction.uncheckedFrom(someTxn);
 
     @Mock private NodeInfo nodeInfo;
     @Mock private TransactionPrecheck precheck;

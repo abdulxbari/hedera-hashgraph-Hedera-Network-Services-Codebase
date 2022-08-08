@@ -177,7 +177,7 @@ class SignedTxnAccessorTest {
         final var nonsenseTxn = buildTransactionFrom(ByteString.copyFromUtf8("NONSENSE"));
 
         assertThrows(
-                IllegalArgumentException.class, () -> SignedTxnAccessor.uncheckedFrom(nonsenseTxn));
+                IllegalArgumentException.class, () -> InProgressTransaction.uncheckedFrom(nonsenseTxn));
     }
 
     @Test
@@ -249,7 +249,7 @@ class SignedTxnAccessorTest {
                 xferWithAliasesNoAutoCreation.toBuilder().setSigMap(expectedMap).build();
         final var body = CommonUtils.extractTransactionBody(xferNoAliases);
 
-        var accessor = SignedTxnAccessor.uncheckedFrom(xferNoAliases);
+        var accessor = InProgressTransaction.uncheckedFrom(xferNoAliases);
         accessor.countAutoCreationsWith(aliasManager);
         final var txnUsageMeta = accessor.baseUsageMeta();
 
@@ -279,11 +279,11 @@ class SignedTxnAccessorTest {
         assertEquals(0, accessor.getNumAutoCreations());
         assertEquals(memoUtf8Bytes.length, txnUsageMeta.memoUtf8Bytes());
 
-        accessor = SignedTxnAccessor.uncheckedFrom(xferWithAutoCreation);
+        accessor = InProgressTransaction.uncheckedFrom(xferWithAutoCreation);
         accessor.countAutoCreationsWith(aliasManager);
         assertEquals(1, accessor.getNumAutoCreations());
 
-        accessor = SignedTxnAccessor.uncheckedFrom(xferWithAliasesNoAutoCreation);
+        accessor = InProgressTransaction.uncheckedFrom(xferWithAliasesNoAutoCreation);
         accessor.countAutoCreationsWith(aliasManager);
         assertEquals(0, accessor.getNumAutoCreations());
     }
@@ -293,14 +293,14 @@ class SignedTxnAccessorTest {
         final var op = TokenBurnTransactionBody.newBuilder().setAmount(1_234).build();
         final var txn = buildTransactionFrom(TransactionBody.newBuilder().setTokenBurn(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         assertEquals(TOKEN_FUNGIBLE_COMMON, subject.getSubType());
     }
 
     @Test
     void usesUnmodifiableFormOfRationalizedSpanMap() {
-        final var subject = SignedTxnAccessor.uncheckedFrom(Transaction.getDefaultInstance());
+        final var subject = InProgressTransaction.uncheckedFrom(Transaction.getDefaultInstance());
 
         final var newMap = new HashMap<String, Object>();
         newMap.put("1", new Object());
@@ -312,7 +312,7 @@ class SignedTxnAccessorTest {
 
     @Test
     void canGetSetNumAutoCreations() {
-        final var accessor = SignedTxnAccessor.uncheckedFrom(Transaction.getDefaultInstance());
+        final var accessor = InProgressTransaction.uncheckedFrom(Transaction.getDefaultInstance());
         assertFalse(accessor.areAutoCreationsCounted());
         accessor.setNumAutoCreations(2);
         assertEquals(2, accessor.getNumAutoCreations());
@@ -322,7 +322,7 @@ class SignedTxnAccessorTest {
 
     @Test
     void canGetExpandedSigStatus() {
-        final var accessor = SignedTxnAccessor.uncheckedFrom(Transaction.getDefaultInstance());
+        final var accessor = InProgressTransaction.uncheckedFrom(Transaction.getDefaultInstance());
         assertNull(accessor.getExpandedSigStatus());
         accessor.setExpandedSigStatus(ResponseCodeEnum.ACCOUNT_DELETED);
         assertEquals(ResponseCodeEnum.ACCOUNT_DELETED, accessor.getExpandedSigStatus());
@@ -338,7 +338,7 @@ class SignedTxnAccessorTest {
                         .build();
         final var txn = buildTransactionFrom(TransactionBody.newBuilder().setTokenBurn(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         assertEquals(TOKEN_NON_FUNGIBLE_UNIQUE, subject.getSubType());
     }
@@ -348,7 +348,7 @@ class SignedTxnAccessorTest {
         final var op = TokenMintTransactionBody.newBuilder().setAmount(1_234).build();
         final var txn = buildTransactionFrom(TransactionBody.newBuilder().setTokenMint(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         assertEquals(TOKEN_FUNGIBLE_COMMON, subject.getSubType());
     }
@@ -361,7 +361,7 @@ class SignedTxnAccessorTest {
                         .build();
         final var txn = buildTransactionFrom(TransactionBody.newBuilder().setTokenMint(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         assertEquals(TOKEN_NON_FUNGIBLE_UNIQUE, subject.getSubType());
     }
@@ -385,7 +385,7 @@ class SignedTxnAccessorTest {
                         .build();
 
         var txn = buildTokenTransferTxn(nftTransfers);
-        var subject = SignedTxnAccessor.from(txn.toByteArray());
+        var subject = InProgressTransaction.from(txn.toByteArray());
         assertEquals(SubType.TOKEN_NON_FUNGIBLE_UNIQUE, subject.availXferUsageMeta().getSubType());
         assertEquals(subject.availXferUsageMeta().getSubType(), subject.getSubType());
 
@@ -396,7 +396,7 @@ class SignedTxnAccessorTest {
         xferUsageMeta.setCustomFeeHbarTransfers(0);
 
         txn = buildTokenTransferTxn(fungibleTokenXfers);
-        subject = SignedTxnAccessor.from(txn.toByteArray(), txn);
+        subject = InProgressTransaction.from(txn.toByteArray(), txn);
         assertEquals(TOKEN_FUNGIBLE_COMMON, subject.availXferUsageMeta().getSubType());
         assertEquals(subject.availXferUsageMeta().getSubType(), subject.getSubType());
 
@@ -407,14 +407,14 @@ class SignedTxnAccessorTest {
         xferUsageMeta.setCustomFeeTokenTransfers(0);
 
         txn = buildDefaultCryptoCreateTxn();
-        subject = SignedTxnAccessor.from(txn.toByteArray(), txn);
+        subject = InProgressTransaction.from(txn.toByteArray(), txn);
         assertEquals(SubType.DEFAULT, subject.getSubType());
     }
 
     @Test
     void understandsFullXferUsageIncTokens() {
         final var txn = buildTransactionFrom(tokenXfers());
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         final var xferMeta = subject.availXferUsageMeta();
 
@@ -427,7 +427,7 @@ class SignedTxnAccessorTest {
     void rejectsRequestForMetaIfNotAvail() {
         final var txn = buildDefaultCryptoCreateTxn();
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         assertEquals(SubType.DEFAULT, subject.getSubType());
         assertThrows(IllegalStateException.class, subject::availXferUsageMeta);
@@ -444,7 +444,7 @@ class SignedTxnAccessorTest {
                                         .setMessage(ByteString.copyFromUtf8(message)))
                         .build();
         final var txn = buildTransactionFrom(txnBody);
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         final var submitMeta = subject.availSubmitUsageMeta();
 
@@ -473,7 +473,7 @@ class SignedTxnAccessorTest {
         final var body = CommonUtils.extractTransactionBody(transaction);
         final var signedTransaction = signedTransactionFrom(body, expectedMap);
         final var newTransaction = buildTransactionFrom(signedTransaction.toByteString());
-        final var accessor = SignedTxnAccessor.uncheckedFrom(newTransaction);
+        final var accessor = InProgressTransaction.uncheckedFrom(newTransaction);
 
         assertEquals(newTransaction, accessor.getSignedTxnWrapper());
         assertArrayEquals(newTransaction.toByteArray(), accessor.getSignedTxnWrapperBytes());
@@ -519,14 +519,14 @@ class SignedTxnAccessorTest {
         final var body = TransactionBody.parseFrom(xferWithTopLevelBodyBytes.getBodyBytes());
         final var confusedTxn = Transaction.parseFrom(body.toByteArray());
 
-        final var confusedAccessor = SignedTxnAccessor.uncheckedFrom(confusedTxn);
+        final var confusedAccessor = InProgressTransaction.uncheckedFrom(confusedTxn);
 
         assertEquals(HederaFunctionality.NONE, confusedAccessor.getFunction());
     }
 
     @Test
     void throwsOnUnsupportedCallToGetScheduleRef() {
-        final var subject = SignedTxnAccessor.uncheckedFrom(Transaction.getDefaultInstance());
+        final var subject = InProgressTransaction.uncheckedFrom(Transaction.getDefaultInstance());
 
         assertDoesNotThrow(subject::getScheduleRef);
     }
@@ -536,7 +536,7 @@ class SignedTxnAccessorTest {
         final var txn = signedFeeScheduleUpdateTxn();
         final var tokenOpsUsage = new TokenOpsUsage();
         final var expectedReprBytes = tokenOpsUsage.bytesNeededToRepr(fees());
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
         final var spanMapAccessor = accessor.getSpanMapAccessor();
 
         final var expandedMeta = spanMapAccessor.getFeeScheduleUpdateMeta(accessor);
@@ -548,7 +548,7 @@ class SignedTxnAccessorTest {
     @Test
     void setTokenCreateUsageMetaWorks() {
         final var txn = signedTokenCreateTxn();
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
         final var spanMapAccessor = accessor.getSpanMapAccessor();
 
         final var expandedMeta = spanMapAccessor.getTokenCreateMeta(accessor);
@@ -574,7 +574,7 @@ class SignedTxnAccessorTest {
                         .setTokenPause(op)
                         .build();
         final var txn = buildTransactionFrom(txnBody);
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
         final var spanMapAccessor = accessor.getSpanMapAccessor();
 
         final var expandedMeta = spanMapAccessor.getTokenPauseMeta(accessor);
@@ -596,7 +596,7 @@ class SignedTxnAccessorTest {
                         .setTokenUnpause(op)
                         .build();
         final var txn = buildTransactionFrom(txnBody);
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
         final var spanMapAccessor = accessor.getSpanMapAccessor();
 
         final var expandedMeta = spanMapAccessor.getTokenUnpauseMeta(accessor);
@@ -607,7 +607,7 @@ class SignedTxnAccessorTest {
     @Test
     void setCryptoCreateUsageMetaWorks() {
         final var txn = signedCryptoCreateTxn();
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
         final var spanMapAccessor = accessor.getSpanMapAccessor();
 
         final var expandedMeta = spanMapAccessor.getCryptoCreateMeta(accessor);
@@ -620,7 +620,7 @@ class SignedTxnAccessorTest {
     @Test
     void setCryptoUpdateUsageMetaWorks() {
         final var txn = signedCryptoUpdateTxn();
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
         final var spanMapAccessor = accessor.getSpanMapAccessor();
 
         final var expandedMeta = spanMapAccessor.getCryptoUpdateMeta(accessor);
@@ -637,7 +637,7 @@ class SignedTxnAccessorTest {
     @Test
     void setCryptoApproveUsageMetaWorks() {
         final var txn = signedCryptoApproveTxn();
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
         final var spanMapAccessor = accessor.getSpanMapAccessor();
 
         final var expandedMeta = spanMapAccessor.getCryptoApproveMeta(accessor);
@@ -649,7 +649,7 @@ class SignedTxnAccessorTest {
     @Test
     void setCryptoDeleteAllowanceUsageMetaWorks() {
         final var txn = signedCryptoDeleteAllowanceTxn();
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
         final var spanMapAccessor = accessor.getSpanMapAccessor();
 
         final var expandedMeta = spanMapAccessor.getCryptoDeleteAllowanceMeta(accessor);
@@ -661,7 +661,7 @@ class SignedTxnAccessorTest {
     @Test
     void setEthTxDataMetaMetaWorks() {
         final var txn = signedEthereumTxn();
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
         final var spanMapAccessor = accessor.getSpanMapAccessor();
 
         final var expandedMeta = spanMapAccessor.getEthTxDataMeta(accessor);
@@ -681,7 +681,7 @@ class SignedTxnAccessorTest {
                                                         Timestamp.newBuilder().setSeconds(now)))
                                 .setUtilPrng(op)
                                 .build());
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
         final var spanMapAccessor = accessor.getSpanMapAccessor();
 
         final var expandedMeta = spanMapAccessor.getUtilPrngMeta(accessor);
@@ -696,7 +696,7 @@ class SignedTxnAccessorTest {
                 buildTransactionFrom(
                         TransactionBody.newBuilder().setContractCreateInstance(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         assertEquals(123456789L, subject.getGasLimitForContractTx());
     }
@@ -707,7 +707,7 @@ class SignedTxnAccessorTest {
         final var txn =
                 buildTransactionFrom(TransactionBody.newBuilder().setContractCall(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         assertEquals(123456789L, subject.getGasLimitForContractTx());
     }
@@ -718,7 +718,7 @@ class SignedTxnAccessorTest {
         var txn =
                 buildTransactionFrom(TransactionBody.newBuilder().setContractCall(falseOp).build());
 
-        final var accessor = SignedTxnAccessor.uncheckedFrom(txn);
+        final var accessor = InProgressTransaction.uncheckedFrom(txn);
 
         assertEquals(false, accessor.supportsPrecheck());
         assertThrows(UnsupportedOperationException.class, () -> accessor.doPrecheck());
@@ -769,7 +769,7 @@ class SignedTxnAccessorTest {
                 buildTransactionFrom(
                         TransactionBody.newBuilder().setEthereumTransaction(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         assertEquals(gasLimit, subject.getGasLimitForContractTx());
     }
@@ -780,7 +780,7 @@ class SignedTxnAccessorTest {
         final var txn =
                 buildTransactionFrom(TransactionBody.newBuilder().setTokenCreation(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         assertEquals(0L, subject.getGasLimitForContractTx());
     }
@@ -791,7 +791,7 @@ class SignedTxnAccessorTest {
         final var txn =
                 buildTransactionFrom(TransactionBody.newBuilder().setContractCall(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         subject.setPayer(asAccount("0.0.2222"));
 
@@ -806,7 +806,7 @@ class SignedTxnAccessorTest {
         final var txn =
                 buildTransactionFrom(TransactionBody.newBuilder().setContractCall(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         subject.setPayer(asAccount("0.0.2"));
 
@@ -819,7 +819,7 @@ class SignedTxnAccessorTest {
         final var txn =
                 buildTransactionFrom(TransactionBody.newBuilder().setContractCall(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         subject.setPayer(asAccount("0.0.2222"));
 
@@ -832,7 +832,7 @@ class SignedTxnAccessorTest {
         final var txn =
                 buildTransactionFrom(TransactionBody.newBuilder().setContractCall(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         subject.setPayer(null);
 
@@ -845,7 +845,7 @@ class SignedTxnAccessorTest {
         final var txn =
                 buildTransactionFrom(TransactionBody.newBuilder().setContractCall(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
 
         assertFalse(subject.congestionExempt());
         subject.markCongestionExempt();
@@ -883,10 +883,10 @@ class SignedTxnAccessorTest {
         final var platformTxn = new SwirldTransaction(signedTxnWithBody.toByteArray());
 
         // when:
-        SignedTxnAccessor subject = SignedTxnAccessor.from(platformTxn.getContents());
+        InProgressTransaction subject = InProgressTransaction.from(platformTxn.getContents());
 
         final var expectedString =
-                "SignedTxnAccessor{sigMapSize=71, numSigPairs=1, numAutoCreations=-1, hash=[111,"
+                "InProgressTransaction{sigMapSize=71, numSigPairs=1, numAutoCreations=-1, hash=[111,"
                     + " -123, -70, 79, 75, -80, -114, -49, 88, -76, -82, -23, 43, 103, -21, 52,"
                     + " -31, -60, 98, -55, -26, -18, -101, -108, -51, 24, 49, 72, 18, -69, 21, -84,"
                     + " -68, -118, 31, -53, 91, -61, -71, -56, 100, -52, -104, 87, -85, -33, -73,"
@@ -948,7 +948,7 @@ class SignedTxnAccessorTest {
         final var txn =
                 buildTransactionFrom(TransactionBody.newBuilder().setContractCall(op).build());
 
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
         final var stateView = mock(StateView.class);
 
         subject.setStateView(stateView);
@@ -967,7 +967,7 @@ class SignedTxnAccessorTest {
         final var op = ContractCallTransactionBody.newBuilder().build();
         final var txn =
                 buildTransactionFrom(TransactionBody.newBuilder().setContractCall(op).build());
-        final var subject = SignedTxnAccessor.uncheckedFrom(txn);
+        final var subject = InProgressTransaction.uncheckedFrom(txn);
         subject.setStateView(stateView);
 
         assertEquals(EntityNum.fromLong(10L), subject.lookUpAlias(alias));

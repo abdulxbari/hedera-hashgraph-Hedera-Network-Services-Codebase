@@ -37,7 +37,7 @@ import com.hedera.services.store.models.Account;
 import com.hedera.services.store.models.Id;
 import com.hedera.services.store.models.Token;
 import com.hedera.services.store.models.TokenRelationship;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
@@ -59,7 +59,7 @@ class TokenUnfreezeTransitionLogicTest {
     private TypedTokenStore tokenStore;
     private AccountStore accountStore;
     private TransactionContext txnCtx;
-    private SignedTxnAccessor accessor;
+    private InProgressTransaction accessor;
     private TokenRelationship tokenRelationship;
     private Token token;
     private Account account;
@@ -68,7 +68,7 @@ class TokenUnfreezeTransitionLogicTest {
 
     @BeforeEach
     private void setup() {
-        accessor = mock(SignedTxnAccessor.class);
+        accessor = mock(InProgressTransaction.class);
         tokenRelationship = mock(TokenRelationship.class);
         token = mock(Token.class);
         account = mock(Account.class);

@@ -27,7 +27,7 @@ import com.hedera.services.context.TransactionContext;
 import com.hedera.services.sysfiles.domain.throttling.ThrottleDefinitions;
 import com.hedera.services.throttles.DeterministicThrottle;
 import com.hedera.services.throttles.GasLimitDeterministicThrottle;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.hederahashgraph.api.proto.java.Query;
 import com.hederahashgraph.api.proto.java.Transaction;
@@ -72,7 +72,7 @@ class TxnAwareHandleThrottlingTest {
     @Test
     void delegatesThrottlingDecisionsWithConsensusTime() {
         // setup:
-        final var accessor = SignedTxnAccessor.uncheckedFrom(Transaction.getDefaultInstance());
+        final var accessor = InProgressTransaction.uncheckedFrom(Transaction.getDefaultInstance());
 
         given(txnCtx.consensusTime()).willReturn(consensusTime);
         given(delegate.shouldThrottleTxn(accessor, consensusTime)).willReturn(true);
@@ -86,7 +86,7 @@ class TxnAwareHandleThrottlingTest {
     @Test
     void delegatesThrottlingConsensusTxnDecisionsWithConsensusTime() {
         // setup:
-        final var accessor = SignedTxnAccessor.uncheckedFrom(Transaction.getDefaultInstance());
+        final var accessor = InProgressTransaction.uncheckedFrom(Transaction.getDefaultInstance());
 
         given(txnCtx.consensusTime()).willReturn(consensusTime);
         given(delegate.shouldThrottleTxn(accessor, consensusTime)).willReturn(true);
@@ -123,7 +123,7 @@ class TxnAwareHandleThrottlingTest {
     @Test
     void leakUnusedGasCallsDelegateLeakMethod() {
         // setup:
-        final var accessor = SignedTxnAccessor.uncheckedFrom(Transaction.getDefaultInstance());
+        final var accessor = InProgressTransaction.uncheckedFrom(Transaction.getDefaultInstance());
 
         // when:
         subject.leakUnusedGasPreviouslyReserved(accessor, 12345L);

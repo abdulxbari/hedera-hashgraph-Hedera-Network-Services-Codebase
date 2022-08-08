@@ -21,7 +21,7 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.PLATFORM_TRANS
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.hedera.services.records.RecordCache;
 import com.hedera.services.stats.MiscSpeedometers;
-import com.hedera.services.utils.accessors.SignedTxnAccessor;
+import com.hedera.services.utils.accessors.InProgressTransaction;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.swirlds.common.system.Platform;
 import javax.inject.Inject;
@@ -45,7 +45,7 @@ public class PlatformSubmissionManager {
         this.speedometers = speedometers;
     }
 
-    public ResponseCodeEnum trySubmission(SignedTxnAccessor accessor) {
+    public ResponseCodeEnum trySubmission(InProgressTransaction accessor) {
         accessor = effective(accessor);
 
         var success =
@@ -60,11 +60,11 @@ public class PlatformSubmissionManager {
         }
     }
 
-    private SignedTxnAccessor effective(SignedTxnAccessor accessor) {
+    private InProgressTransaction effective(InProgressTransaction accessor) {
         var txn = accessor.getTxn();
         if (txn.hasUncheckedSubmit()) {
             try {
-                return SignedTxnAccessor.from(
+                return InProgressTransaction.from(
                         txn.getUncheckedSubmit().getTransactionBytes().toByteArray());
             } catch (InvalidProtocolBufferException e) {
                 log.warn("Transaction bytes from UncheckedSubmit not a valid gRPC transaction!", e);
