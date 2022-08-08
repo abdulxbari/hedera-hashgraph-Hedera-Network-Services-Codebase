@@ -250,7 +250,7 @@ public class SignedTxnAccessor implements TxnAccessor {
 
     @Override
     public AccountID getPayer() {
-        return payer;
+        return unaliased(payer).toGrpcAccountId();
     }
 
     @Override

@@ -15,6 +15,40 @@
  */
 package com.hedera.services.txns.crypto;
 
+import com.google.protobuf.BoolValue;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.hedera.services.context.TransactionContext;
+import com.hedera.services.context.primitives.StateView;
+import com.hedera.services.state.enums.TokenType;
+import com.hedera.services.store.AccountStore;
+import com.hedera.services.store.models.Account;
+import com.hedera.services.store.models.Id;
+import com.hedera.services.store.models.Token;
+import com.hedera.services.store.models.UniqueToken;
+import com.hedera.services.txns.crypto.validators.ApproveAllowanceChecks;
+import com.hedera.services.utils.accessors.custom.CryptoApproveAllowanceAccessor;
+import com.hederahashgraph.api.proto.java.AccountID;
+import com.hederahashgraph.api.proto.java.CryptoAllowance;
+import com.hederahashgraph.api.proto.java.CryptoApproveAllowanceTransactionBody;
+import com.hederahashgraph.api.proto.java.NftAllowance;
+import com.hederahashgraph.api.proto.java.Timestamp;
+import com.hederahashgraph.api.proto.java.TokenAllowance;
+import com.hederahashgraph.api.proto.java.TokenID;
+import com.hederahashgraph.api.proto.java.Transaction;
+import com.hederahashgraph.api.proto.java.TransactionBody;
+import com.hederahashgraph.api.proto.java.TransactionID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.TreeSet;
+
 import static com.hedera.services.store.models.Id.fromGrpcAccount;
 import static com.hedera.test.utils.IdUtils.asAccount;
 import static com.hedera.test.utils.IdUtils.asToken;
@@ -25,37 +59,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
-import com.google.protobuf.BoolValue;
-import com.hedera.services.context.TransactionContext;
-import com.hedera.services.context.primitives.StateView;
-import com.hedera.services.state.enums.TokenType;
-import com.hedera.services.store.AccountStore;
-import com.hedera.services.store.models.Account;
-import com.hedera.services.store.models.Id;
-import com.hedera.services.store.models.Token;
-import com.hedera.services.store.models.UniqueToken;
-import com.hedera.services.txns.crypto.validators.ApproveAllowanceChecks;
-import com.hedera.services.utils.accessors.PlatformTxnAccessor;
-import com.hederahashgraph.api.proto.java.AccountID;
-import com.hederahashgraph.api.proto.java.CryptoAllowance;
-import com.hederahashgraph.api.proto.java.CryptoApproveAllowanceTransactionBody;
-import com.hederahashgraph.api.proto.java.NftAllowance;
-import com.hederahashgraph.api.proto.java.Timestamp;
-import com.hederahashgraph.api.proto.java.TokenAllowance;
-import com.hederahashgraph.api.proto.java.TokenID;
-import com.hederahashgraph.api.proto.java.TransactionBody;
-import com.hederahashgraph.api.proto.java.TransactionID;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.TreeSet;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 @ExtendWith(MockitoExtension.class)
 class CryptoApproveAllowanceTransitionLogicTest {
     @Mock private TransactionContext txnCtx;
@@ -63,37 +66,34 @@ class CryptoApproveAllowanceTransitionLogicTest {
     @Mock private ApproveAllowanceChecks allowanceChecks;
     @Mock private StateView view;
     @Mock private ApproveAllowanceLogic approveAllowanceLogic;
-    @Mock private PlatformTxnAccessor accessor;
+    private CryptoApproveAllowanceAccessor accessor;
+    private TransactionBody cryptoApproveAllowanceTxnBody;
 
-    private TransactionBody cryptoApproveAllowanceTxn;
+    private Transaction cryptoApproveAllowanceTxn;
     private CryptoApproveAllowanceTransactionBody op;
 
     CryptoApproveAllowanceTransitionLogic subject;
 
     @BeforeEach
     private void setup() {
-        subject =
-                new CryptoApproveAllowanceTransitionLogic(
-                        txnCtx, accountStore, allowanceChecks, approveAllowanceLogic, view);
+        subject = new CryptoApproveAllowanceTransitionLogic(txnCtx, approveAllowanceLogic);
         nft1.setOwner(fromGrpcAccount(ownerId));
         nft2.setOwner(fromGrpcAccount(ownerId));
     }
 
     @Test
     void callsApproveAllowanceLogic() {
-        givenValidTxnCtx();
-
-        given(accessor.getTxn()).willReturn(cryptoApproveAllowanceTxn);
         given(txnCtx.activePayer()).willReturn(ourAccount());
-        given(txnCtx.accessor()).willReturn(accessor);
+        givenValidTxnCtx();
+        given(txnCtx.specializedAccessor()).willReturn(accessor);
 
         subject.doStateTransition();
 
         verify(approveAllowanceLogic)
                 .approveAllowance(
-                        op.getCryptoAllowancesList(),
-                        op.getTokenAllowancesList(),
-                        op.getNftAllowancesList(),
+                        accessor.cryptoAllowances(),
+                        accessor.tokenAllowances(),
+                        accessor.nftAllowances(),
                         fromGrpcAccount(payerId).asGrpcAccount());
     }
 
@@ -101,7 +101,7 @@ class CryptoApproveAllowanceTransitionLogicTest {
     void hasCorrectApplicability() {
         givenValidTxnCtx();
 
-        assertTrue(subject.applicability().test(cryptoApproveAllowanceTxn));
+        assertTrue(subject.applicability().test(cryptoApproveAllowanceTxnBody));
         assertFalse(subject.applicability().test(TransactionBody.getDefaultInstance()));
     }
 
@@ -110,14 +110,14 @@ class CryptoApproveAllowanceTransitionLogicTest {
         givenValidTxnCtx();
         given(
                         allowanceChecks.allowancesValidation(
-                                op.getCryptoAllowancesList(),
-                                op.getTokenAllowancesList(),
-                                op.getNftAllowancesList(),
+                                accessor.cryptoAllowances(),
+                                accessor.tokenAllowances(),
+                                accessor.nftAllowances(),
                                 payerAcccount,
                                 view))
                 .willReturn(OK);
         given(accountStore.loadAccount(payerAcccount.getId())).willReturn(payerAcccount);
-        assertEquals(OK, subject.semanticCheck().apply(cryptoApproveAllowanceTxn));
+        assertEquals(OK, subject.validateSemantics(accessor));
     }
 
     private void givenValidTxnCtx() {
@@ -130,7 +130,7 @@ class CryptoApproveAllowanceTransitionLogicTest {
         tokenAllowances.add(tokenAllowance1);
         nftAllowances.add(nftAllowance1);
 
-        cryptoApproveAllowanceTxn =
+        cryptoApproveAllowanceTxnBody =
                 TransactionBody.newBuilder()
                         .setTransactionID(ourTxnId())
                         .setCryptoApproveAllowance(
@@ -139,7 +139,8 @@ class CryptoApproveAllowanceTransitionLogicTest {
                                         .addAllTokenAllowances(tokenAllowances)
                                         .addAllNftAllowances(nftAllowances))
                         .build();
-        op = cryptoApproveAllowanceTxn.getCryptoApproveAllowance();
+        op = cryptoApproveAllowanceTxnBody.getCryptoApproveAllowance();
+        addToTxn();
 
         ownerAccount.setApproveForAllNfts(new TreeSet<>());
         ownerAccount.setCryptoAllowances(new HashMap<>());
@@ -152,6 +153,22 @@ class CryptoApproveAllowanceTransitionLogicTest {
                 .setTransactionValidStart(
                         Timestamp.newBuilder().setSeconds(consensusTime.getEpochSecond()))
                 .build();
+    }
+
+    private void addToTxn() {
+        cryptoApproveAllowanceTxn =
+                Transaction.newBuilder().setBodyBytes(cryptoApproveAllowanceTxnBody.toByteString()).build();
+        try {
+            accessor =
+                    new CryptoApproveAllowanceAccessor(
+                            cryptoApproveAllowanceTxn.toByteArray(),
+                            cryptoApproveAllowanceTxn,
+                            allowanceChecks,
+                            view,
+                            accountStore);
+        } catch (InvalidProtocolBufferException ex) {
+            throw new IllegalStateException(ex);
+        }
     }
 
     private AccountID ourAccount() {

@@ -15,20 +15,16 @@
  */
 package com.hedera.services.txns.crypto;
 
-import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS;
-
 import com.hedera.services.context.TransactionContext;
-import com.hedera.services.context.primitives.StateView;
-import com.hedera.services.store.AccountStore;
-import com.hedera.services.store.models.Id;
 import com.hedera.services.txns.TransitionLogic;
-import com.hedera.services.txns.crypto.validators.ApproveAllowanceChecks;
+import com.hedera.services.utils.accessors.custom.CryptoApproveAllowanceAccessor;
 import com.hederahashgraph.api.proto.java.AccountID;
-import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.TransactionBody;
-import java.util.function.Function;
-import java.util.function.Predicate;
+
 import javax.inject.Inject;
+import java.util.function.Predicate;
+
+import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS;
 
 /**
  * Implements the {@link TransitionLogic} for a HAPI CryptoApproveAllowance transaction, and the
@@ -36,36 +32,29 @@ import javax.inject.Inject;
  */
 public class CryptoApproveAllowanceTransitionLogic implements TransitionLogic {
     private final TransactionContext txnCtx;
-    private final AccountStore accountStore;
-    private final ApproveAllowanceChecks allowanceChecks;
     private final ApproveAllowanceLogic approveAllowanceLogic;
-    private final StateView workingView;
 
     @Inject
     public CryptoApproveAllowanceTransitionLogic(
             final TransactionContext txnCtx,
-            final AccountStore accountStore,
-            final ApproveAllowanceChecks allowanceChecks,
-            final ApproveAllowanceLogic approveAllowanceLogic,
-            final StateView workingView) {
+            final ApproveAllowanceLogic approveAllowanceLogic) {
         this.txnCtx = txnCtx;
-        this.accountStore = accountStore;
-        this.allowanceChecks = allowanceChecks;
         this.approveAllowanceLogic = approveAllowanceLogic;
-        this.workingView = workingView;
     }
 
     @Override
     public void doStateTransition() {
         /* --- Extract gRPC --- */
-        final TransactionBody cryptoApproveAllowanceTxn = txnCtx.accessor().getTxn();
-        final AccountID payer = txnCtx.activePayer();
-        final var op = cryptoApproveAllowanceTxn.getCryptoApproveAllowance();
+        final var accessor = (CryptoApproveAllowanceAccessor) txnCtx.specializedAccessor();
+        AccountID payer = txnCtx.activePayer();
+        final var cryptoAllowances = accessor.cryptoAllowances();
+        final var tokenAllowances = accessor.tokenAllowances();
+        final var nftAllowances = accessor.nftAllowances();
 
         approveAllowanceLogic.approveAllowance(
-                op.getCryptoAllowancesList(),
-                op.getTokenAllowancesList(),
-                op.getNftAllowancesList(),
+                cryptoAllowances,
+                tokenAllowances,
+                nftAllowances,
                 payer);
 
         txnCtx.setStatus(SUCCESS);
@@ -74,23 +63,5 @@ public class CryptoApproveAllowanceTransitionLogic implements TransitionLogic {
     @Override
     public Predicate<TransactionBody> applicability() {
         return TransactionBody::hasCryptoApproveAllowance;
-    }
-
-    @Override
-    public Function<TransactionBody, ResponseCodeEnum> semanticCheck() {
-        return this::validate;
-    }
-
-    private ResponseCodeEnum validate(TransactionBody cryptoAllowanceTxn) {
-        final AccountID payer = cryptoAllowanceTxn.getTransactionID().getAccountID();
-        final var op = cryptoAllowanceTxn.getCryptoApproveAllowance();
-        final var payerAccount = accountStore.loadAccount(Id.fromGrpcAccount(payer));
-
-        return allowanceChecks.allowancesValidation(
-                op.getCryptoAllowancesList(),
-                op.getTokenAllowancesList(),
-                op.getNftAllowancesList(),
-                payerAccount,
-                workingView);
     }
 }

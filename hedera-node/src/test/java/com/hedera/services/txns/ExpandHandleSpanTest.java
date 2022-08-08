@@ -22,9 +22,12 @@ import static org.mockito.Mockito.verify;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.hedera.services.context.NodeInfo;
+import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.ledger.PureTransferSemanticChecks;
 import com.hedera.services.state.merkle.MerkleAccount;
+import com.hedera.services.store.AccountStore;
+import com.hedera.services.txns.crypto.validators.ApproveAllowanceChecks;
 import com.hedera.services.txns.span.ExpandHandleSpan;
 import com.hedera.services.txns.span.SpanMapManager;
 import com.hedera.services.txns.validation.OptionValidator;
@@ -55,8 +58,12 @@ class ExpandHandleSpanTest {
     @Mock private NodeInfo nodeInfo;
     @Mock private PureTransferSemanticChecks checks;
 
+    @Mock private AccountStore accountStore;
+    @Mock private ApproveAllowanceChecks allowanceChecks;
+    @Mock private StateView view;
+
     private AccessorFactory accessorFactory =
-            new AccessorFactory(properties, validator, () -> accounts, nodeInfo, checks);
+            new AccessorFactory(properties, validator, () -> accounts, nodeInfo, checks, allowanceChecks, view, accountStore);
 
     private final long duration = 20;
     private final TimeUnit testUnit = TimeUnit.MILLISECONDS;

@@ -19,12 +19,16 @@ import static com.hedera.services.legacy.proto.utils.CommonUtils.extractTransact
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.hedera.services.context.NodeInfo;
+import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.ledger.PureTransferSemanticChecks;
 import com.hedera.services.state.merkle.MerkleAccount;
+import com.hedera.services.store.AccountStore;
+import com.hedera.services.txns.crypto.validators.ApproveAllowanceChecks;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.MiscUtils;
+import com.hedera.services.utils.accessors.custom.CryptoApproveAllowanceAccessor;
 import com.hedera.services.utils.accessors.custom.CryptoCreateAccessor;
 import com.hedera.services.utils.accessors.custom.CryptoTransferAccessor;
 import com.hedera.services.utils.accessors.custom.CryptoUpdateAccessor;
@@ -45,18 +49,28 @@ public class AccessorFactory {
 
     private final PureTransferSemanticChecks transferChecks;
 
+    private final ApproveAllowanceChecks allowanceChecks;
+    private final StateView workingView;
+    private final AccountStore accountStore;
+
     @Inject
     public AccessorFactory(
             final GlobalDynamicProperties dynamicProperties,
             final OptionValidator validator,
             final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts,
             final NodeInfo nodeInfo,
-            final PureTransferSemanticChecks transferChecks) {
+            final PureTransferSemanticChecks transferChecks,
+            final ApproveAllowanceChecks allowanceChecks,
+            final StateView workingView,
+            final AccountStore accountStore) {
         this.dynamicProperties = dynamicProperties;
         this.validator = validator;
         this.accounts = accounts;
         this.nodeInfo = nodeInfo;
         this.transferChecks = transferChecks;
+        this.allowanceChecks = allowanceChecks;
+        this.workingView = workingView;
+        this.accountStore = accountStore;
     }
 
     public TxnAccessor nonTriggeredTxn(byte[] signedTxnWrapperBytes)
@@ -117,6 +131,8 @@ public class AccessorFactory {
                     validator,
                     accounts,
                     nodeInfo);
+            case CryptoApproveAllowance -> new CryptoApproveAllowanceAccessor(signedTxnWrapperBytes,
+                    signedTxn, allowanceChecks, workingView, accountStore);
             default -> SignedTxnAccessor.from(signedTxnWrapperBytes, signedTxn);
         };
     }

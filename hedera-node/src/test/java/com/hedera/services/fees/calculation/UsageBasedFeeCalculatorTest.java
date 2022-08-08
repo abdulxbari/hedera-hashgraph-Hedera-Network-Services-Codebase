@@ -582,7 +582,8 @@ class UsageBasedFeeCalculatorTest {
         given(dynamicProperties.areNftsEnabled()).willReturn(true);
         given(dynamicProperties.maxBatchSizeWipe()).willReturn(10);
 
-        accessorFactory = new AccessorFactory(dynamicProperties, null, null, null, null);
+        accessorFactory = new AccessorFactory(dynamicProperties, null, null, null,
+                null, null, null, null);
         accessor = new TokenWipeAccessor(signedTxn.toByteArray(), signedTxn, dynamicProperties);
 
         // and:

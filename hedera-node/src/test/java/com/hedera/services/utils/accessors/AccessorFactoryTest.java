@@ -21,9 +21,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.hedera.services.context.NodeInfo;
+import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.ledger.PureTransferSemanticChecks;
 import com.hedera.services.state.merkle.MerkleAccount;
+import com.hedera.services.store.AccountStore;
+import com.hedera.services.txns.crypto.validators.ApproveAllowanceChecks;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.test.utils.IdUtils;
@@ -52,6 +55,9 @@ class AccessorFactoryTest {
     @Mock private MerkleMap<EntityNum, MerkleAccount> accounts;
     @Mock private NodeInfo nodeInfo;
     @Mock private PureTransferSemanticChecks checks;
+    @Mock private AccountStore accountStore;
+    @Mock private ApproveAllowanceChecks allowanceChecks;
+    @Mock private StateView view;
 
     AccessorFactory subject;
 
@@ -69,7 +75,7 @@ class AccessorFactoryTest {
 
     @BeforeEach
     void setUp() {
-        subject = new AccessorFactory(properties, validator, () -> accounts, nodeInfo, checks);
+        subject = new AccessorFactory(properties, validator, () -> accounts, nodeInfo, checks, allowanceChecks, view, accountStore);
     }
 
     @Test
