@@ -27,6 +27,7 @@ import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.ledger.SigImpactHistorian;
 import com.hedera.services.ledger.accounts.ContractCustomizer;
 import com.hedera.services.ledger.ids.EntityIdSource;
+import com.hedera.services.ledger.properties.AccountProperty;
 import com.hedera.services.state.validation.UsageLimits;
 import com.hedera.services.utils.BytesComparator;
 import com.hederahashgraph.api.proto.java.AccountID;
@@ -165,8 +166,17 @@ public class HederaWorldState implements HederaMutableWorldState {
         if (!isGettable(accountId)) {
             return null;
         }
-        final long balance = entityAccess.getBalance(accountId);
-        return new WorldStateAccount(address, Wei.of(balance), codeCache, entityAccess);
+
+        final var balance = entityAccess.getBalance(accountId);
+        if ((Boolean) entityAccess.worldLedgers().accounts()
+            .get(accountId, AccountProperty.IS_SMART_CONTRACT)) {
+            final var nonce = (Long) entityAccess.worldLedgers().accounts()
+                .get(accountId, AccountProperty.ETHEREUM_NONCE);
+            return new WorldStateAccount(address, Wei.of(balance), codeCache, entityAccess, nonce);
+        } else {
+            return new WorldStateAccount(address, Wei.of(balance), codeCache, entityAccess);
+        }
+
     }
 
     private boolean isGettable(final AccountID id) {

@@ -16,6 +16,7 @@
 package com.hedera.services.store.contracts;
 
 import static com.hedera.services.ledger.properties.AccountProperty.BALANCE;
+import static com.hedera.services.ledger.properties.AccountProperty.ETHEREUM_NONCE;
 import static com.hedera.services.store.contracts.WorldStateTokenAccount.TOKEN_PROXY_ACCOUNT_NONCE;
 
 import com.google.common.base.Preconditions;
@@ -140,6 +141,10 @@ public class UpdateTrackingLedgerAccount<A extends Account> implements MutableAc
     @Override
     public void setNonce(final long value) {
         this.nonce = value;
+        // we want to update nonce only for smart contracts, not for EOA (hasCode) and tokens (-1 nonce)
+        if (trackingAccounts != null && this.hasCode() && nonce != -1) {
+            trackingAccounts.set(accountId, ETHEREUM_NONCE, value);
+        }
     }
 
     public boolean wrappedAccountIsTokenProxy() {

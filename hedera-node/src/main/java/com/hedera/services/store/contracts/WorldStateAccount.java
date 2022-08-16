@@ -38,6 +38,7 @@ public class WorldStateAccount implements Account {
     private final AccountID account;
     private final CodeCache codeCache;
     private final EntityAccess entityAccess;
+    private final long nonce;
 
     public WorldStateAccount(
             final Address address,
@@ -50,6 +51,22 @@ public class WorldStateAccount implements Account {
         this.entityAccess = entityAccess;
 
         this.account = accountIdFromEvmAddress(address);
+        this.nonce = 0;
+    }
+
+    public WorldStateAccount(
+        final Address address,
+        final Wei balance,
+        final CodeCache codeCache,
+        final EntityAccess entityAccess,
+        final long nonce) {
+        this.balance = balance;
+        this.address = address;
+        this.codeCache = codeCache;
+        this.entityAccess = entityAccess;
+
+        this.account = accountIdFromEvmAddress(address);
+        this.nonce = nonce;
     }
 
     @Override
@@ -64,7 +81,7 @@ public class WorldStateAccount implements Account {
 
     @Override
     public long getNonce() {
-        return 0;
+        return this.nonce;
     }
 
     @Override
