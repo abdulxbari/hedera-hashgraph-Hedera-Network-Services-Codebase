@@ -23,6 +23,7 @@ import static com.hedera.services.bdd.spec.queries.QueryUtils.reflectForPrecheck
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.asTransferList;
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.tinyBarsFromTo;
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.txnToString;
+import static com.hedera.services.bdd.suites.HapiApiSuite.DEFAULT_CONTRACT_SENDER;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INSUFFICIENT_TX_FEE;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.UNKNOWN;
@@ -207,6 +208,20 @@ public abstract class HapiQueryOp<T extends HapiQueryOp<T>> extends HapiSpecOper
             return false;
         }
         txnSubmitted = payment;
+        // TODO: fix this
+        if (
+            spec.isVerifyingRecordStream() &&
+                needsPayment() &&
+                payer.isPresent() &&
+                !payer.get().equals("DEFAULT_PAYER") &&
+                !payer.get().equals("GENESIS")
+        ) {
+            if (payer.get().equals(DEFAULT_CONTRACT_SENDER) && spec.isUsingEthCalls()) {
+                spec.addExpectedTransaction(txnSubmitted);
+            } else if (!payer.get().equals(DEFAULT_CONTRACT_SENDER)) {
+                spec.addExpectedTransaction(txnSubmitted);
+            }
+        }
         return true;
     }
 

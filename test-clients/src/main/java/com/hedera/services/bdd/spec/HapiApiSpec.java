@@ -42,9 +42,11 @@ import com.hedera.services.bdd.spec.persistence.EntityManager;
 import com.hedera.services.bdd.spec.props.MapPropertySource;
 import com.hedera.services.bdd.spec.transactions.TxnFactory;
 import com.hedera.services.bdd.spec.utilops.UtilVerbs;
+import com.hedera.services.bdd.spec.verification.RecordStreamWatcher;
 import com.hedera.services.stream.proto.AllAccountBalances;
 import com.hedera.services.stream.proto.SingleAccountBalances;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
+import com.hederahashgraph.api.proto.java.Transaction;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -135,6 +137,19 @@ public class HapiApiSpec implements Runnable {
             new EnumMap<>(ResponseCodeEnum.class);
     EnumMap<ResponseCodeEnum, AtomicInteger> finalizedStatusCounts =
             new EnumMap<>(ResponseCodeEnum.class);
+    RecordStreamWatcher recordStreamWatcher;
+
+    public void setVerifyingRecordStream(RecordStreamWatcher recordStreamWatcher) {
+        this.recordStreamWatcher = recordStreamWatcher;
+    }
+
+    public void addExpectedTransaction(final Transaction txnSubmitted) {
+        this.recordStreamWatcher.addTransaction(txnSubmitted);
+    }
+
+    public boolean isVerifyingRecordStream() {
+        return recordStreamWatcher != null;
+    }
 
     List<SingleAccountBalances> accountBalances = new ArrayList<>();
 
