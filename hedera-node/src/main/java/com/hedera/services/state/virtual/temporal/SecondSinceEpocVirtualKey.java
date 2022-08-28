@@ -25,8 +25,8 @@ import java.nio.ByteBuffer;
 /**
  * A {@link com.swirlds.virtualmap.VirtualKey} for a second since the unix epoc.
  *
- * This is currently used in a MerkleMap due to issues with virtual map in the 0.27 release.
- * It should be moved back to VirtualMap in 0.30.
+ * <p>This is currently used in a MerkleMap due to issues with virtual map in the 0.27 release. It
+ * should be moved back to VirtualMap in 0.30.
  */
 public final class SecondSinceEpocVirtualKey implements VirtualLongKey {
     static final long CLASS_ID = 0x1978f91b2f262595L;

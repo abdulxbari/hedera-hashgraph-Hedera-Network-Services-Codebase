@@ -81,34 +81,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class StateChildrenSigMetadataLookupTest {
-	@Mock
-	private MutableStateChildren stateChildren;
-	@Mock
-	private MerkleTopic topic;
-	@Mock
-	private MerkleToken token;
-	@Mock
-	private ScheduleVirtualValue schedule;
-	@Mock
-	private MerkleAccount account;
-	@Mock
-	private TokenSigningMetadata tokenMeta;
-	@Mock
-	private MerkleMap<EntityNum, MerkleToken> tokens;
-	@Mock
-	private MerkleMap<EntityNum, MerkleTopic> topics;
-	@Mock
-	private Function<MerkleToken, TokenSigningMetadata> tokenMetaTransform;
-	@Mock
-	private MerkleMap<EntityNum, MerkleAccount> accounts;
-	@Mock
-	private MerkleScheduledTransactions schedules;
-	@Mock
-	private VirtualMap<EntityNumVirtualKey, ScheduleVirtualValue> schedulesById;
-	@Mock
-	private VirtualMap<VirtualBlobKey, VirtualBlobValue> storage;
-	@Mock
-	private FCHashMap<ByteString, EntityNum> aliases;
+    @Mock private MutableStateChildren stateChildren;
+    @Mock private MerkleTopic topic;
+    @Mock private MerkleToken token;
+    @Mock private ScheduleVirtualValue schedule;
+    @Mock private MerkleAccount account;
+    @Mock private TokenSigningMetadata tokenMeta;
+    @Mock private MerkleMap<EntityNum, MerkleToken> tokens;
+    @Mock private MerkleMap<EntityNum, MerkleTopic> topics;
+    @Mock private Function<MerkleToken, TokenSigningMetadata> tokenMetaTransform;
+    @Mock private MerkleMap<EntityNum, MerkleAccount> accounts;
+    @Mock private MerkleScheduledTransactions schedules;
+    @Mock private VirtualMap<EntityNumVirtualKey, ScheduleVirtualValue> schedulesById;
+    @Mock private VirtualMap<VirtualBlobKey, VirtualBlobValue> storage;
+    @Mock private FCHashMap<ByteString, EntityNum> aliases;
 
     private StateChildrenSigMetadataLookup subject;
 
