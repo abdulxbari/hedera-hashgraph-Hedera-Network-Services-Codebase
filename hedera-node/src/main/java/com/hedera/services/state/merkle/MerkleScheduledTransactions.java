@@ -26,7 +26,11 @@ import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.impl.PartialNaryMerkleInternal;
 import com.swirlds.merkle.map.MerkleMap;
+
+import java.util.ArrayList;
 import java.util.List;
+
+import com.swirlds.virtualmap.VirtualMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -55,6 +59,19 @@ public class MerkleScheduledTransactions extends PartialNaryMerkleInternal
         ChildIndices() {
             throw new UnsupportedOperationException("Utility Class");
         }
+    }
+
+    @Override
+    public void addDeserializedChildren(final List<MerkleNode> children, final int version) {
+        List<MerkleNode> childrenCopy = new ArrayList<>(children.size());
+        for (MerkleNode node : children) {
+            if (node instanceof VirtualMap<?,?>) {
+                childrenCopy.add(new MerkleMap<>());
+            } else {
+                childrenCopy.add(node);
+            }
+        }
+        super.addDeserializedChildren(childrenCopy, version);
     }
 
     public MerkleScheduledTransactions(
@@ -121,6 +138,7 @@ public class MerkleScheduledTransactions extends PartialNaryMerkleInternal
         }
 
         setImmutable(true);
+
         return new MerkleScheduledTransactions(
                 List.of(
                         state().copy(),
