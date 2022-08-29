@@ -136,15 +136,12 @@ public class PropertyNames {
             "hedera.recordStream.recordFileVersion";
     public static final String HEDERA_RECORD_STREAM_SIG_FILE_VERSION =
             "hedera.recordStream.signatureFileVersion";
-    public static final String AUTO_REMOVE_MAX_PURGED_KV_PAIRS_PER_TOUCH =
-            "autoRemove.maxPurgedKvPairsPerTouch";
-    public static final String AUTO_REMOVE_MAX_RETURNED_NFTS_PER_TOUCH =
-            "autoRemove.maxReturnedNftsPerTouch";
     public static final String AUTO_RENEW_TARGET_TYPES = "autoRenew.targetTypes";
     public static final String AUTO_RENEW_NUM_OF_ENTITIES_TO_SCAN =
             "autorenew.numberOfEntitiesToScan";
     public static final String AUTO_RENEW_MAX_NUM_OF_ENTITIES_TO_RENEW_OR_DELETE =
             "autorenew.maxNumberOfEntitiesToRenewOrDelete";
+    public static final String EXPIRY_THROTTLE_RESOURCE = "expiry.throttleResource";
     public static final String AUTO_RENEW_GRACE_PERIOD = "autorenew.gracePeriod";
     public static final String LEDGER_CHANGE_HIST_MEM_SECS = "ledger.changeHistorian.memorySecs";
     public static final String LEDGER_AUTO_RENEW_PERIOD_MAX_DURATION =
