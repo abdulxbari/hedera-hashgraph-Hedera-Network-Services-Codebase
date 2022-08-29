@@ -46,7 +46,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class TreasuryReturnHelperTest {
     @Mock private MerkleMap<EntityNumPair, MerkleTokenRelStatus> tokenRels;
-    @Mock private MerkleMap<EntityNumPair, MerkleUniqueToken> nfts;
+    @Mock private MerkleMap<EntityNumPair, MerkleUniqueToken> nftsMerkleMap;
+    private UniqueTokenMapAdapter nfts;
 
     private final List<CurrencyAdjustments> returnTransfers = new ArrayList<>();
     private final List<EntityId> tokenTypes = new ArrayList<>();
@@ -57,6 +58,7 @@ class TreasuryReturnHelperTest {
     @BeforeEach
     void setUp() {
         subject = new TreasuryReturnHelper();
+        nfts = UniqueTokenMapAdapter.wrap(nftsMerkleMap);
     }
 
     @Test
@@ -83,36 +85,35 @@ class TreasuryReturnHelperTest {
 
     @Test
     void namejustRemovesIfWasBurn() {
-        given(nfts.get(aNftKey)).willReturn(someNft);
+        given(nftsMerkleMap.get(aNftKey)).willReturn(someNft);
         someNft.setNext(bNftKey.asNftNumPair());
 
-        final var newRoot = subject.finishNft(true, aNftKey,
-                UniqueTokenMapAdapter.wrap(nfts));
+        final var newRoot = subject.finishNft(true, aNftKey, nfts);
 
-        verify(nfts).remove(aNftKey);
+        verify(nftsMerkleMap).remove(aNftKey);
         assertEquals(bNftKey, newRoot);
     }
 
     @Test
     void clearsOwnerIfNotBurn() {
-        given(nfts.getForModify(aNftKey)).willReturn(someNft);
+        given(nftsMerkleMap.getForModify(aNftKey)).willReturn(someNft);
         someNft.setNext(NftNumPair.MISSING_NFT_NUM_PAIR);
 
-        final var newRoot = subject.finishNft(false, aNftKey, UniqueTokenMapAdapter.wrap(nfts);
+        final var newRoot = subject.finishNft(false, aNftKey, nfts);
 
-        verify(nfts, never()).remove(aNftKey);
+        verify(nftsMerkleMap, never()).remove(aNftKey);
         assertEquals(EntityId.MISSING_ENTITY_ID, someNft.getOwner());
         assertNull(newRoot);
     }
 
     @Test
     void worksAroundNullNext() {
-        given(nfts.getForModify(aNftKey)).willReturn(someNft);
+        given(nftsMerkleMap.getForModify(aNftKey)).willReturn(someNft);
         someNft.setNext(null);
 
-        final var newRoot = subject.finishNft(false, aNftKey, UniqueTokenMapAdapter.wrap(nfts));
+        final var newRoot = subject.finishNft(false, aNftKey, nfts);
 
-        verify(nfts, never()).remove(aNftKey);
+        verify(nftsMerkleMap, never()).remove(aNftKey);
         assertEquals(EntityId.MISSING_ENTITY_ID, someNft.getOwner());
         assertNull(newRoot);
     }

@@ -132,7 +132,7 @@ class UniqueTokensLinkManagerTest {
         setUpEntities();
         setUpMaps();
 
-        assertEquals(tokenNum, accounts.get(oldOwner).getHeadNftId());
+        assertEquals(tokenNum, accounts.get(oldOwner).getHeadNftTokenNum());
         assertEquals(serialNum1, accounts.get(oldOwner).getHeadNftSerialNum());
 
         subjectForVm.updateLinks(oldOwner, newOwner, nftKey2);
@@ -140,9 +140,9 @@ class UniqueTokensLinkManagerTest {
         assertEquals(nftNumPair1, virtualUniqueTokens.get(nftKey3).getPrev());
         assertEquals(nftNumPair3, virtualUniqueTokens.get(nftKey1).getNext());
 
-        assertEquals(tokenNum, accounts.get(newOwner).getHeadNftId());
+        assertEquals(tokenNum, accounts.get(newOwner).getHeadNftTokenNum());
         assertEquals(serialNum2, accounts.get(newOwner).getHeadNftSerialNum());
-        assertEquals(tokenNum, accounts.get(oldOwner).getHeadNftId());
+        assertEquals(tokenNum, accounts.get(oldOwner).getHeadNftTokenNum());
         assertEquals(serialNum1, accounts.get(oldOwner).getHeadNftSerialNum());
     }
 
