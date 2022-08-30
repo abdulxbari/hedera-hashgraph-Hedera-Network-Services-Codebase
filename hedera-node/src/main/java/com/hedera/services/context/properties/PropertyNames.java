@@ -80,6 +80,12 @@ public class PropertyNames {
     public static final String BALANCES_NODE_BALANCE_WARN_THRESHOLD =
             "balances.nodeBalanceWarningThreshold";
     public static final String CACHE_RECORDS_TTL = "cache.records.ttl";
+    public static final String CONTRACTS_ITEMIZE_STORAGE_FEES = "contracts.itemizeStorageFees";
+    public static final String CONTRACTS_REFERENCE_SLOT_LIFETIME =
+            "contracts.referenceSlotLifetime";
+    public static final String CONTRACTS_FREE_STORAGE_TIER_LIMIT = "contracts.freeStorageTierLimit";
+    public static final String CONTRACTS_STORAGE_SLOT_PRICE_TIERS =
+            "contract.storageSlotPriceTiers";
     public static final String CONTRACTS_DEFAULT_LIFETIME = "contracts.defaultLifetime";
     public static final String CONTRACTS_KNOWN_BLOCK_HASH = "contracts.knownBlockHash";
     public static final String CONTRACTS_LOCAL_CALL_EST_RET_BYTES =
@@ -192,6 +198,8 @@ public class PropertyNames {
     public static final String TOKENS_NFTS_MAX_BATCH_SIZE_MINT = "tokens.nfts.maxBatchSizeMint";
     public static final String TOKENS_NFTS_MAX_ALLOWED_MINTS = "tokens.nfts.maxAllowedMints";
     public static final String TOKENS_NFTS_MAX_QUERY_RANGE = "tokens.nfts.maxQueryRange";
+    public static final String TOKENS_NFTS_USE_TREASURY_WILDCARDS =
+            "tokens.nfts.useTreasuryWildcards";
     public static final String TOKENS_NFTS_MINT_THORTTLE_SCALE_FACTOR =
             "tokens.nfts.mintThrottleScaleFactor";
     public static final String TOKENS_NFTS_USE_VIRTUAL_MERKLE = "tokens.nfts.useVirtualMerkle";
