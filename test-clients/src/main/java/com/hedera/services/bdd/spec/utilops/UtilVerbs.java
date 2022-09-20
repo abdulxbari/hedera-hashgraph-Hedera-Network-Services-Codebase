@@ -104,6 +104,7 @@ import com.hedera.services.bdd.spec.utilops.streams.RecordFileChecker;
 import com.hedera.services.bdd.spec.utilops.streams.RecordStreamVerification;
 import com.hedera.services.bdd.spec.utilops.throughput.FinishThroughputObs;
 import com.hedera.services.bdd.spec.utilops.throughput.StartThroughputObs;
+import com.hedera.services.bdd.spec.verification.TransactionLogger;
 import com.hedera.services.bdd.suites.HapiApiSuite;
 import com.hedera.services.bdd.suites.crypto.CryptoTransferSuite;
 import com.hedera.services.bdd.suites.perf.PerfTestLoadSettings;
@@ -391,8 +392,9 @@ public class UtilVerbs {
     }
 
     /* Stream validation. */
-    public static RecordStreamVerification verifyRecordStreams(Supplier<String> baseDir) {
-        return new RecordStreamVerification(baseDir);
+    public static RecordStreamVerification verifyRecordStreams(
+            Supplier<String> baseDir, TransactionLogger transactionLogger) {
+        return new RecordStreamVerification(baseDir, transactionLogger);
     }
 
     public static RecordFileChecker verifyRecordFile(

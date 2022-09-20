@@ -208,17 +208,14 @@ public abstract class HapiQueryOp<T extends HapiQueryOp<T>> extends HapiSpecOper
             return false;
         }
         txnSubmitted = payment;
-        // TODO: fix this
-        if (
-            spec.isVerifyingRecordStream() &&
-                needsPayment() &&
-                payer.isPresent() &&
-                !payer.get().equals("DEFAULT_PAYER") &&
-                !payer.get().equals("GENESIS")
-        ) {
-            if (payer.get().equals(DEFAULT_CONTRACT_SENDER) && spec.isUsingEthCalls()) {
-                spec.addExpectedTransaction(txnSubmitted);
-            } else if (!payer.get().equals(DEFAULT_CONTRACT_SENDER)) {
+        // FUTURE WORK: for sure this can be simplified
+        if (spec.isVerifyingRecordStream()
+                && needsPayment()
+                && payer.isPresent()
+                && !payer.get().equals("DEFAULT_PAYER")
+                && !payer.get().equals("GENESIS")) {
+            if ((payer.get().equals(DEFAULT_CONTRACT_SENDER) && spec.isUsingEthCalls())
+                    || !payer.get().equals(DEFAULT_CONTRACT_SENDER)) {
                 spec.addExpectedTransaction(txnSubmitted);
             }
         }

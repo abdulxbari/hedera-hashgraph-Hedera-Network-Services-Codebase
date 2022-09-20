@@ -15,13 +15,21 @@
  */
 package com.hedera.services.recordstreaming;
 
+import com.google.common.primitives.Ints;
 import com.hedera.services.stream.proto.RecordStreamFile;
 import com.hedera.services.stream.proto.SidecarFile;
 import com.hedera.services.stream.proto.SignatureFile;
+import com.swirlds.common.crypto.Cryptography;
+import com.swirlds.common.crypto.Hash;
+import com.swirlds.common.crypto.HashingOutputStream;
+import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 import org.apache.commons.lang3.tuple.Pair;
@@ -69,7 +77,7 @@ public class RecordStreamingUtils {
         return SidecarFile.parseFrom(getUncompressedStreamFileBytes(fileLoc));
     }
 
-    private static byte[] getUncompressedStreamFileBytes(final String fileLoc) throws IOException {
+    public static byte[] getUncompressedStreamFileBytes(final String fileLoc) throws IOException {
         try (final var fin = new GZIPInputStream(new FileInputStream(fileLoc));
                 final var byteArrayOutputStream = new ByteArrayOutputStream()) {
             final var buffer = new byte[1024];
@@ -79,6 +87,50 @@ public class RecordStreamingUtils {
             }
 
             return byteArrayOutputStream.toByteArray();
+        }
+    }
+
+    public static Hash computeFileHashFrom(
+            final Integer version, final RecordStreamFile recordStreamFile) {
+        try {
+            final var messageDigest =
+                    MessageDigest.getInstance(Cryptography.DEFAULT_DIGEST_TYPE.algorithmName());
+            messageDigest.update(Ints.toByteArray(version));
+            messageDigest.update(recordStreamFile.toByteArray());
+            return new Hash(messageDigest.digest(), Cryptography.DEFAULT_DIGEST_TYPE);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static Hash computeMetadataHashFrom(
+            final Integer version, final RecordStreamFile recordStreamFile) {
+        final MessageDigest messageDigest;
+        try {
+            messageDigest =
+                    MessageDigest.getInstance(Cryptography.DEFAULT_DIGEST_TYPE.algorithmName());
+        } catch (NoSuchAlgorithmException e) {
+            return null;
+        }
+        try (final var outputStream =
+                new SerializableDataOutputStream(new HashingOutputStream(messageDigest)); ) {
+            // digest file header
+            outputStream.writeInt(version);
+            final var hapiProtoVersion = recordStreamFile.getHapiProtoVersion();
+            outputStream.writeInt(hapiProtoVersion.getMajor());
+            outputStream.writeInt(hapiProtoVersion.getMinor());
+            outputStream.writeInt(hapiProtoVersion.getPatch());
+            // digest startRunningHash
+            outputStream.write(
+                    recordStreamFile.getStartObjectRunningHash().getHash().toByteArray());
+            // digest endRunningHash
+            outputStream.write(recordStreamFile.getEndObjectRunningHash().getHash().toByteArray());
+            // digest block number
+            outputStream.writeLong(recordStreamFile.getBlockNumber());
+            final var digest = messageDigest.digest();
+            return new Hash(digest, Cryptography.DEFAULT_DIGEST_TYPE);
+        } catch (Exception e) {
+            return new Hash("error".getBytes(StandardCharsets.UTF_8));
         }
     }
 }

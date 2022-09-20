@@ -231,7 +231,7 @@ public abstract class HapiTxnOp<T extends HapiTxnOp<T>> extends HapiSpecOperatio
         spec.adhocIncrement();
 
         //		if (!payer.isPresent() || !payer.get().equals("DEFAULT_PAYER") && !payer.get().equals(
-//				"GENESIS"))
+        //				"GENESIS"))
         if (spec.isVerifyingRecordStream()) {
             spec.addExpectedTransaction(txnSubmitted);
         }

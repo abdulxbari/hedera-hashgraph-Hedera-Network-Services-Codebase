@@ -17,12 +17,13 @@ package com.hedera.services.bdd.spec.verification;
 
 import static java.util.stream.Collectors.toList;
 
+import com.hedera.services.recordstreaming.RecordStreamingUtils;
+import com.hedera.services.stream.proto.RecordStreamFile;
+import com.hedera.services.stream.proto.SignatureObject;
 import com.hederahashgraph.api.proto.java.NodeAddress;
 import com.hederahashgraph.api.proto.java.NodeAddressBook;
 import com.swirlds.common.utility.CommonUtils;
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.InvalidKeyException;
@@ -36,6 +37,7 @@ import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -52,10 +54,6 @@ import org.apache.logging.log4j.MarkerManager;
 public class NodeSignatureVerifier {
     private static final Logger log = LogManager.getLogger(NodeSignatureVerifier.class);
     private static final Marker MARKER = MarkerManager.getMarker("NodeSignatureVerifier");
-
-    static final byte TYPE_SIGNATURE = 3; // the file content signature, should not be hashed
-    static final byte TYPE_FILE_HASH =
-            4; // next 48 bytes are hash384 of content of corresponding RecordFile
 
     Map<String, PublicKey> accountKeys = new HashMap<>();
 
@@ -101,12 +99,13 @@ public class NodeSignatureVerifier {
     }
 
     /* The input list is assumed to contain multiple signatures for THE SAME RECORD FILE. */
-    public List<String> verifySignatureFiles(List<File> sigFiles) {
+    public List<String> verifySignatureFiles(final List<File> sigFiles) {
         Map<String, Set<String>> hashToNodeAccountIDs = new HashMap<>();
         for (File sigFile : sigFiles) {
             String nodeAccountID = getAccountIDStringFromFilePath(sigFile.getPath());
-            if (verifySignatureFile(sigFile)) {
-                byte[] hash = extractHashAndSigFromFile(sigFile).getLeft();
+            if (verifySignatureFile(sigFile, sigFile.getPath().replace("_sig", ".gz"))) {
+                byte[] hash =
+                        extractHashAndSigFromFile(sigFile).getLeft().getHashObject().toByteArray();
                 String hashString = CommonUtils.hex(hash);
                 Set<String> nodeAccountIDs =
                         hashToNodeAccountIDs.getOrDefault(hashString, new HashSet<>());
@@ -131,68 +130,66 @@ public class NodeSignatureVerifier {
         return null;
     }
 
-    private boolean verifySignatureFile(File sigFile) {
-        Pair<byte[], byte[]> hashAndSig = extractHashAndSigFromFile(sigFile);
-
-        byte[] signedData = hashAndSig.getLeft();
-        String nodeAccountID = getAccountIDStringFromFilePath(sigFile.getPath());
-        byte[] signature = hashAndSig.getRight();
-
-        return verifySignature(signedData, signature, nodeAccountID);
+    private boolean verifySignatureFile(final File sigFile, final String recordFile) {
+        final var fileAndMetadataSignatureObjects = extractHashAndSigFromFile(sigFile);
+        if (fileAndMetadataSignatureObjects == null) {
+            return false;
+        }
+        // verify file signature
+        final var fileSignatureObject = fileAndMetadataSignatureObjects.getLeft();
+        final var signedData = fileSignatureObject.getHashObject().getHash().toByteArray();
+        final var nodeAccountID = getAccountIDStringFromFilePath(sigFile.getPath());
+        final var signature = fileSignatureObject.getSignature().toByteArray();
+        if (!verifySignature(signedData, signature, nodeAccountID)) {
+            return false;
+        }
+        // verify that the actual file hash has been signed
+        int recordStreamVersion;
+        RecordStreamFile recordStreamFileProto;
+        try {
+            final var readRecordStreamFilePair =
+                    RecordStreamingUtils.readRecordStreamFile(recordFile);
+            recordStreamVersion = readRecordStreamFilePair.getKey();
+            recordStreamFileProto = readRecordStreamFilePair.getValue().get();
+            final var fileHash =
+                    RecordStreamingUtils.computeFileHashFrom(
+                            recordStreamVersion, recordStreamFileProto);
+            if (fileHash == null || !Arrays.equals(fileHash.getValue(), signedData)) {
+                return false;
+            }
+        } catch (IOException e) {
+            return false;
+        }
+        // verify metadata signature
+        final var metadataSignatureObject = fileAndMetadataSignatureObjects.getRight();
+        final var signedMetadataData =
+                metadataSignatureObject.getHashObject().getHash().toByteArray();
+        final var metadataSignature = metadataSignatureObject.getSignature().toByteArray();
+        if (!verifySignature(signedMetadataData, metadataSignature, nodeAccountID)) {
+            return false;
+        }
+        // verify the actual metadata hash has been signed
+        final var metadataHash =
+                RecordStreamingUtils.computeMetadataHashFrom(
+                        recordStreamVersion, recordStreamFileProto);
+        return metadataHash != null && Arrays.equals(metadataHash.getValue(), signedMetadataData);
     }
 
-    private Pair<byte[], byte[]> extractHashAndSigFromFile(File file) {
-        FileInputStream stream = null;
-        byte[] sig = null;
-
+    private Pair<SignatureObject, SignatureObject> extractHashAndSigFromFile(File file) {
         if (!file.exists()) {
             log.warn("Signature file {} does not exist!", file);
             return null;
         }
-
         try {
-            stream = new FileInputStream(file);
-            DataInputStream dis = new DataInputStream(stream);
-            byte[] fileHash = new byte[48];
-
-            while (dis.available() != 0) {
-                try {
-                    byte typeDelimiter = dis.readByte();
-
-                    switch (typeDelimiter) {
-                        case TYPE_FILE_HASH:
-                            dis.read(fileHash);
-                            break;
-                        case TYPE_SIGNATURE:
-                            int sigLength = dis.readInt();
-                            byte[] sigBytes = new byte[sigLength];
-                            dis.readFully(sigBytes);
-                            sig = sigBytes;
-                            break;
-                        default:
-                            log.warn("Unrecognized record file delimiter '{}'", typeDelimiter);
-                    }
-                } catch (Exception e) {
-                    log.warn("Problem parsing record signature file {}!", file, e);
-                    break;
-                }
-            }
-
-            return Pair.of(fileHash, sig);
+            final var signatureFile =
+                    RecordStreamingUtils.readSignatureFile(file.getAbsolutePath()).getRight().get();
+            return Pair.of(signatureFile.getFileSignature(), signatureFile.getMetadataSignature());
         } catch (FileNotFoundException e) {
             log.warn("File '{}' not found!", file, e);
         } catch (IOException e) {
             log.error("IOException reading '{}'", file, e);
         } catch (Exception e) {
             log.error("Problem reading '{}'", file, e);
-        } finally {
-            try {
-                if (stream != null) {
-                    stream.close();
-                }
-            } catch (IOException ex) {
-                log.warn("Problem closing the stream for '{}'", file, ex);
-            }
         }
 
         return null;
