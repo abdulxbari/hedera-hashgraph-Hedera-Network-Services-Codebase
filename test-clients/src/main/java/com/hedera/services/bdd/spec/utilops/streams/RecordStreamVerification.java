@@ -108,7 +108,7 @@ public class RecordStreamVerification extends UtilOp {
             List<RecordFileParser.RecordFile> recordFiles =
                     orderedRcdNames.stream()
                             .map(name -> Path.of(recordsDir, name).toFile())
-                            .map(RecordFileParser::parseFrom)
+                            .map(RecordFileParser::parseV5From)
                             .collect(toList());
             log.info("**** Running Hash Validation for {} Record Files ****", account);
             for (int i = 1; i < recordFiles.size(); i++) {

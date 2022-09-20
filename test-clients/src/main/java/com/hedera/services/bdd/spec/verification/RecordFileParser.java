@@ -17,20 +17,17 @@ package com.hedera.services.bdd.spec.verification;
 
 import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionRecord;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public class RecordFileParser {
     private static final Logger log = LogManager.getLogger(RecordFileParser.class);
@@ -50,7 +47,7 @@ public class RecordFileParser {
         }
     }
 
-    public static RecordFile parseFrom(File file) {
+    public static RecordFile parseV5From(File file) {
         FileInputStream stream = null;
         List<TxnHistory> histories = new LinkedList<>();
         byte[] prevHash = null;
