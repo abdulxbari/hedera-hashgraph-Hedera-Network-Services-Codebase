@@ -181,9 +181,8 @@ public interface StateModule {
 
     @Provides
     @Singleton
-    static Optional<PrintStream> providePrintStream(Platform platform) {
-        final var console = platform.createConsole(true);
-        return Optional.ofNullable(console).map(c -> c.out);
+    static Optional<PrintStream> providePrintStream() {
+        return Optional.empty();
     }
 
     @Provides
