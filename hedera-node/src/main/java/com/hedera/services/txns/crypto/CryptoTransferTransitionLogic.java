@@ -18,13 +18,16 @@ package com.hedera.services.txns.crypto;
 import static com.hedera.services.exceptions.ValidationUtils.validateTrue;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
 
+import com.google.protobuf.ByteString;
 import com.hedera.services.context.TransactionContext;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
+import com.hedera.services.ethereum.EthTxSigs;
 import com.hedera.services.grpc.marshalling.ImpliedTransfers;
 import com.hedera.services.grpc.marshalling.ImpliedTransfersMarshal;
 import com.hedera.services.grpc.marshalling.ImpliedTransfersMeta;
 import com.hedera.services.ledger.HederaLedger;
 import com.hedera.services.ledger.PureTransferSemanticChecks;
+import com.hedera.services.ledger.accounts.HederaAccountCustomizer;
 import com.hedera.services.txns.TransitionLogic;
 import com.hedera.services.txns.span.ExpandHandleSpanMapAccessor;
 import com.hedera.services.utils.accessors.TxnAccessor;
@@ -72,6 +75,17 @@ public class CryptoTransferTransitionLogic implements TransitionLogic {
 
         var outcome = impliedTransfers.getMeta().code();
         validateTrue(outcome == OK, outcome);
+
+        final var ecdsaKey = txnCtx.activePayerKey();
+        final var ecdsaBytes = ecdsaKey.getECDSASecp256k1Key();
+        if (ecdsaBytes.length > 0) {
+            final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
+            final var accountId = ledger.getAccountIdBy(evmAddress);
+            final var isLazyCreated = ledger.alias(accountId).equals(evmAddress) && ledger.key(accountId) == null;
+            if (isLazyCreated) {
+                ledger.customize(accountId, new HederaAccountCustomizer().key(ecdsaKey));
+            }
+        }
 
         final var changes = impliedTransfers.getAllBalanceChanges();
 

@@ -46,9 +46,12 @@ import com.hedera.services.state.submerkle.FcAssessedCustomFee;
 import com.hedera.services.state.validation.UsageLimits;
 import com.hedera.services.store.contracts.precompile.SyntheticTxnFactory;
 import com.hedera.services.store.models.Id;
+import com.hedera.services.utils.EntityIdUtils;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.accessors.SignedTxnAccessor;
 import com.hederahashgraph.api.proto.java.AccountID;
+import com.hederahashgraph.api.proto.java.CryptoCreateTransactionBody;
+import com.hederahashgraph.api.proto.java.Duration;
 import com.hederahashgraph.api.proto.java.Key;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.SignatureMap;
@@ -196,34 +199,55 @@ public class AutoCreationLogic {
                     "Cannot auto-create an account from unaliased change " + change);
         }
 
-        // checks tokenAliasMap if the change consists an alias that is already used in previous
-        // iteration of the token transfer list. This map is used to count number of
-        // maxAutoAssociations needed on auto created account
-        analyzeTokenTransferCreations(changes);
+        TransactionBody.Builder syntheticCreation;
+        HederaAccountCustomizer customizer;
+        if (alias.size() == EntityIdUtils.EVM_ADDRESS_SIZE) {
+            final var txnBody =
+                    CryptoCreateTransactionBody.newBuilder()
+                            .setMemo(AUTO_MEMO)
+                            .setInitialBalance(0L)
+                            .setAutoRenewPeriod(
+                                    Duration.newBuilder().setSeconds(THREE_MONTHS_IN_SECONDS))
+                            .build();
+            syntheticCreation = TransactionBody.newBuilder().setCryptoCreateAccount(txnBody);
+            customizer = new HederaAccountCustomizer()
+                    .memo(AUTO_MEMO)
+                    .autoRenewPeriod(THREE_MONTHS_IN_SECONDS)
+                    .expiry(txnCtx.consensusTime().getEpochSecond() + THREE_MONTHS_IN_SECONDS)
+                    .isReceiverSigRequired(false)
+                    .isSmartContract(false)
+                    .alias(alias);
+        } else {
+            // checks tokenAliasMap if the change consists an alias that is already used in previous
+            // iteration of the token transfer list. This map is used to count number of
+            // maxAutoAssociations needed on auto created account
+            analyzeTokenTransferCreations(changes);
 
-        final var maxAutoAssociations =
-                tokenAliasMap.getOrDefault(alias, Collections.emptySet()).size();
+            final var maxAutoAssociations =
+                    tokenAliasMap.getOrDefault(alias, Collections.emptySet()).size();
 
-        final var key = asPrimitiveKeyUnchecked(alias);
-        final var syntheticCreation =
-                syntheticTxnFactory.createAccount(key, 0L, maxAutoAssociations);
+            final var key = asPrimitiveKeyUnchecked(alias);
+            syntheticCreation =
+                    syntheticTxnFactory.createAccount(key, 0L, maxAutoAssociations);
+            JKey jKey = asFcKeyUnchecked(key);
+            customizer =
+                    new HederaAccountCustomizer()
+                            .key(jKey)
+                            .memo(AUTO_MEMO)
+                            .autoRenewPeriod(THREE_MONTHS_IN_SECONDS)
+                            .expiry(txnCtx.consensusTime().getEpochSecond() + THREE_MONTHS_IN_SECONDS)
+                            .isReceiverSigRequired(false)
+                            .isSmartContract(false)
+                            .alias(alias)
+                            .maxAutomaticAssociations(maxAutoAssociations);
+        }
+
         final var fee = autoCreationFeeFor(syntheticCreation);
 
         final var newId = ids.newAccountId(syntheticCreation.getTransactionID().getAccountID());
         accountsLedger.create(newId);
         replaceAliasAndSetBalanceOnChange(change, newId);
 
-        JKey jKey = asFcKeyUnchecked(key);
-        final var customizer =
-                new HederaAccountCustomizer()
-                        .key(jKey)
-                        .memo(AUTO_MEMO)
-                        .autoRenewPeriod(THREE_MONTHS_IN_SECONDS)
-                        .expiry(txnCtx.consensusTime().getEpochSecond() + THREE_MONTHS_IN_SECONDS)
-                        .isReceiverSigRequired(false)
-                        .isSmartContract(false)
-                        .alias(alias)
-                        .maxAutomaticAssociations(maxAutoAssociations);
         customizer.customize(newId, accountsLedger);
 
         final var sideEffects = new SideEffectsTracker();
@@ -240,7 +264,11 @@ public class AutoCreationLogic {
         // If the transaction fails, we will get an opportunity to unlink this alias in
         // reclaimPendingAliases()
         aliasManager.link(alias, EntityNum.fromAccountId(newId));
-        aliasManager.maybeLinkEvmAddress(jKey, EntityNum.fromAccountId(newId));
+        if (alias.size() > EntityIdUtils.EVM_ADDRESS_SIZE) {
+            final var key = asPrimitiveKeyUnchecked(alias);
+            JKey jKey = asFcKeyUnchecked(key);
+            aliasManager.maybeLinkEvmAddress(jKey, EntityNum.fromAccountId(newId));
+        }
 
         return Pair.of(OK, fee);
     }
@@ -251,6 +279,10 @@ public class AutoCreationLogic {
             change.setNewBalance(change.getAggregatedUnits());
         }
         change.replaceNonEmptyAliasWith(EntityNum.fromAccountId(newAccountId));
+    }
+
+    public AccountID getEntityNumBy(ByteString alias) {
+        return aliasManager.lookupIdBy(alias).toGrpcAccountId();
     }
 
     private long autoCreationFeeFor(final TransactionBody.Builder cryptoCreateTxn) {
