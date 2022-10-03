@@ -184,7 +184,7 @@ public class AccountInfoAsserts extends BaseErroringAssertsProvider<AccountInfo>
                         assertEquals(
                                 ((AccountInfo) o).getKey(),
                                 com.hederahashgraph.api.proto.java.Key.getDefaultInstance(),
-                                "Bad key!"));
+                                "Has non-default key!"));
         return this;
     }
 
@@ -290,14 +290,14 @@ public class AccountInfoAsserts extends BaseErroringAssertsProvider<AccountInfo>
                         assertEquals(
                                 expectedKey.toByteString(),
                                 ((AccountInfo) o).getAlias(),
-                                "Bad Alias!");
+                                "Bad Ed25519 key alias!");
                     }
 
                     if (expectedKey.getECDSASecp256K1().size() > 0) {
                         assertEquals(
                                 expectedKey.getECDSASecp256K1(),
                                 ((AccountInfo) o).getAlias(),
-                                "Bad Alias!");
+                                "Bad ECDSA key alias!");
                     }
                 });
         return this;
