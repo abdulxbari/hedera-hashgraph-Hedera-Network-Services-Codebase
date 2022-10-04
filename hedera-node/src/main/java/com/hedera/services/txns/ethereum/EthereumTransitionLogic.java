@@ -18,6 +18,7 @@ package com.hedera.services.txns.ethereum;
 import static com.hedera.services.exceptions.ValidationUtils.validateFalse;
 import static com.hedera.services.exceptions.ValidationUtils.validateTrue;
 import static com.hedera.services.ledger.properties.AccountProperty.ETHEREUM_NONCE;
+import static com.hedera.services.ledger.properties.AccountProperty.KEY;
 import static com.hedera.services.legacy.proto.utils.ByteStringUtils.wrapUnsafely;
 import static com.hedera.services.utils.EntityNum.MISSING_NUM;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ACCOUNT_ID;
@@ -27,9 +28,11 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.WRONG_CHAIN_ID;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.WRONG_NONCE;
 
+import com.google.protobuf.ByteString;
 import com.hedera.services.context.TransactionContext;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.ethereum.EthTxData;
+import com.hedera.services.ethereum.EthTxSigs;
 import com.hedera.services.ledger.TransactionalLedger;
 import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.ledger.accounts.SynthCreationCustomizer;
@@ -123,6 +126,19 @@ public class EthereumTransitionLogic implements PreFetchableTransition {
         } else {
             delegateToCreateTransition(
                     callerNum.toId(), synthTxn, relayerId, maxGasAllowance, userOfferedGasPrice);
+        }
+
+        final var payerKey = txnCtx.activePayerKey();
+        final var ecdsaBytes = payerKey != null ? payerKey.getECDSASecp256k1Key() : new byte[0];
+        if (ecdsaBytes.length > 0) {
+            final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
+            final var accountId = aliasManager.lookupIdBy(evmAddress).toGrpcAccountId();
+            final var account = accountsLedger.getRef(accountId);
+            final var isLazyCreated = account.getAlias().equals(evmAddress) && account.getAccountKey() == null;
+            if (isLazyCreated) {
+                account.setAccountKey(payerKey);
+                accountsLedger.put(accountId, account);
+            }
         }
 
         recordService.updateForEvmCall(

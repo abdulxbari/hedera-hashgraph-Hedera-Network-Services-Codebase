@@ -24,7 +24,6 @@ import static com.hedera.services.bdd.spec.assertions.AutoAssocAsserts.accountTo
 import static com.hedera.services.bdd.spec.assertions.ContractInfoAsserts.contractWith;
 import static com.hedera.services.bdd.spec.assertions.TransactionRecordAsserts.includingFungibleMovement;
 import static com.hedera.services.bdd.spec.assertions.TransactionRecordAsserts.recordWith;
-import static com.hedera.services.bdd.spec.keys.KeyFactory.KeyType.THRESHOLD;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAccountInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAliasedAccountInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAutoCreatedAccountBalance;
@@ -41,6 +40,7 @@ import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoDeleteAli
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoTransfer;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoUpdate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoUpdateAliased;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.ethereumContractCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.mintToken;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.sortedCryptoTransfer;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenAssociate;
@@ -79,8 +79,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.google.protobuf.ByteString;
 import com.hedera.services.bdd.spec.HapiApiSpec;
 import com.hedera.services.bdd.spec.keys.KeyShape;
-import com.hedera.services.bdd.spec.utilops.UtilVerbs;
 import com.hedera.services.bdd.suites.HapiApiSuite;
+import com.hedera.services.ethereum.EthTxData;
 import com.hedera.services.ethereum.EthTxSigs;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ContractID;
@@ -97,6 +97,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -175,6 +176,7 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
                 lazyAccountCreationWithCryptoTransfer(),
                 lazyAccountCreationWithContractCreate(),
                 lazyAccountCreationWithContractCall(),
+                lazyAccountCreationWithEthereumTransaction(),
                 /* -- HTS auto creates -- */
                 canAutoCreateWithFungibleTokenTransfersToAlias(),
                 multipleTokenTransfersSucceed(),
@@ -840,7 +842,7 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
                                                                     .key(SECP_256K1_SOURCE_KEY)
                                                                     .alias(evmAddress)
                                                                     .expectedBalanceWithChargedUsd(
-                                                                            (ONE_HUNDRED_HBARS), 0, 0)
+                                                                            ONE_HUNDRED_HBARS, 0, 0)
                                                     );
 
                                     allRunFor(spec, op, op2, op3);
@@ -887,7 +889,54 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
                                                                     .key(SECP_256K1_SOURCE_KEY)
                                                                     .alias(evmAddress)
                                                                     .expectedBalanceWithChargedUsd(
-                                                                            (ONE_HUNDRED_HBARS), 0, 0)
+                                                                            ONE_HUNDRED_HBARS, 0, 0)
+                                                    );
+
+                                    allRunFor(spec, op, op2, op3);
+                                }));
+    }
+
+    private HapiApiSpec lazyAccountCreationWithEthereumTransaction() {
+        final var lazyCreateSponsor = "lazyCreateSponsor";
+        final String CONTRACT = "Fuse";
+        return defaultHapiSpec("LazyAccountCreationWithEthereumTransaction")
+                .given(
+                        newKeyNamed(SECP_256K1_SOURCE_KEY).shape(SECP_256K1_SHAPE),
+                        cryptoCreate(lazyCreateSponsor).balance(INITIAL_BALANCE * ONE_HBAR).key(SECP_256K1_SOURCE_KEY),
+                        uploadInitCode(CONTRACT))
+                .when()
+                .then(
+                        overriding("contracts.chainId", "298"),
+                        withOpContext(
+                                (spec, opLog) -> {
+                                    final var ecdsaKey = spec.registry().getKey(SECP_256K1_SOURCE_KEY)
+                                            .getECDSASecp256K1()
+                                            .toByteArray();
+                                    final var evmAddress = ByteString.copyFrom(
+                                            EthTxSigs.recoverAddressFromPubKey(ecdsaKey)
+                                    );
+                                    final var op =
+                                            cryptoTransfer(tinyBarsFromTo(lazyCreateSponsor, evmAddress, ONE_HUNDRED_HBARS))
+                                                    .hasKnownStatus(SUCCESS)
+                                                    .via(TRANSFER_TXN);
+
+                                    final var op2 =
+                                            ethereumContractCreate(CONTRACT)
+                                                    .type(EthTxData.EthTransactionType.LEGACY_ETHEREUM)
+                                                    .gasLimit(1_000_000)
+                                                    .gasPrice(0)
+                                                    .hasKnownStatus(SUCCESS)
+                                                    .payingWith(lazyCreateSponsor)
+                                                    .via(TRANSFER_TXN_2);
+
+                                    final var op3 =
+                                            getAliasedAccountInfo(SECP_256K1_SOURCE_KEY)
+                                                    .has(
+                                                            accountWith()
+                                                                    .key(SECP_256K1_SOURCE_KEY)
+                                                                    .alias(evmAddress)
+                                                                    .expectedBalanceWithChargedUsd(
+                                                                            ONE_HUNDRED_HBARS, 0, 0)
                                                     );
 
                                     allRunFor(spec, op, op2, op3);
