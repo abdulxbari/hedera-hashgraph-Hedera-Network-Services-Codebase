@@ -35,17 +35,21 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.REQUESTED_NUM_
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SERIALIZATION_FAILED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.STAKING_NOT_ENABLED;
 
+import com.google.protobuf.ByteString;
 import com.hedera.services.context.NodeInfo;
 import com.hedera.services.context.SideEffectsTracker;
 import com.hedera.services.context.TransactionContext;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.contracts.execution.CreateEvmTxProcessor;
 import com.hedera.services.contracts.execution.TransactionProcessingResult;
+import com.hedera.services.ethereum.EthTxSigs;
 import com.hedera.services.exceptions.InvalidTransactionException;
 import com.hedera.services.files.HederaFs;
 import com.hedera.services.files.TieredHederaFs;
 import com.hedera.services.ledger.SigImpactHistorian;
+import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.ledger.accounts.ContractCustomizer;
+import com.hedera.services.ledger.accounts.HederaAccountCustomizer;
 import com.hedera.services.legacy.core.jproto.JContractIDKey;
 import com.hedera.services.legacy.proto.utils.ByteStringUtils;
 import com.hedera.services.records.RecordsHistorian;
@@ -99,6 +103,7 @@ public class ContractCreateTransitionLogic implements TransitionLogic {
     private final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts;
     private final NodeInfo nodeInfo;
     private final SyntheticTxnFactory syntheticTxnFactory;
+    private final AliasManager aliasManager;
 
     @Inject
     public ContractCreateTransitionLogic(
@@ -115,7 +120,8 @@ public class ContractCreateTransitionLogic implements TransitionLogic {
             final SigImpactHistorian sigImpactHistorian,
             final SyntheticTxnFactory syntheticTxnFactory,
             final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts,
-            final NodeInfo nodeInfo) {
+            final NodeInfo nodeInfo,
+            final AliasManager aliasManager) {
         this.hfs = hfs;
         this.txnCtx = txnCtx;
         this.validator = validator;
@@ -130,6 +136,7 @@ public class ContractCreateTransitionLogic implements TransitionLogic {
         this.properties = properties;
         this.accounts = accounts;
         this.nodeInfo = nodeInfo;
+        this.aliasManager = aliasManager;
     }
 
     @Override
@@ -174,6 +181,19 @@ public class ContractCreateTransitionLogic implements TransitionLogic {
         final var newContractAddress = worldState.newContractAddress(sender.getId().asEvmAddress());
 
         // --- Do the business logic ---
+        final var payerKey = txnCtx.activePayerKey();
+        final var ecdsaBytes = payerKey != null ? payerKey.getECDSASecp256k1Key() : new byte[0];
+        if (ecdsaBytes.length > 0) {
+            final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
+            final var accountId = aliasManager.lookupIdBy(evmAddress).toId();
+            final var account = accountStore.loadAccount(accountId);
+            final var isLazyCreated = account.getAlias().equals(evmAddress) && account.getKey() == null;
+            if (isLazyCreated) {
+                account.setKey(payerKey);
+                accountStore.commitAccount(account);
+            }
+        }
+
         ContractCustomizer hapiSenderCustomizer = fromHapiCreation(key, consensusTime, op);
         if (!properties.areContractAutoAssociationsEnabled()) {
             hapiSenderCustomizer.accountCustomizer().maxAutomaticAssociations(0);

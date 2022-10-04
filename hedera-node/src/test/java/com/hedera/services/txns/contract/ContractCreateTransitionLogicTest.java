@@ -45,6 +45,7 @@ import com.hedera.services.exceptions.InvalidTransactionException;
 import com.hedera.services.files.HederaFs;
 import com.hedera.services.files.TieredHederaFs;
 import com.hedera.services.ledger.SigImpactHistorian;
+import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.ledger.accounts.ContractCustomizer;
 import com.hedera.services.legacy.core.jproto.JEd25519Key;
 import com.hedera.services.records.RecordsHistorian;
@@ -130,6 +131,7 @@ class ContractCreateTransitionLogicTest {
     @Mock private NodeInfo nodeInfo;
     private ContractCreateTransitionLogic subject;
     private TransactionBody contractCreateTxn;
+    @Mock private AliasManager aliasManager;
 
     @BeforeEach
     void setup() {
@@ -148,7 +150,8 @@ class ContractCreateTransitionLogicTest {
                         sigImpactHistorian,
                         syntheticTxnFactory,
                         () -> accounts,
-                        nodeInfo);
+                        nodeInfo,
+                        aliasManager);
     }
 
     @Test
