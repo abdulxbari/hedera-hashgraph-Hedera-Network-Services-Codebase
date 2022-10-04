@@ -177,6 +177,7 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
                 lazyAccountCreationWithContractCreate(),
                 lazyAccountCreationWithContractCall(),
                 lazyAccountCreationWithEthereumTransaction(),
+                lazyAccountCreationWithTokenAssociation(),
                 /* -- HTS auto creates -- */
                 canAutoCreateWithFungibleTokenTransfersToAlias(),
                 multipleTokenTransfersSucceed(),
@@ -925,6 +926,52 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
                                                     .type(EthTxData.EthTransactionType.LEGACY_ETHEREUM)
                                                     .gasLimit(1_000_000)
                                                     .gasPrice(0)
+                                                    .hasKnownStatus(SUCCESS)
+                                                    .payingWith(lazyCreateSponsor)
+                                                    .via(TRANSFER_TXN_2);
+
+                                    final var op3 =
+                                            getAliasedAccountInfo(SECP_256K1_SOURCE_KEY)
+                                                    .has(
+                                                            accountWith()
+                                                                    .key(SECP_256K1_SOURCE_KEY)
+                                                                    .alias(evmAddress)
+                                                                    .expectedBalanceWithChargedUsd(
+                                                                            ONE_HUNDRED_HBARS, 0, 0)
+                                                    );
+
+                                    allRunFor(spec, op, op2, op3);
+                                }));
+    }
+    private HapiApiSpec lazyAccountCreationWithTokenAssociation() {
+        final var lazyCreateSponsor = "lazyCreateSponsor";
+        final String TOKEN_TREASURY = "treasury";
+        final String VANILLA_TOKEN = "TokenD";
+        return defaultHapiSpec("LazyAccountCreationWithTokenAssociation")
+                .given(
+                        newKeyNamed(SECP_256K1_SOURCE_KEY).shape(SECP_256K1_SHAPE),
+                        cryptoCreate(lazyCreateSponsor).balance(INITIAL_BALANCE * ONE_HBAR).key(SECP_256K1_SOURCE_KEY),
+                        cryptoCreate(TOKEN_TREASURY).balance(0L),
+                        tokenCreate(VANILLA_TOKEN).treasury(TOKEN_TREASURY),
+                        cryptoCreate("test"))
+                .when()
+                .then(
+                        overriding("contracts.chainId", "298"),
+                        withOpContext(
+                                (spec, opLog) -> {
+                                    final var ecdsaKey = spec.registry().getKey(SECP_256K1_SOURCE_KEY)
+                                            .getECDSASecp256K1()
+                                            .toByteArray();
+                                    final var evmAddress = ByteString.copyFrom(
+                                            EthTxSigs.recoverAddressFromPubKey(ecdsaKey)
+                                    );
+                                    final var op =
+                                            cryptoTransfer(tinyBarsFromTo(lazyCreateSponsor, evmAddress, ONE_HUNDRED_HBARS))
+                                                    .hasKnownStatus(SUCCESS)
+                                                    .via(TRANSFER_TXN);
+
+                                    final var op2 =
+                                            tokenAssociate("test", VANILLA_TOKEN)
                                                     .hasKnownStatus(SUCCESS)
                                                     .payingWith(lazyCreateSponsor)
                                                     .via(TRANSFER_TXN_2);

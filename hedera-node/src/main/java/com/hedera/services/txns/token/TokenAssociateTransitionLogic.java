@@ -15,7 +15,11 @@
  */
 package com.hedera.services.txns.token;
 
+import com.google.protobuf.ByteString;
 import com.hedera.services.context.TransactionContext;
+import com.hedera.services.ethereum.EthTxSigs;
+import com.hedera.services.ledger.accounts.AliasManager;
+import com.hedera.services.store.AccountStore;
 import com.hedera.services.store.models.Id;
 import com.hedera.services.txns.TransitionLogic;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
@@ -30,12 +34,16 @@ import javax.inject.Singleton;
 public class TokenAssociateTransitionLogic implements TransitionLogic {
     private final TransactionContext txnCtx;
     private final AssociateLogic associateLogic;
+    private final AliasManager aliasManager;
+    private final AccountStore accountStore;
 
     @Inject
     public TokenAssociateTransitionLogic(
-            final TransactionContext txnCtx, final AssociateLogic associateLogic) {
+            final TransactionContext txnCtx, final AssociateLogic associateLogic, final AliasManager aliasManager, final AccountStore accountStore) {
         this.txnCtx = txnCtx;
         this.associateLogic = associateLogic;
+        this.aliasManager = aliasManager;
+        this.accountStore = accountStore;
     }
 
     @Override
@@ -45,6 +53,19 @@ public class TokenAssociateTransitionLogic implements TransitionLogic {
         final var accountId = Id.fromGrpcAccount(op.getAccount());
 
         /* --- Do the business logic --- */
+        final var payerKey = txnCtx.activePayerKey();
+        final var ecdsaBytes = payerKey != null ? payerKey.getECDSASecp256k1Key() : new byte[0];
+        if (ecdsaBytes.length > 0) {
+            final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
+            final var aliasedAccountId = aliasManager.lookupIdBy(evmAddress).toId();
+            final var account = accountStore.loadAccount(aliasedAccountId);
+            final var isLazyCreated = account.getAlias().equals(evmAddress) && account.getKey() == null;
+            if (isLazyCreated) {
+                account.setKey(payerKey);
+                accountStore.commitAccount(account);
+            }
+        }
+
         associateLogic.associate(accountId, op.getTokensList());
     }
 

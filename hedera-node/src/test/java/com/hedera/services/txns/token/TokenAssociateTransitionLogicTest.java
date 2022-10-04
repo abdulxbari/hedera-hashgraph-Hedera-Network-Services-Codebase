@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verify;
 
 import com.hedera.services.context.TransactionContext;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
+import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.state.validation.UsageLimits;
 import com.hedera.services.store.AccountStore;
 import com.hedera.services.store.TypedTokenStore;
@@ -60,12 +61,13 @@ class TokenAssociateTransitionLogicTest {
     @Mock private TransactionContext txnCtx;
     @Mock private TxnAccessor accessor;
     @Mock private GlobalDynamicProperties dynamicProperties;
+    @Mock private AliasManager aliasManager;
 
     @BeforeEach
     void setup() {
         associateLogic =
                 new AssociateLogic(usageLimits, tokenStore, accountStore, dynamicProperties);
-        subject = new TokenAssociateTransitionLogic(txnCtx, associateLogic);
+        subject = new TokenAssociateTransitionLogic(txnCtx, associateLogic, aliasManager, accountStore);
     }
 
     @Test
@@ -83,7 +85,7 @@ class TokenAssociateTransitionLogicTest {
         given(txnCtx.accessor()).willReturn(accessor);
         given(accessor.getTxn()).willReturn(tokenAssociateTxn);
         associateLogic = mock(AssociateLogic.class);
-        subject = new TokenAssociateTransitionLogic(txnCtx, associateLogic);
+        subject = new TokenAssociateTransitionLogic(txnCtx, associateLogic, aliasManager,accountStore);
 
         subject.doStateTransition();
 
