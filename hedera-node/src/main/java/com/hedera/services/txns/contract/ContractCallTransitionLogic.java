@@ -20,12 +20,15 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.CONTRACT_NEGAT
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.MAX_GAS_LIMIT_EXCEEDED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
 
+import com.google.protobuf.ByteString;
 import com.hedera.services.context.TransactionContext;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.contracts.execution.CallEvmTxProcessor;
 import com.hedera.services.contracts.execution.TransactionProcessingResult;
+import com.hedera.services.ethereum.EthTxSigs;
 import com.hedera.services.ledger.SigImpactHistorian;
 import com.hedera.services.ledger.accounts.AliasManager;
+import com.hedera.services.ledger.accounts.HederaAccountCustomizer;
 import com.hedera.services.records.TransactionRecordService;
 import com.hedera.services.store.AccountStore;
 import com.hedera.services.store.contracts.CodeCache;
@@ -121,6 +124,19 @@ public class ContractCallTransitionLogic implements PreFetchableTransition {
                         : Bytes.EMPTY;
 
         // --- Do the business logic ---
+        final var payerKey = txnCtx.activePayerKey();
+        final var ecdsaBytes = payerKey != null ? payerKey.getECDSASecp256k1Key() : new byte[0];
+        if (ecdsaBytes.length > 0) {
+            final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
+            final var accountId = aliasManager.lookupIdBy(evmAddress).toId();
+            final var account = accountStore.loadAccount(accountId);
+            final var isLazyCreated = account.getAlias().equals(evmAddress) && account.getKey() == null;
+            if (isLazyCreated) {
+                account.setKey(payerKey);
+                accountStore.commitAccount(account);
+            }
+        }
+
         TransactionProcessingResult result;
         if (relayerId == null) {
             result =

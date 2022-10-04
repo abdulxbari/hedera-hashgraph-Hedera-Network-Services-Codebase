@@ -24,6 +24,7 @@ import static com.hedera.services.bdd.spec.assertions.AutoAssocAsserts.accountTo
 import static com.hedera.services.bdd.spec.assertions.ContractInfoAsserts.contractWith;
 import static com.hedera.services.bdd.spec.assertions.TransactionRecordAsserts.includingFungibleMovement;
 import static com.hedera.services.bdd.spec.assertions.TransactionRecordAsserts.recordWith;
+import static com.hedera.services.bdd.spec.keys.KeyFactory.KeyType.THRESHOLD;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAccountInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAliasedAccountInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAutoCreatedAccountBalance;
@@ -31,6 +32,7 @@ import static com.hedera.services.bdd.spec.queries.QueryVerbs.getContractInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getReceipt;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.queries.crypto.ExpectedTokenRel.relationshipWith;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCall;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractUpdate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.createDefaultContract;
@@ -77,6 +79,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.google.protobuf.ByteString;
 import com.hedera.services.bdd.spec.HapiApiSpec;
 import com.hedera.services.bdd.spec.keys.KeyShape;
+import com.hedera.services.bdd.spec.utilops.UtilVerbs;
 import com.hedera.services.bdd.suites.HapiApiSuite;
 import com.hedera.services.ethereum.EthTxSigs;
 import com.hederahashgraph.api.proto.java.AccountID;
@@ -171,6 +174,7 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
                 noStakePeriodStartIfNotStakingToNode(),
                 lazyAccountCreationWithCryptoTransfer(),
                 lazyAccountCreationWithContractCreate(),
+                lazyAccountCreationWithContractCall(),
                 /* -- HTS auto creates -- */
                 canAutoCreateWithFungibleTokenTransfersToAlias(),
                 multipleTokenTransfersSucceed(),
@@ -825,6 +829,53 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
                                     final var op2 =
                                             contractCreate(CONTRACT)
                                                     .adminKey(ADMIN_KEY)
+                                                    .hasKnownStatus(SUCCESS)
+                                                    .payingWith(lazyCreateSponsor)
+                                                    .via(TRANSFER_TXN_2);
+
+                                    final var op3 =
+                                            getAliasedAccountInfo(SECP_256K1_SOURCE_KEY)
+                                                    .has(
+                                                            accountWith()
+                                                                    .key(SECP_256K1_SOURCE_KEY)
+                                                                    .alias(evmAddress)
+                                                                    .expectedBalanceWithChargedUsd(
+                                                                            (ONE_HUNDRED_HBARS), 0, 0)
+                                                    );
+
+                                    allRunFor(spec, op, op2, op3);
+                                }));
+    }
+
+    private HapiApiSpec lazyAccountCreationWithContractCall() {
+        final var lazyCreateSponsor = "lazyCreateSponsor";
+        final String CONTRACT = "PayReceivable";
+        final long DEPOSIT_AMOUNT = 1000;
+        return defaultHapiSpec("LazyAccountCreationWithContractCall")
+                .given(
+                        newKeyNamed(SECP_256K1_SOURCE_KEY).shape(SECP_256K1_SHAPE),
+                        cryptoCreate(lazyCreateSponsor).balance(INITIAL_BALANCE * ONE_HBAR).key(SECP_256K1_SOURCE_KEY),
+                        newKeyNamed(ADMIN_KEY),
+                        uploadInitCode(CONTRACT),
+                        contractCreate(CONTRACT).adminKey(ADMIN_KEY))
+                .when()
+                .then(
+                        withOpContext(
+                                (spec, opLog) -> {
+                                    final var ecdsaKey = spec.registry().getKey(SECP_256K1_SOURCE_KEY)
+                                            .getECDSASecp256K1()
+                                            .toByteArray();
+                                    final var evmAddress = ByteString.copyFrom(
+                                            EthTxSigs.recoverAddressFromPubKey(ecdsaKey)
+                                    );
+                                    final var op =
+                                            cryptoTransfer(tinyBarsFromTo(lazyCreateSponsor, evmAddress, ONE_HUNDRED_HBARS))
+                                                    .hasKnownStatus(SUCCESS)
+                                                    .via(TRANSFER_TXN);
+
+                                    final var op2 =
+                                            contractCall(CONTRACT)
+                                                    .sending(DEPOSIT_AMOUNT)
                                                     .hasKnownStatus(SUCCESS)
                                                     .payingWith(lazyCreateSponsor)
                                                     .via(TRANSFER_TXN_2);
