@@ -38,6 +38,7 @@ import com.hedera.services.store.contracts.HederaWorldState;
 import com.hedera.services.store.models.Account;
 import com.hedera.services.store.models.Id;
 import com.hedera.services.txns.PreFetchableTransition;
+import com.hedera.services.txns.crypto.LazyCreationLogic;
 import com.hedera.services.utils.EntityIdUtils;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.accessors.TxnAccessor;
@@ -67,6 +68,7 @@ public class ContractCallTransitionLogic implements PreFetchableTransition {
     private final AliasManager aliasManager;
     private final SigImpactHistorian sigImpactHistorian;
     private final EntityAccess entityAccess;
+    private final LazyCreationLogic lazyCreationLogic;
 
     @Inject
     public ContractCallTransitionLogic(
@@ -79,7 +81,8 @@ public class ContractCallTransitionLogic implements PreFetchableTransition {
             final CodeCache codeCache,
             final SigImpactHistorian sigImpactHistorian,
             final AliasManager aliasManager,
-            final EntityAccess entityAccess) {
+            final EntityAccess entityAccess,
+            final LazyCreationLogic lazyCreationLogic) {
         this.txnCtx = txnCtx;
         this.aliasManager = aliasManager;
         this.worldState = worldState;
@@ -90,6 +93,7 @@ public class ContractCallTransitionLogic implements PreFetchableTransition {
         this.codeCache = codeCache;
         this.sigImpactHistorian = sigImpactHistorian;
         this.entityAccess = entityAccess;
+        this.lazyCreationLogic = lazyCreationLogic;
     }
 
     @Override
@@ -128,13 +132,7 @@ public class ContractCallTransitionLogic implements PreFetchableTransition {
         final var ecdsaBytes = payerKey != null ? payerKey.getECDSASecp256k1Key() : new byte[0];
         if (ecdsaBytes.length > 0) {
             final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
-            final var accountId = aliasManager.lookupIdBy(evmAddress).toId();
-            final var account = accountStore.loadAccount(accountId);
-            final var isLazyCreated = account.getAlias().equals(evmAddress) && account.getKey() == null;
-            if (isLazyCreated) {
-                account.setKey(payerKey);
-                accountStore.commitAccount(account);
-            }
+            lazyCreationLogic.tryToComplete(evmAddress, payerKey);
         }
 
         TransactionProcessingResult result;

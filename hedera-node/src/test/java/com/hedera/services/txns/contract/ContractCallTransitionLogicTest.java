@@ -42,6 +42,7 @@ import com.hedera.services.store.contracts.EntityAccess;
 import com.hedera.services.store.contracts.HederaWorldState;
 import com.hedera.services.store.models.Account;
 import com.hedera.services.store.models.Id;
+import com.hedera.services.txns.crypto.LazyCreationLogic;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.accessors.PlatformTxnAccessor;
 import com.hedera.test.utils.IdUtils;
@@ -81,6 +82,7 @@ class ContractCallTransitionLogicTest {
     @Mock private SigImpactHistorian sigImpactHistorian;
     @Mock private AliasManager aliasManager;
     @Mock private EntityAccess entityAccess;
+    @Mock private LazyCreationLogic lazyCreationLogic;
 
     private TransactionBody contractCallTxn;
     private final Account senderAccount = new Account(new Id(0, 0, 1002));
@@ -101,7 +103,8 @@ class ContractCallTransitionLogicTest {
                         codeCache,
                         sigImpactHistorian,
                         aliasManager,
-                        entityAccess);
+                        entityAccess,
+                        lazyCreationLogic);
     }
 
     @Test

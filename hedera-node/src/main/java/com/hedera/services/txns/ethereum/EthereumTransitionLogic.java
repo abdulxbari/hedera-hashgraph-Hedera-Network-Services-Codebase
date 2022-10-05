@@ -39,11 +39,13 @@ import com.hedera.services.ledger.accounts.SynthCreationCustomizer;
 import com.hedera.services.ledger.properties.AccountProperty;
 import com.hedera.services.records.TransactionRecordService;
 import com.hedera.services.state.merkle.MerkleAccount;
+import com.hedera.services.store.AccountStore;
 import com.hedera.services.store.contracts.precompile.SyntheticTxnFactory;
 import com.hedera.services.store.models.Id;
 import com.hedera.services.txns.PreFetchableTransition;
 import com.hedera.services.txns.contract.ContractCallTransitionLogic;
 import com.hedera.services.txns.contract.ContractCreateTransitionLogic;
+import com.hedera.services.txns.crypto.LazyCreationLogic;
 import com.hedera.services.txns.span.ExpandHandleSpanMapAccessor;
 import com.hedera.services.txns.span.SpanMapManager;
 import com.hedera.services.utils.EntityNum;
@@ -76,6 +78,7 @@ public class EthereumTransitionLogic implements PreFetchableTransition {
     private final ContractCallTransitionLogic contractCallTransitionLogic;
     private final ContractCreateTransitionLogic contractCreateTransitionLogic;
     private final TransactionalLedger<AccountID, AccountProperty, MerkleAccount> accountsLedger;
+    private final LazyCreationLogic lazyCreationLogic;
 
     @Inject
     public EthereumTransitionLogic(
@@ -89,7 +92,8 @@ public class EthereumTransitionLogic implements PreFetchableTransition {
             final GlobalDynamicProperties dynamicProperties,
             final AliasManager aliasManager,
             final TransactionalLedger<AccountID, AccountProperty, MerkleAccount> accountsLedger,
-            final SpanMapManager spanMapManager) {
+            final SpanMapManager spanMapManager,
+            final LazyCreationLogic lazyCreationLogic) {
         this.txnCtx = txnCtx;
         this.syntheticTxnFactory = syntheticTxnFactory;
         this.creationCustomizer = creationCustomizer;
@@ -101,6 +105,7 @@ public class EthereumTransitionLogic implements PreFetchableTransition {
         this.accountsLedger = accountsLedger;
         this.dynamicProperties = dynamicProperties;
         this.spanMapManager = spanMapManager;
+        this.lazyCreationLogic = lazyCreationLogic;
     }
 
     @Override
@@ -132,13 +137,7 @@ public class EthereumTransitionLogic implements PreFetchableTransition {
         final var ecdsaBytes = payerKey != null ? payerKey.getECDSASecp256k1Key() : new byte[0];
         if (ecdsaBytes.length > 0) {
             final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
-            final var accountId = aliasManager.lookupIdBy(evmAddress).toGrpcAccountId();
-            final var account = accountsLedger.getRef(accountId);
-            final var isLazyCreated = account.getAlias().equals(evmAddress) && account.getAccountKey() == null;
-            if (isLazyCreated) {
-                account.setAccountKey(payerKey);
-                accountsLedger.put(accountId, account);
-            }
+            lazyCreationLogic.tryToComplete(evmAddress, payerKey);
         }
 
         recordService.updateForEvmCall(

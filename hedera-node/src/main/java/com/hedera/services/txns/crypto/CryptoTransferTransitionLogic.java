@@ -52,7 +52,7 @@ public class CryptoTransferTransitionLogic implements TransitionLogic {
     private final ImpliedTransfersMarshal impliedTransfersMarshal;
     private final PureTransferSemanticChecks transferSemanticChecks;
     private final ExpandHandleSpanMapAccessor spanMapAccessor;
-    private final AliasManager aliasManager;
+    private final LazyCreationLogic lazyCreationLogic;
 
     @Inject
     public CryptoTransferTransitionLogic(
@@ -62,14 +62,14 @@ public class CryptoTransferTransitionLogic implements TransitionLogic {
             ImpliedTransfersMarshal impliedTransfersMarshal,
             PureTransferSemanticChecks transferSemanticChecks,
             ExpandHandleSpanMapAccessor spanMapAccessor,
-            AliasManager aliasManager) {
+            LazyCreationLogic lazyCreationLogic) {
         this.txnCtx = txnCtx;
         this.ledger = ledger;
         this.spanMapAccessor = spanMapAccessor;
         this.dynamicProperties = dynamicProperties;
         this.transferSemanticChecks = transferSemanticChecks;
         this.impliedTransfersMarshal = impliedTransfersMarshal;
-        this.aliasManager = aliasManager;
+        this.lazyCreationLogic = lazyCreationLogic;
     }
 
     @Override
@@ -83,14 +83,8 @@ public class CryptoTransferTransitionLogic implements TransitionLogic {
         final var payerKey = txnCtx.activePayerKey();
         final var ecdsaBytes = payerKey != null ? payerKey.getECDSASecp256k1Key() : new byte[0];
         if (ecdsaBytes.length > 0) {
-            final var evmAddress =
-                    ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
-            final var accountId = aliasManager.lookupIdBy(evmAddress).toGrpcAccountId();
-            final var isLazyCreated =
-                    ledger.alias(accountId).equals(evmAddress) && ledger.key(accountId) == null;
-            if (isLazyCreated) {
-                ledger.customize(accountId, new HederaAccountCustomizer().key(payerKey));
-            }
+            final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
+            lazyCreationLogic.tryToComplete(evmAddress, payerKey);
         }
 
         final var changes = impliedTransfers.getAllBalanceChanges();

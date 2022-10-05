@@ -160,32 +160,32 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
     public List<HapiApiSpec> getSpecsInSuite() {
         return List.of(
                 /* --- Hbar auto creates */
-                autoAccountCreationsHappyPath(),
-                autoAccountCreationBadAlias(),
-                autoAccountCreationUnsupportedAlias(),
-                transferToAccountAutoCreatedUsingAlias(),
-                transferToAccountAutoCreatedUsingAccount(),
-                transferFromAliasToAlias(),
-                transferFromAliasToAccount(),
-                multipleAutoAccountCreations(),
-                accountCreatedIfAliasUsedAsPubKey(),
-                aliasCanBeUsedOnManyAccountsNotAsAlias(),
-                autoAccountCreationWorksWhenUsingAliasOfDeletedAccount(),
-                canGetBalanceAndInfoViaAlias(),
-                noStakePeriodStartIfNotStakingToNode(),
+//                autoAccountCreationsHappyPath(),
+//                autoAccountCreationBadAlias(),
+//                autoAccountCreationUnsupportedAlias(),
+//                transferToAccountAutoCreatedUsingAlias(),
+//                transferToAccountAutoCreatedUsingAccount(),
+//                transferFromAliasToAlias(),
+//                transferFromAliasToAccount(),
+//                multipleAutoAccountCreations(),
+//                accountCreatedIfAliasUsedAsPubKey(),
+//                aliasCanBeUsedOnManyAccountsNotAsAlias(),
+//                autoAccountCreationWorksWhenUsingAliasOfDeletedAccount(),
+//                canGetBalanceAndInfoViaAlias(),
+//                noStakePeriodStartIfNotStakingToNode(),
                 lazyAccountCreationWithCryptoTransfer(),
                 lazyAccountCreationWithContractCreate(),
                 lazyAccountCreationWithContractCall(),
                 lazyAccountCreationWithEthereumTransaction(),
-                lazyAccountCreationWithTokenAssociation(),
+                lazyAccountCreationWithTokenAssociation());
                 /* -- HTS auto creates -- */
-                canAutoCreateWithFungibleTokenTransfersToAlias(),
-                multipleTokenTransfersSucceed(),
-                nftTransfersToAlias(),
-                autoCreateWithNftFallBackFeeFails(),
-                repeatedAliasInSameTransferListFails(),
-                tokenTransfersFailWhenFeatureFlagDisabled(),
-                canAutoCreateWithHbarAndTokenTransfers());
+//                canAutoCreateWithFungibleTokenTransfersToAlias(),
+//                multipleTokenTransfersSucceed(),
+//                nftTransfersToAlias(),
+//                autoCreateWithNftFallBackFeeFails(),
+//                repeatedAliasInSameTransferListFails(),
+//                tokenTransfersFailWhenFeatureFlagDisabled(),
+//                canAutoCreateWithHbarAndTokenTransfers());
     }
 
     private HapiApiSpec canAutoCreateWithHbarAndTokenTransfers() {

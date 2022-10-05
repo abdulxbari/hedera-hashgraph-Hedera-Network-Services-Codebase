@@ -64,6 +64,7 @@ import com.hedera.services.store.models.Id;
 import com.hedera.services.stream.proto.SidecarType;
 import com.hedera.services.stream.proto.TransactionSidecarRecord;
 import com.hedera.services.txns.TransitionLogic;
+import com.hedera.services.txns.crypto.LazyCreationLogic;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.SidecarUtils;
@@ -103,7 +104,7 @@ public class ContractCreateTransitionLogic implements TransitionLogic {
     private final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts;
     private final NodeInfo nodeInfo;
     private final SyntheticTxnFactory syntheticTxnFactory;
-    private final AliasManager aliasManager;
+    private final LazyCreationLogic lazyCreationLogic;
 
     @Inject
     public ContractCreateTransitionLogic(
@@ -121,7 +122,7 @@ public class ContractCreateTransitionLogic implements TransitionLogic {
             final SyntheticTxnFactory syntheticTxnFactory,
             final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts,
             final NodeInfo nodeInfo,
-            final AliasManager aliasManager) {
+            final LazyCreationLogic lazyCreationLogic) {
         this.hfs = hfs;
         this.txnCtx = txnCtx;
         this.validator = validator;
@@ -136,7 +137,7 @@ public class ContractCreateTransitionLogic implements TransitionLogic {
         this.properties = properties;
         this.accounts = accounts;
         this.nodeInfo = nodeInfo;
-        this.aliasManager = aliasManager;
+        this.lazyCreationLogic = lazyCreationLogic;
     }
 
     @Override
@@ -185,13 +186,7 @@ public class ContractCreateTransitionLogic implements TransitionLogic {
         final var ecdsaBytes = payerKey != null ? payerKey.getECDSASecp256k1Key() : new byte[0];
         if (ecdsaBytes.length > 0) {
             final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
-            final var accountId = aliasManager.lookupIdBy(evmAddress).toId();
-            final var account = accountStore.loadAccount(accountId);
-            final var isLazyCreated = account.getAlias().equals(evmAddress) && account.getKey() == null;
-            if (isLazyCreated) {
-                account.setKey(payerKey);
-                accountStore.commitAccount(account);
-            }
+            lazyCreationLogic.tryToComplete(evmAddress, payerKey);
         }
 
         ContractCustomizer hapiSenderCustomizer = fromHapiCreation(key, consensusTime, op);

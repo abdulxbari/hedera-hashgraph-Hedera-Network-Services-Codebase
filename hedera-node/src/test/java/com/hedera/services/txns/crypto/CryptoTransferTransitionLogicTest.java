@@ -102,7 +102,7 @@ class CryptoTransferTransitionLogicTest {
     @Mock private PureTransferSemanticChecks transferSemanticChecks;
     @Mock private ExpandHandleSpanMapAccessor spanMapAccessor;
     @Mock private SignedTxnAccessor accessor;
-    @Mock private AliasManager aliasManager;
+    @Mock private LazyCreationLogic lazyCreationLogic;
 
     private TransactionBody cryptoTransferTxn;
 
@@ -118,7 +118,7 @@ class CryptoTransferTransitionLogicTest {
                         impliedTransfersMarshal,
                         transferSemanticChecks,
                         spanMapAccessor,
-                        aliasManager);
+                        lazyCreationLogic);
     }
 
     @Test

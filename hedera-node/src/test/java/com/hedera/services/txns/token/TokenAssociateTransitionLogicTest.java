@@ -32,6 +32,7 @@ import com.hedera.services.state.validation.UsageLimits;
 import com.hedera.services.store.AccountStore;
 import com.hedera.services.store.TypedTokenStore;
 import com.hedera.services.store.models.Id;
+import com.hedera.services.txns.crypto.LazyCreationLogic;
 import com.hedera.services.utils.accessors.TxnAccessor;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
@@ -61,13 +62,13 @@ class TokenAssociateTransitionLogicTest {
     @Mock private TransactionContext txnCtx;
     @Mock private TxnAccessor accessor;
     @Mock private GlobalDynamicProperties dynamicProperties;
-    @Mock private AliasManager aliasManager;
+    @Mock private LazyCreationLogic lazyCreationLogic;
 
     @BeforeEach
     void setup() {
         associateLogic =
                 new AssociateLogic(usageLimits, tokenStore, accountStore, dynamicProperties);
-        subject = new TokenAssociateTransitionLogic(txnCtx, associateLogic, aliasManager, accountStore);
+        subject = new TokenAssociateTransitionLogic(txnCtx, associateLogic, lazyCreationLogic);
     }
 
     @Test
@@ -85,7 +86,7 @@ class TokenAssociateTransitionLogicTest {
         given(txnCtx.accessor()).willReturn(accessor);
         given(accessor.getTxn()).willReturn(tokenAssociateTxn);
         associateLogic = mock(AssociateLogic.class);
-        subject = new TokenAssociateTransitionLogic(txnCtx, associateLogic, aliasManager,accountStore);
+        subject = new TokenAssociateTransitionLogic(txnCtx, associateLogic, lazyCreationLogic);
 
         subject.doStateTransition();
 

@@ -60,6 +60,7 @@ import com.hedera.services.store.models.Account;
 import com.hedera.services.store.models.Id;
 import com.hedera.services.stream.proto.SidecarType;
 import com.hedera.services.stream.proto.TransactionSidecarRecord;
+import com.hedera.services.txns.crypto.LazyCreationLogic;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.SidecarUtils;
@@ -131,7 +132,7 @@ class ContractCreateTransitionLogicTest {
     @Mock private NodeInfo nodeInfo;
     private ContractCreateTransitionLogic subject;
     private TransactionBody contractCreateTxn;
-    @Mock private AliasManager aliasManager;
+    @Mock private LazyCreationLogic lazyCreationLogic;
 
     @BeforeEach
     void setup() {
@@ -151,7 +152,7 @@ class ContractCreateTransitionLogicTest {
                         syntheticTxnFactory,
                         () -> accounts,
                         nodeInfo,
-                        aliasManager);
+                        lazyCreationLogic);
     }
 
     @Test
