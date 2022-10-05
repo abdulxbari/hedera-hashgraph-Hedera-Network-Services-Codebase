@@ -202,14 +202,7 @@ public class AutoCreationLogic {
         TransactionBody.Builder syntheticCreation;
         HederaAccountCustomizer customizer;
         if (alias.size() == EntityIdUtils.EVM_ADDRESS_SIZE) {
-            final var txnBody =
-                    CryptoCreateTransactionBody.newBuilder()
-                            .setMemo(AUTO_MEMO)
-                            .setInitialBalance(0L)
-                            .setAutoRenewPeriod(
-                                    Duration.newBuilder().setSeconds(THREE_MONTHS_IN_SECONDS))
-                            .build();
-            syntheticCreation = TransactionBody.newBuilder().setCryptoCreateAccount(txnBody);
+            syntheticCreation = syntheticTxnFactory.createHollowAccount(0L);
             customizer = new HederaAccountCustomizer()
                     .memo(AUTO_MEMO)
                     .autoRenewPeriod(THREE_MONTHS_IN_SECONDS)
