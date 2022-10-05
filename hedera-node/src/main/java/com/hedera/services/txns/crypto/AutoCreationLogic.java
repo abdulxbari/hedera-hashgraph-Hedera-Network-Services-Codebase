@@ -281,10 +281,6 @@ public class AutoCreationLogic {
         change.replaceNonEmptyAliasWith(EntityNum.fromAccountId(newAccountId));
     }
 
-    public AccountID getEntityNumBy(ByteString alias) {
-        return aliasManager.lookupIdBy(alias).toGrpcAccountId();
-    }
-
     private long autoCreationFeeFor(final TransactionBody.Builder cryptoCreateTxn) {
         final var signedTxn =
                 SignedTransaction.newBuilder()

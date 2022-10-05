@@ -444,10 +444,6 @@ public class HederaLedger {
         accountsLedger.set(id, ALIAS, ByteString.EMPTY);
     }
 
-    public AccountID getAccountIdBy(ByteString alias) {
-        return autoCreationLogic.getEntityNumBy(alias);
-    }
-
     public boolean isPendingCreation(AccountID id) {
         return accountsLedger.existsPending(id);
     }

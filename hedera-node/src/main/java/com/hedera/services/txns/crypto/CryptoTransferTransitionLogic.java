@@ -27,6 +27,7 @@ import com.hedera.services.grpc.marshalling.ImpliedTransfersMarshal;
 import com.hedera.services.grpc.marshalling.ImpliedTransfersMeta;
 import com.hedera.services.ledger.HederaLedger;
 import com.hedera.services.ledger.PureTransferSemanticChecks;
+import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.ledger.accounts.HederaAccountCustomizer;
 import com.hedera.services.txns.TransitionLogic;
 import com.hedera.services.txns.span.ExpandHandleSpanMapAccessor;
@@ -51,6 +52,7 @@ public class CryptoTransferTransitionLogic implements TransitionLogic {
     private final ImpliedTransfersMarshal impliedTransfersMarshal;
     private final PureTransferSemanticChecks transferSemanticChecks;
     private final ExpandHandleSpanMapAccessor spanMapAccessor;
+    private final AliasManager aliasManager;
 
     @Inject
     public CryptoTransferTransitionLogic(
@@ -59,13 +61,15 @@ public class CryptoTransferTransitionLogic implements TransitionLogic {
             GlobalDynamicProperties dynamicProperties,
             ImpliedTransfersMarshal impliedTransfersMarshal,
             PureTransferSemanticChecks transferSemanticChecks,
-            ExpandHandleSpanMapAccessor spanMapAccessor) {
+            ExpandHandleSpanMapAccessor spanMapAccessor,
+            AliasManager aliasManager) {
         this.txnCtx = txnCtx;
         this.ledger = ledger;
         this.spanMapAccessor = spanMapAccessor;
         this.dynamicProperties = dynamicProperties;
         this.transferSemanticChecks = transferSemanticChecks;
         this.impliedTransfersMarshal = impliedTransfersMarshal;
+        this.aliasManager = aliasManager;
     }
 
     @Override
@@ -80,7 +84,7 @@ public class CryptoTransferTransitionLogic implements TransitionLogic {
         final var ecdsaBytes = payerKey != null ? payerKey.getECDSASecp256k1Key() : new byte[0];
         if (ecdsaBytes.length > 0) {
             final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
-            final var accountId = ledger.getAccountIdBy(evmAddress);
+            final var accountId = aliasManager.lookupIdBy(evmAddress).toGrpcAccountId();
             final var isLazyCreated = ledger.alias(accountId).equals(evmAddress) && ledger.key(accountId) == null;
             if (isLazyCreated) {
                 ledger.customize(accountId, new HederaAccountCustomizer().key(payerKey));

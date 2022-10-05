@@ -47,6 +47,7 @@ import com.hedera.services.grpc.marshalling.ImpliedTransfersMarshal;
 import com.hedera.services.grpc.marshalling.ImpliedTransfersMeta;
 import com.hedera.services.ledger.HederaLedger;
 import com.hedera.services.ledger.PureTransferSemanticChecks;
+import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.state.submerkle.FcAssessedCustomFee;
 import com.hedera.services.state.submerkle.FcCustomFee;
 import com.hedera.services.store.models.Id;
@@ -101,6 +102,7 @@ class CryptoTransferTransitionLogicTest {
     @Mock private PureTransferSemanticChecks transferSemanticChecks;
     @Mock private ExpandHandleSpanMapAccessor spanMapAccessor;
     @Mock private SignedTxnAccessor accessor;
+    @Mock private AliasManager aliasManager;
 
     private TransactionBody cryptoTransferTxn;
 
@@ -115,7 +117,8 @@ class CryptoTransferTransitionLogicTest {
                         dynamicProperties,
                         impliedTransfersMarshal,
                         transferSemanticChecks,
-                        spanMapAccessor);
+                        spanMapAccessor,
+                        aliasManager);
     }
 
     @Test
