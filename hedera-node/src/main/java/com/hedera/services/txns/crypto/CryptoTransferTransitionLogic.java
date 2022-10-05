@@ -83,9 +83,11 @@ public class CryptoTransferTransitionLogic implements TransitionLogic {
         final var payerKey = txnCtx.activePayerKey();
         final var ecdsaBytes = payerKey != null ? payerKey.getECDSASecp256k1Key() : new byte[0];
         if (ecdsaBytes.length > 0) {
-            final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
+            final var evmAddress =
+                    ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
             final var accountId = aliasManager.lookupIdBy(evmAddress).toGrpcAccountId();
-            final var isLazyCreated = ledger.alias(accountId).equals(evmAddress) && ledger.key(accountId) == null;
+            final var isLazyCreated =
+                    ledger.alias(accountId).equals(evmAddress) && ledger.key(accountId) == null;
             if (isLazyCreated) {
                 ledger.customize(accountId, new HederaAccountCustomizer().key(payerKey));
             }

@@ -50,8 +50,6 @@ import com.hedera.services.utils.EntityIdUtils;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.accessors.SignedTxnAccessor;
 import com.hederahashgraph.api.proto.java.AccountID;
-import com.hederahashgraph.api.proto.java.CryptoCreateTransactionBody;
-import com.hederahashgraph.api.proto.java.Duration;
 import com.hederahashgraph.api.proto.java.Key;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.SignatureMap;
@@ -203,13 +201,16 @@ public class AutoCreationLogic {
         HederaAccountCustomizer customizer;
         if (alias.size() == EntityIdUtils.EVM_ADDRESS_SIZE) {
             syntheticCreation = syntheticTxnFactory.createHollowAccount(0L);
-            customizer = new HederaAccountCustomizer()
-                    .memo(AUTO_MEMO)
-                    .autoRenewPeriod(THREE_MONTHS_IN_SECONDS)
-                    .expiry(txnCtx.consensusTime().getEpochSecond() + THREE_MONTHS_IN_SECONDS)
-                    .isReceiverSigRequired(false)
-                    .isSmartContract(false)
-                    .alias(alias);
+            customizer =
+                    new HederaAccountCustomizer()
+                            .memo(AUTO_MEMO)
+                            .autoRenewPeriod(THREE_MONTHS_IN_SECONDS)
+                            .expiry(
+                                    txnCtx.consensusTime().getEpochSecond()
+                                            + THREE_MONTHS_IN_SECONDS)
+                            .isReceiverSigRequired(false)
+                            .isSmartContract(false)
+                            .alias(alias);
         } else {
             // checks tokenAliasMap if the change consists an alias that is already used in previous
             // iteration of the token transfer list. This map is used to count number of
@@ -220,15 +221,16 @@ public class AutoCreationLogic {
                     tokenAliasMap.getOrDefault(alias, Collections.emptySet()).size();
 
             final var key = asPrimitiveKeyUnchecked(alias);
-            syntheticCreation =
-                    syntheticTxnFactory.createAccount(key, 0L, maxAutoAssociations);
+            syntheticCreation = syntheticTxnFactory.createAccount(key, 0L, maxAutoAssociations);
             JKey jKey = asFcKeyUnchecked(key);
             customizer =
                     new HederaAccountCustomizer()
                             .key(jKey)
                             .memo(AUTO_MEMO)
                             .autoRenewPeriod(THREE_MONTHS_IN_SECONDS)
-                            .expiry(txnCtx.consensusTime().getEpochSecond() + THREE_MONTHS_IN_SECONDS)
+                            .expiry(
+                                    txnCtx.consensusTime().getEpochSecond()
+                                            + THREE_MONTHS_IN_SECONDS)
                             .isReceiverSigRequired(false)
                             .isSmartContract(false)
                             .alias(alias)
