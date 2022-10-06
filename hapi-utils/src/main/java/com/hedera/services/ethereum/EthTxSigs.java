@@ -167,7 +167,7 @@ public record EthTxSigs(byte[] publicKey, byte[] address) {
         return address;
     }
 
-    static byte[] recoverCompressedPubKey(LibSecp256k1.secp256k1_pubkey pubKey) {
+    public static byte[] recoverCompressedPubKey(LibSecp256k1.secp256k1_pubkey pubKey) {
         final ByteBuffer recoveredFullKey = ByteBuffer.allocate(33);
         final LongByReference fullKeySize = new LongByReference(recoveredFullKey.limit());
         LibSecp256k1.secp256k1_ec_pubkey_serialize(
@@ -175,7 +175,7 @@ public record EthTxSigs(byte[] publicKey, byte[] address) {
         return recoveredFullKey.array();
     }
 
-    private static LibSecp256k1.secp256k1_pubkey extractSig(
+    public static LibSecp256k1.secp256k1_pubkey extractSig(
             int recId, byte[] r, byte[] s, byte[] message) {
         byte[] dataHash = new Keccak.Digest256().digest(message);
 

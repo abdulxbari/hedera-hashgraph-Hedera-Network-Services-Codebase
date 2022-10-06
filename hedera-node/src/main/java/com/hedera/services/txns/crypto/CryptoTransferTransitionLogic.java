@@ -27,13 +27,15 @@ import com.hedera.services.grpc.marshalling.ImpliedTransfersMarshal;
 import com.hedera.services.grpc.marshalling.ImpliedTransfersMeta;
 import com.hedera.services.ledger.HederaLedger;
 import com.hedera.services.ledger.PureTransferSemanticChecks;
-import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.ledger.accounts.HederaAccountCustomizer;
+import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.txns.TransitionLogic;
 import com.hedera.services.txns.span.ExpandHandleSpanMapAccessor;
 import com.hedera.services.utils.accessors.TxnAccessor;
+import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.TransactionBody;
+
 import java.util.function.Predicate;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -81,8 +83,17 @@ public class CryptoTransferTransitionLogic implements TransitionLogic {
         validateTrue(outcome == OK, outcome);
 
         final var payerKey = txnCtx.activePayerKey();
-        final var ecdsaBytes = payerKey != null ? payerKey.getECDSASecp256k1Key() : new byte[0];
-        if (ecdsaBytes.length > 0) {
+        if (payerKey == null || payerKey.isEmpty()) {
+            var message = txnCtx.accessor().getTxnBytes();
+            var sigPairList = txnCtx.accessor().getSigMap().getSigPairList();
+            var ecdsaKey = lazyCreationLogic.recoverPubKeyFromSigMap(message, sigPairList);
+            if (ecdsaKey != null) {
+                final var ecdsaBytes = ecdsaKey.getECDSASecp256k1Key();
+                final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
+                lazyCreationLogic.tryToComplete(evmAddress, ecdsaKey);
+            }
+        } else if (payerKey.hasECDSAsecp256k1Key()) {
+            final var ecdsaBytes = payerKey.getECDSASecp256k1Key();
             final var evmAddress = ByteString.copyFrom(EthTxSigs.recoverAddressFromPubKey(ecdsaBytes));
             lazyCreationLogic.tryToComplete(evmAddress, payerKey);
         }
@@ -93,6 +104,8 @@ public class CryptoTransferTransitionLogic implements TransitionLogic {
 
         txnCtx.setAssessedCustomFees(impliedTransfers.getAssessedCustomFees());
     }
+
+
 
     private ImpliedTransfers finalImpliedTransfersFor(TxnAccessor accessor) {
         var impliedTransfers = spanMapAccessor.getImpliedTransfers(accessor);
