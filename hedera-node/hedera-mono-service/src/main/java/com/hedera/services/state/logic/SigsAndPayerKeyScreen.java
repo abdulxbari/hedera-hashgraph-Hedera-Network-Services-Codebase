@@ -20,11 +20,15 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
 import com.hedera.services.context.TransactionContext;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.sigs.Rationalization;
+import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.stats.MiscSpeedometers;
+import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.accessors.SwirldsTxnAccessor;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.swirlds.common.crypto.TransactionSignature;
+import com.swirlds.merkle.map.MerkleMap;
 import java.util.function.BiPredicate;
+import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
@@ -39,19 +43,22 @@ public class SigsAndPayerKeyScreen {
     private final MiscSpeedometers speedometers;
     private final TransactionContext txnCtx;
     private final BiPredicate<JKey, TransactionSignature> validityTest;
+    private final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts;
 
     @Inject
     public SigsAndPayerKeyScreen(
-            Rationalization rationalization,
-            PayerSigValidity payerSigValidity,
-            TransactionContext txnCtx,
-            MiscSpeedometers speedometers,
-            BiPredicate<JKey, TransactionSignature> validityTest) {
+            final Rationalization rationalization,
+            final PayerSigValidity payerSigValidity,
+            final TransactionContext txnCtx,
+            final MiscSpeedometers speedometers,
+            final BiPredicate<JKey, TransactionSignature> validityTest,
+            final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts) {
         this.txnCtx = txnCtx;
         this.validityTest = validityTest;
         this.speedometers = speedometers;
         this.rationalization = rationalization;
         this.payerSigValidity = payerSigValidity;
+        this.accounts = accounts;
     }
 
     public ResponseCodeEnum applyTo(SwirldsTxnAccessor accessor) {
@@ -62,8 +69,14 @@ public class SigsAndPayerKeyScreen {
             speedometers.cycleSyncVerifications();
         }
 
+        final var sigMeta = accessor.getSigMeta();
+        final var replacedPayerHollowKey = sigMeta.replacePayerHollowKeyIfNeeded();
         if (hasActivePayerSig(accessor)) {
             txnCtx.payerSigIsKnownActive();
+            if (replacedPayerHollowKey) {
+                accounts.get().getForModify(EntityNum.fromAccountId(txnCtx.activePayer())).setAccountKey(sigMeta.payerKey());
+                // TODO: track preceding CryptoUpdate
+            }
         }
 
         return sigStatus;

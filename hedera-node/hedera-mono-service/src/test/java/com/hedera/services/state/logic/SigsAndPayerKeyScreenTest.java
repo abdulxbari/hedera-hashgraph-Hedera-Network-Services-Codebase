@@ -26,14 +26,18 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import com.hedera.services.context.TransactionContext;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.sigs.Rationalization;
+import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.stats.MiscSpeedometers;
+import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.accessors.PlatformTxnAccessor;
 import com.hedera.test.extensions.LogCaptor;
 import com.hedera.test.extensions.LogCaptureExtension;
 import com.hedera.test.extensions.LoggingSubject;
 import com.hedera.test.extensions.LoggingTarget;
 import com.swirlds.common.crypto.TransactionSignature;
+import com.swirlds.merkle.map.MerkleMap;
 import java.util.function.BiPredicate;
+import java.util.function.Supplier;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +54,7 @@ class SigsAndPayerKeyScreenTest {
     @Mock private MiscSpeedometers speedometers;
     @Mock private BiPredicate<JKey, TransactionSignature> validityTest;
     @Mock private PlatformTxnAccessor accessor;
+    @Mock private Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts;
 
     @LoggingTarget private LogCaptor logCaptor;
     @LoggingSubject private SigsAndPayerKeyScreen subject;
@@ -58,7 +63,8 @@ class SigsAndPayerKeyScreenTest {
     void setUp() {
         subject =
                 new SigsAndPayerKeyScreen(
-                        rationalization, payerSigValidity, txnCtx, speedometers, validityTest);
+                        rationalization, payerSigValidity, txnCtx, speedometers, validityTest,
+                    accounts);
     }
 
     @Test

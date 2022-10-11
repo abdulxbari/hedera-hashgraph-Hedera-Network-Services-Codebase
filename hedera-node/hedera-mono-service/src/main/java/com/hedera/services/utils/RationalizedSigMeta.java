@@ -21,6 +21,7 @@ import static com.hedera.services.keys.HederaKeyActivation.pkToSigMapFrom;
 import static com.hedera.services.keys.HederaKeyTraversal.visitSimpleKeys;
 import static com.hederahashgraph.api.proto.java.HederaFunctionality.EthereumTransaction;
 
+import com.hedera.services.legacy.core.jproto.JECDSASecp256k1Key;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.txns.span.ExpandHandleSpanMapAccessor;
 import com.hedera.services.utils.accessors.TxnAccessor;
@@ -30,6 +31,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.datatypes.Hash;
 
 /**
  * A simple wrapper around the three outputs of the {@code Rationalization#execute()} process.
@@ -59,18 +62,18 @@ public class RationalizedSigMeta {
     private static final RationalizedSigMeta NONE_AVAIL = new RationalizedSigMeta();
     private static final ExpandHandleSpanMapAccessor SPAN_MAP_ACCESSOR =
             new ExpandHandleSpanMapAccessor();
-
-    private final JKey payerReqSig;
     private final List<JKey> othersReqSigs;
     private final List<TransactionSignature> rationalizedSigs;
-
+    private JKey payerReqSig;
     private Function<byte[], TransactionSignature> pkToVerifiedSigFn;
+    private boolean replacedHollowKey;
 
-    private RationalizedSigMeta() {
+  private RationalizedSigMeta() {
         payerReqSig = null;
         othersReqSigs = null;
         rationalizedSigs = null;
         pkToVerifiedSigFn = null;
+        replacedHollowKey = false;
     }
 
     private RationalizedSigMeta(
@@ -82,6 +85,7 @@ public class RationalizedSigMeta {
         this.othersReqSigs = othersReqSigs;
         this.rationalizedSigs = rationalizedSigs;
         this.pkToVerifiedSigFn = pkToVerifiedSigFn;
+        this.replacedHollowKey = false;
     }
 
     public static RationalizedSigMeta noneAvailable() {
@@ -137,6 +141,31 @@ public class RationalizedSigMeta {
                                 : wrappedFn.apply(publicKey);
     }
 
+    public boolean replacePayerHollowKeyIfNeeded() {
+        // TODO: or any JHollowKey{0.0.H} in its JKey's here, it checks whether the rationalizedSigs list
+        //  includes a public key that hashes to the EVM address for 0.0.H in the given MerkleMap---if so,
+        //  it replaces that JHollowKey with a JECDSASecp256k1Key and includes the replaced entry in
+        //  its returned Map<EntityNum, JKey>
+
+        // TODO: We'll want to add a final boolean usesHollowKeys in RationalizedSigMeta
+        //  so we can immediately return from this method 99.999% of the time
+        if (!payerReqSig.hasHollowKey() ||  rationalizedSigs == null)
+            return false;
+
+        final var targetEvmAddress = payerReqSig.getHollowKey().getEvmAddress();
+        for (final var sig: rationalizedSigs) {
+            // see if hashing can be done better, not coupling to Besu?
+            final var publicKeyHashed = Hash.hash(Bytes.of(rationalizedSigs.get(0).getExpandedPublicKey()))
+                .toArrayUnsafe();
+            if (Arrays.equals(targetEvmAddress, 0, targetEvmAddress.length, publicKeyHashed, publicKeyHashed.length - 20, publicKeyHashed.length)) {
+                payerReqSig = new JECDSASecp256k1Key(sig.getExpandedPublicKey());
+                this.replacedHollowKey = true;
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean couldRationalizePayer() {
         return payerReqSig != null;
     }
@@ -173,5 +202,9 @@ public class RationalizedSigMeta {
             throw new IllegalStateException("Verified signatures could not be rationalized");
         }
         return pkToVerifiedSigFn;
+    }
+
+    public boolean hasReplacedHollowKey() {
+      return replacedHollowKey;
     }
 }

@@ -58,7 +58,8 @@ public final class PlatformSigOps {
             final PubKeyToSigBytes sigBytesFn,
             final TxnScopedPlatformSigFactory factory,
             final PlatformSigsCreationResult result) {
-        if (result.hasFailed()) {
+        // TODO: skip hollow key
+        if (result.hasFailed() || primitiveKey.hasHollowKey()) {
             return;
         }
 

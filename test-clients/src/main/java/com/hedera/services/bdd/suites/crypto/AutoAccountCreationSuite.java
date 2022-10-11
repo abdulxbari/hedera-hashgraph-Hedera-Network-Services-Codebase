@@ -24,6 +24,7 @@ import static com.hedera.services.bdd.spec.assertions.AutoAssocAsserts.accountTo
 import static com.hedera.services.bdd.spec.assertions.ContractInfoAsserts.contractWith;
 import static com.hedera.services.bdd.spec.assertions.TransactionRecordAsserts.includingFungibleMovement;
 import static com.hedera.services.bdd.spec.assertions.TransactionRecordAsserts.recordWith;
+import static com.hedera.services.bdd.spec.keys.TrieSigMapGenerator.uniqueWithFullPrefixesFor;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAccountInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAliasedAccountInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAutoCreatedAccountBalance;
@@ -31,6 +32,8 @@ import static com.hedera.services.bdd.spec.queries.QueryVerbs.getContractInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getReceipt;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.queries.crypto.ExpectedTokenRel.relationshipWith;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCall;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractUpdate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.createDefaultContract;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
@@ -38,10 +41,12 @@ import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoDeleteAli
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoTransfer;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoUpdate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoUpdateAliased;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.ethereumContractCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.mintToken;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.sortedCryptoTransfer;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenAssociate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenCreate;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.uploadInitCode;
 import static com.hedera.services.bdd.spec.transactions.crypto.HapiCryptoTransfer.tinyBarsFromAccountToAlias;
 import static com.hedera.services.bdd.spec.transactions.crypto.HapiCryptoTransfer.tinyBarsFromTo;
 import static com.hedera.services.bdd.spec.transactions.crypto.HapiCryptoTransfer.tinyBarsFromToWithAlias;
@@ -75,7 +80,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.google.protobuf.ByteString;
 import com.hedera.services.bdd.spec.HapiApiSpec;
 import com.hedera.services.bdd.spec.keys.KeyShape;
+import com.hedera.services.bdd.spec.queries.meta.HapiGetTxnRecord;
 import com.hedera.services.bdd.suites.HapiApiSuite;
+import com.hedera.services.ethereum.EthTxData;
 import com.hedera.services.ethereum.EthTxSigs;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ContractID;
@@ -154,29 +161,29 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
     public List<HapiApiSpec> getSpecsInSuite() {
         return List.of(
                 /* --- Hbar auto creates */
-                autoAccountCreationsHappyPath(),
-                autoAccountCreationBadAlias(),
-                autoAccountCreationUnsupportedAlias(),
-                transferToAccountAutoCreatedUsingAlias(),
-                transferToAccountAutoCreatedUsingAccount(),
-                transferFromAliasToAlias(),
-                transferFromAliasToAccount(),
-                multipleAutoAccountCreations(),
-                accountCreatedIfAliasUsedAsPubKey(),
-                aliasCanBeUsedOnManyAccountsNotAsAlias(),
-                autoAccountCreationWorksWhenUsingAliasOfDeletedAccount(),
-                canGetBalanceAndInfoViaAlias(),
-                noStakePeriodStartIfNotStakingToNode(),
-                hollowAccountCreationWithCryptoTransfer(),
+//                autoAccountCreationsHappyPath(),
+//                autoAccountCreationBadAlias(),
+//                autoAccountCreationUnsupportedAlias(),
+//                transferToAccountAutoCreatedUsingAlias(),
+//                transferToAccountAutoCreatedUsingAccount(),
+//                transferFromAliasToAlias(),
+//                transferFromAliasToAccount(),
+//                multipleAutoAccountCreations(),
+//                accountCreatedIfAliasUsedAsPubKey(),
+//                aliasCanBeUsedOnManyAccountsNotAsAlias(),
+//                autoAccountCreationWorksWhenUsingAliasOfDeletedAccount(),
+//                canGetBalanceAndInfoViaAlias(),
+//                noStakePeriodStartIfNotStakingToNode(),
+            hollowAccountCreationWithCryptoTransfer()
                 /* -- HTS auto creates -- */
-                canAutoCreateWithFungibleTokenTransfersToAlias(),
-                multipleTokenTransfersSucceed(),
-                nftTransfersToAlias(),
-                autoCreateWithNftFallBackFeeFails(),
-                repeatedAliasInSameTransferListFails(),
-                tokenTransfersFailWhenFeatureFlagDisabled(),
-                canAutoCreateWithHbarAndTokenTransfers());
-    }
+//                canAutoCreateWithFungibleTokenTransfersToAlias(),
+//                multipleTokenTransfersSucceed(),
+//                nftTransfersToAlias(),
+//                autoCreateWithNftFallBackFeeFails(),
+//                repeatedAliasInSameTransferListFails(),
+//                tokenTransfersFailWhenFeatureFlagDisabled(),
+//                canAutoCreateWithHbarAndTokenTransfers()
+        );}
 
     private HapiApiSpec canAutoCreateWithHbarAndTokenTransfers() {
         final var initialTokenSupply = 1000;
@@ -769,7 +776,6 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
                                                                     ONE_HUNDRED_HBARS))
                                                     .hasKnownStatus(SUCCESS)
                                                     .via(TRANSFER_TXN);
-
                                     final var op2 =
                                             getAliasedAccountInfo(SECP_256K1_SOURCE_KEY)
                                                     .has(
@@ -782,8 +788,34 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
                                                                             THREE_MONTHS_IN_SECONDS)
                                                                     .receiverSigReq(false)
                                                                     .memo(AUTO_MEMO));
+                                    final HapiGetTxnRecord hapiGetTxnRecord = getTxnRecord(
+                                        TRANSFER_TXN).andAllChildRecords().logged();
+                                    allRunFor(spec, op, op2, hapiGetTxnRecord);
 
-                                    allRunFor(spec, op, op2);
+                                    final AccountID newAccountID = hapiGetTxnRecord.getChildRecord(0)
+                                        .getReceipt().getAccountID();
+                                    spec.registry().saveAccountId(SECP_256K1_SOURCE_KEY, newAccountID);
+
+                                    final var op3 =
+                                            cryptoTransfer(tinyBarsFromTo(hollowAccountCreateSponsor, evmAddress, ONE_HUNDRED_HBARS))
+                                                    .hasKnownStatus(SUCCESS)
+                                                    .payingWith(SECP_256K1_SOURCE_KEY)
+                                                    .sigMapPrefixes(uniqueWithFullPrefixesFor(SECP_256K1_SOURCE_KEY))
+//                                                  .signedBy(SECP_256K1_SOURCE_KEY)
+                                                    .via(TRANSFER_TXN_2);
+
+                                    final var op4 =
+                                            getAliasedAccountInfo(SECP_256K1_SOURCE_KEY)
+                                                    .has(
+                                                            accountWith()
+                                                                    .key(SECP_256K1_SOURCE_KEY)
+                                                                    .alias(evmAddress)
+                                                                    .expectedBalanceWithChargedUsd(
+                                                                            (2 * ONE_HUNDRED_HBARS), 0, 0)
+                                                    );
+
+                                    allRunFor(spec, op3, op4);
+
                                 }));
     }
 
