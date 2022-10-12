@@ -141,29 +141,20 @@ public class RationalizedSigMeta {
                                 : wrappedFn.apply(publicKey);
     }
 
-    public boolean replacePayerHollowKeyIfNeeded() {
-        // TODO: or any JHollowKey{0.0.H} in its JKey's here, it checks whether the rationalizedSigs list
-        //  includes a public key that hashes to the EVM address for 0.0.H in the given MerkleMap---if so,
-        //  it replaces that JHollowKey with a JECDSASecp256k1Key and includes the replaced entry in
-        //  its returned Map<EntityNum, JKey>
-
-        // TODO: We'll want to add a final boolean usesHollowKeys in RationalizedSigMeta
-        //  so we can immediately return from this method 99.999% of the time
+    public void replacePayerHollowKeyIfNeeded() {
         if (!payerReqSig.hasHollowKey() ||  rationalizedSigs == null)
-            return false;
+            return;
 
         final var targetEvmAddress = payerReqSig.getHollowKey().getEvmAddress();
         for (final var sig: rationalizedSigs) {
-            // see if hashing can be done better, not coupling to Besu?
+            // maybe do the hashing of the public key a better way... not coupling to Besu classes?
             final var publicKeyHashed = Hash.hash(Bytes.of(rationalizedSigs.get(0).getExpandedPublicKey()))
                 .toArrayUnsafe();
             if (Arrays.equals(targetEvmAddress, 0, targetEvmAddress.length, publicKeyHashed, publicKeyHashed.length - 20, publicKeyHashed.length)) {
                 payerReqSig = new JECDSASecp256k1Key(sig.getExpandedPublicKey());
-                this.replacedHollowKey = true;
-                return true;
+                replacedHollowKey = true;
             }
         }
-        return false;
     }
 
     public boolean couldRationalizePayer() {

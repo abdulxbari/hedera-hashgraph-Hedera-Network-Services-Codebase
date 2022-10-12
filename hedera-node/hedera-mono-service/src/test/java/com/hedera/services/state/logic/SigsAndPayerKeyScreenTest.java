@@ -64,7 +64,7 @@ class SigsAndPayerKeyScreenTest {
         subject =
                 new SigsAndPayerKeyScreen(
                         rationalization, payerSigValidity, txnCtx, speedometers, validityTest,
-                    accounts);
+                    accounts, spanMapAccessor, aliasManager);
     }
 
     @Test

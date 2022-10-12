@@ -68,14 +68,11 @@ public class PrecheckVerifier {
     public boolean hasNecessarySignatures(final SignedTxnAccessor accessor) throws Exception {
         try {
             final var reqKeys = precheckKeyReqs.getRequiredKeys(accessor.getTxn());
-            // TODO: if hollow, hashes all full-key prefixes in the sigMap until it finds the one
-            //  whose ECDSA public key generates EVM address A; it then synchronously verifies
-            //  the full-prefix signature for that key
-
             // first key in reqKeys is always the payer key
             final var payerKey = reqKeys.get(0);
             if (payerKey.hasHollowKey()) {
-                // can change this to use the sig map
+                // can change this algorithm to use the accessor.getSigMap()
+                // and return immediately when we find the first match
                 accessor.getPkToSigsFn().forEachUnusedSigWithFullPrefix(
                     (type, pubKey, sig) -> {
                         if (type.equals(ECDSA_SECP256K1)) {

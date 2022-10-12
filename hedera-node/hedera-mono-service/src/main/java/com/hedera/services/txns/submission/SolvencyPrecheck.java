@@ -120,8 +120,7 @@ public class SolvencyPrecheck {
         try {
             final var now = accessor.getTxnId().getTransactionValidStart();
             final var payerKey = payerAccount.getAccountKey();
-            // TODO: if hollow, add a simple ECDSA key stub for calculating signature
-            // fees
+            // TODO: if hollow, add a simple ECDSA key stub for calculating signature fees
             final var estimatedFees =
                     feeCalculator.estimateFee(accessor, payerKey != null ? payerKey : new JECDSASecp256k1Key(null), stateView.get(), now);
             final var estimatedReqFee = totalOf(estimatedFees, includeSvcFee);
@@ -132,7 +131,7 @@ public class SolvencyPrecheck {
 
             final var estimatedAdj =
                     Math.min(0L, feeCalculator.estimatedNonFeePayerAdjustments(accessor, now));
-            // TODO: if hollow, check that the 0.0.H balance is enough for an extra CryptoUpdate fee along with the fee for T
+            // TODO? if hollow, check that the 0.0.H balance is enough for an extra CryptoUpdate fee along with the fee for T
             final var requiredPayerBalance = estimatedReqFee - estimatedAdj;
             final var payerBalance = payerAccount.getBalance();
             var finalStatus = OK;

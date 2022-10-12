@@ -15,13 +15,17 @@
  */
 package com.hedera.services.state.logic;
 
+import static com.hedera.services.legacy.proto.utils.ByteStringUtils.wrapUnsafely;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
 
 import com.hedera.services.context.TransactionContext;
+import com.hedera.services.ledger.accounts.AliasManager;
+import com.hedera.services.legacy.core.jproto.JECDSASecp256k1Key;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.sigs.Rationalization;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.stats.MiscSpeedometers;
+import com.hedera.services.txns.span.ExpandHandleSpanMapAccessor;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.accessors.SwirldsTxnAccessor;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
@@ -44,6 +48,8 @@ public class SigsAndPayerKeyScreen {
     private final TransactionContext txnCtx;
     private final BiPredicate<JKey, TransactionSignature> validityTest;
     private final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts;
+    private final ExpandHandleSpanMapAccessor spanMapAccessor;
+    private final AliasManager aliasManager;
 
     @Inject
     public SigsAndPayerKeyScreen(
@@ -52,13 +58,16 @@ public class SigsAndPayerKeyScreen {
             final TransactionContext txnCtx,
             final MiscSpeedometers speedometers,
             final BiPredicate<JKey, TransactionSignature> validityTest,
-            final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts) {
+            final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts,
+        ExpandHandleSpanMapAccessor spanMapAccessor, AliasManager aliasManager) {
         this.txnCtx = txnCtx;
         this.validityTest = validityTest;
         this.speedometers = speedometers;
         this.rationalization = rationalization;
         this.payerSigValidity = payerSigValidity;
         this.accounts = accounts;
+        this.spanMapAccessor = spanMapAccessor;
+        this.aliasManager = aliasManager;
     }
 
     public ResponseCodeEnum applyTo(SwirldsTxnAccessor accessor) {
@@ -70,17 +79,39 @@ public class SigsAndPayerKeyScreen {
         }
 
         final var sigMeta = accessor.getSigMeta();
-        final var replacedPayerHollowKey = sigMeta.replacePayerHollowKeyIfNeeded();
+        sigMeta.replacePayerHollowKeyIfNeeded();
+
         if (hasActivePayerSig(accessor)) {
             txnCtx.payerSigIsKnownActive();
-            if (replacedPayerHollowKey) {
+            if (sigMeta.hasReplacedHollowKey()) {
                 accounts.get().getForModify(EntityNum.fromAccountId(txnCtx.activePayer())).setAccountKey(sigMeta.payerKey());
                 // TODO: track preceding CryptoUpdate
             }
+
+
+            // TODO: figure out where the finalization of a hollow ethereum tranasction sender
+            //  should be..
+//            final var ethTxExpansion = spanMapAccessor.getEthTxExpansion(accessor);
+//            if (ethTxExpansion != null && ethTxExpansion.result().equals(OK)) {
+//                replaceEthSenderKeyIfNecessary(accessor);
+//                // TODO: track preceding CryptoUpdate
+//            }
         }
 
         return sigStatus;
     }
+
+//    private void replaceEthSenderKeyIfNecessary(SwirldsTxnAccessor accessor) {
+//        final var ethTxSigs = spanMapAccessor.getEthTxSigsMeta(accessor);
+//        final var callerNum = aliasManager.lookupIdBy(wrapUnsafely(ethTxSigs.address()));
+//        if (callerNum != EntityNum.MISSING_NUM) {
+//            final MerkleAccount account = accounts.get().getForModify(callerNum);
+//            if (account.getAccountKey() == null) {
+//                account.setAccountKey(new JECDSASecp256k1Key(ethTxSigs.publicKey()));
+//                accessor.getSigMeta().newHollowReplaced();
+//            }
+//        }
+//    }
 
     private boolean hasActivePayerSig(SwirldsTxnAccessor accessor) {
         try {
