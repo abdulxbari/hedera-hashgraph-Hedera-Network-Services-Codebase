@@ -99,16 +99,16 @@ public class SigsAndPayerKeyScreen {
         }
 
         final var sigMeta = accessor.getSigMeta();
-        sigMeta.replacePayerHollowKeyIfNeeded();
+        sigMeta.replacePayerHollowKeyIfNeeded(accessor.getSigMap());
 
         if (hasActivePayerSig(accessor)) {
             txnCtx.payerSigIsKnownActive();
             if (sigMeta.hasReplacedHollowKey()) {
-                accounts.get()
-                        .getForModify(EntityNum.fromAccountId(txnCtx.activePayer()))
-                        .setAccountKey(sigMeta.payerKey());
-                
                 try {
+                    accounts.get()
+                            .getForModify(EntityNum.fromAccountId(txnCtx.activePayer()))
+                            .setAccountKey(sigMeta.payerKey());
+
                     final var accountKey = JKey.mapJKey(sigMeta.payerKey());
                     var syntheticUpdate =
                             syntheticTxnFactory.updateHollowAccount(

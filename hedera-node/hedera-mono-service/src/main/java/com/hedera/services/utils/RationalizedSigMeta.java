@@ -23,8 +23,10 @@ import static com.hederahashgraph.api.proto.java.HederaFunctionality.EthereumTra
 
 import com.hedera.services.legacy.core.jproto.JECDSASecp256k1Key;
 import com.hedera.services.legacy.core.jproto.JKey;
+import com.hedera.services.sigs.utils.MiscCryptoUtils;
 import com.hedera.services.txns.span.ExpandHandleSpanMapAccessor;
 import com.hedera.services.utils.accessors.TxnAccessor;
+import com.hederahashgraph.api.proto.java.SignatureMap;
 import com.swirlds.common.crypto.TransactionSignature;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -68,7 +70,7 @@ public class RationalizedSigMeta {
     private Function<byte[], TransactionSignature> pkToVerifiedSigFn;
     private boolean replacedHollowKey;
 
-  private RationalizedSigMeta() {
+    private RationalizedSigMeta() {
         payerReqSig = null;
         othersReqSigs = null;
         rationalizedSigs = null;
@@ -141,18 +143,33 @@ public class RationalizedSigMeta {
                                 : wrappedFn.apply(publicKey);
     }
 
-    public void replacePayerHollowKeyIfNeeded() {
-        if (!payerReqSig.hasHollowKey() ||  rationalizedSigs == null)
-            return;
+    public void replacePayerHollowKeyIfNeeded(SignatureMap signatureMap) {
+        if (!payerReqSig.hasHollowKey() || rationalizedSigs == null) return;
 
         final var targetEvmAddress = payerReqSig.getHollowKey().getEvmAddress();
-        for (final var sig: rationalizedSigs) {
+        for (final var sig : rationalizedSigs) {
             // maybe do the hashing of the public key a better way... not coupling to Besu classes?
-            final var publicKeyHashed = Hash.hash(Bytes.of(rationalizedSigs.get(0).getExpandedPublicKey()))
-                .toArrayUnsafe();
-            if (Arrays.equals(targetEvmAddress, 0, targetEvmAddress.length, publicKeyHashed, publicKeyHashed.length - 20, publicKeyHashed.length)) {
-                payerReqSig = new JECDSASecp256k1Key(sig.getExpandedPublicKey());
-                replacedHollowKey = true;
+            final var publicKeyHashed =
+                    Hash.hash(Bytes.of(rationalizedSigs.get(0).getExpandedPublicKey()))
+                            .toArrayUnsafe();
+            if (Arrays.equals(
+                    targetEvmAddress,
+                    0,
+                    targetEvmAddress.length,
+                    publicKeyHashed,
+                    publicKeyHashed.length - 20,
+                    publicKeyHashed.length)) {
+
+                // use compressed public key
+                for (final var sigPair : signatureMap.getSigPairList()) {
+                    final var keyBytes = sigPair.getPubKeyPrefix().toByteArray();
+                    if (Arrays.equals(
+                            sig.getExpandedPublicKey(),
+                            MiscCryptoUtils.decompressSecp256k1(keyBytes))) {
+                        payerReqSig = new JECDSASecp256k1Key(keyBytes);
+                        replacedHollowKey = true;
+                    }
+                }
             }
         }
     }
@@ -196,6 +213,6 @@ public class RationalizedSigMeta {
     }
 
     public boolean hasReplacedHollowKey() {
-      return replacedHollowKey;
+        return replacedHollowKey;
     }
 }
