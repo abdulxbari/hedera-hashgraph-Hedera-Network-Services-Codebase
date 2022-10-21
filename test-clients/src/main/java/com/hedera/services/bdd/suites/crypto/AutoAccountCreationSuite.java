@@ -61,6 +61,7 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.childRecordsCheck;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.newKeyNamed;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overriding;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overridingAllOf;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.resetToDefault;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sourcing;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.suites.contract.Utils.aaWith;
@@ -80,7 +81,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.google.protobuf.ByteString;
 import com.hedera.services.bdd.spec.HapiApiSpec;
 import com.hedera.services.bdd.spec.keys.KeyShape;
-import com.hedera.services.bdd.spec.queries.meta.HapiGetTxnRecord;
+import com.hedera.services.bdd.spec.utilops.UtilVerbs;
 import com.hedera.services.bdd.suites.HapiApiSuite;
 import com.hedera.services.ethereum.EthTxData;
 import com.hedera.services.ethereum.EthTxSigs;
@@ -113,6 +114,7 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
             Key.newBuilder().setEd25519(ALIAS_CONTENT).build();
     private static final ByteString VALID_25519_ALIAS = VALID_ED_25519_KEY.toByteString();
     private static final String AUTO_MEMO = "auto-created account";
+    private static final String LAZY_MEMO = "lazy-created account";
     private static final String VALID_ALIAS = "validAlias";
     private static final String PAYER = "payer";
     private static final String TRANSFER_TXN = "transferTxn";
@@ -136,8 +138,11 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
     private static final String TOKEN_B_CREATE = "tokenBCreateTxn";
     private static final String NFT_CREATE = "nftCreateTxn";
     private static final String SPONSOR = "autoCreateSponsor";
+    private static final String LAZY_CREATE_SPONSOR = "lazyCreateSponsor";
 
     private static final String FEATURE_FLAG = "tokens.autoCreations.isEnabled";
+    private static final String AUTO_CREATE_FEATURE_FLAG = "autoCreation.enabled";
+    private static final String LAZY_CREATE_FEATURE_FLAG = "lazyCreation.enabled";
 
     private static final long EXPECTED_HBAR_TRANSFER_AUTO_CREATION_FEE = 39418863L;
     private static final long EXPECTED_MULTI_TOKEN_TRANSFER_AUTO_CREATION_FEE = 42427268L;
@@ -161,28 +166,29 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
     public List<HapiApiSpec> getSpecsInSuite() {
         return List.of(
                 /* --- Hbar auto creates */
-//                autoAccountCreationsHappyPath(),
-//                autoAccountCreationBadAlias(),
-//                autoAccountCreationUnsupportedAlias(),
-//                transferToAccountAutoCreatedUsingAlias(),
-//                transferToAccountAutoCreatedUsingAccount(),
-//                transferFromAliasToAlias(),
-//                transferFromAliasToAccount(),
-//                multipleAutoAccountCreations(),
-//                accountCreatedIfAliasUsedAsPubKey(),
-//                aliasCanBeUsedOnManyAccountsNotAsAlias(),
-//                autoAccountCreationWorksWhenUsingAliasOfDeletedAccount(),
-//                canGetBalanceAndInfoViaAlias(),
-//                noStakePeriodStartIfNotStakingToNode(),
-            hollowAccountCreationWithCryptoTransfer()
+                autoAccountCreationsHappyPath(),
+                autoAccountCreationBadAlias(),
+                autoAccountCreationUnsupportedAlias(),
+                transferToAccountAutoCreatedUsingAlias(),
+                transferToAccountAutoCreatedUsingAccount(),
+                transferFromAliasToAlias(),
+                transferFromAliasToAccount(),
+                multipleAutoAccountCreations(),
+                accountCreatedIfAliasUsedAsPubKey(),
+                aliasCanBeUsedOnManyAccountsNotAsAlias(),
+                autoAccountCreationWorksWhenUsingAliasOfDeletedAccount(),
+                canGetBalanceAndInfoViaAlias(),
+                noStakePeriodStartIfNotStakingToNode(),
+                hollowAccountCreationWithCryptoTransfer(),
+                hollowAccountCreationFailWhenAutoCreateFlagEnabledAndLazyFeatureFlagDisabled(),
                 /* -- HTS auto creates -- */
-//                canAutoCreateWithFungibleTokenTransfersToAlias(),
-//                multipleTokenTransfersSucceed(),
-//                nftTransfersToAlias(),
-//                autoCreateWithNftFallBackFeeFails(),
-//                repeatedAliasInSameTransferListFails(),
-//                tokenTransfersFailWhenFeatureFlagDisabled(),
-//                canAutoCreateWithHbarAndTokenTransfers()
+                canAutoCreateWithFungibleTokenTransfersToAlias(),
+                multipleTokenTransfersSucceed(),
+                nftTransfersToAlias(),
+                autoCreateWithNftFallBackFeeFails(),
+                repeatedAliasInSameTransferListFails(),
+                tokenTransfersFailWhenFeatureFlagDisabled(),
+                canAutoCreateWithHbarAndTokenTransfers()
         );}
 
     private HapiApiSpec canAutoCreateWithHbarAndTokenTransfers() {
@@ -749,13 +755,11 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
     }
 
     private HapiApiSpec hollowAccountCreationWithCryptoTransfer() {
-        final var hollowAccountCreateSponsor = "hollowAccountCreateSponsor";
         return defaultHapiSpec("HollowAccountCreationWithCryptoTransfer")
                 .given(
+                        UtilVerbs.overriding(LAZY_CREATE_FEATURE_FLAG, "true"),
                         newKeyNamed(SECP_256K1_SOURCE_KEY).shape(SECP_256K1_SHAPE),
-                        cryptoCreate(hollowAccountCreateSponsor)
-                                .balance(INITIAL_BALANCE * ONE_HBAR)
-                                .key(SECP_256K1_SOURCE_KEY))
+                        cryptoCreate(LAZY_CREATE_SPONSOR).balance(INITIAL_BALANCE * ONE_HBAR))
                 .when()
                 .then(
                         withOpContext(
@@ -771,7 +775,7 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
                                     final var op =
                                             cryptoTransfer(
                                                             tinyBarsFromTo(
-                                                                    hollowAccountCreateSponsor,
+                                                                    LAZY_CREATE_SPONSOR,
                                                                     evmAddress,
                                                                     ONE_HUNDRED_HBARS))
                                                     .hasKnownStatus(SUCCESS)
@@ -781,41 +785,52 @@ public class AutoAccountCreationSuite extends HapiApiSuite {
                                                     .has(
                                                             accountWith()
                                                                     .hasDefaultKey()
-                                                                    .alias(evmAddress)
+                                                                    .evmAddressAlias(evmAddress)
                                                                     .expectedBalanceWithChargedUsd(
                                                                             ONE_HUNDRED_HBARS, 0, 0)
                                                                     .autoRenew(
                                                                             THREE_MONTHS_IN_SECONDS)
                                                                     .receiverSigReq(false)
-                                                                    .memo(AUTO_MEMO));
-                                    final HapiGetTxnRecord hapiGetTxnRecord = getTxnRecord(
-                                        TRANSFER_TXN).andAllChildRecords().logged();
-                                    allRunFor(spec, op, op2, hapiGetTxnRecord);
+                                                                    .memo(LAZY_MEMO));
 
-                                    final AccountID newAccountID = hapiGetTxnRecord.getChildRecord(0)
-                                        .getReceipt().getAccountID();
-                                    spec.registry().saveAccountId(SECP_256K1_SOURCE_KEY, newAccountID);
+                                    allRunFor(spec, op, op2);
+                                    resetToDefault(LAZY_CREATE_FEATURE_FLAG);
+                                }));
+    }
 
-                                    final var op3 =
-                                            cryptoTransfer(tinyBarsFromTo(hollowAccountCreateSponsor, evmAddress, ONE_HUNDRED_HBARS))
-                                                    .hasKnownStatus(SUCCESS)
-                                                    .payingWith(SECP_256K1_SOURCE_KEY)
-                                                    .sigMapPrefixes(uniqueWithFullPrefixesFor(SECP_256K1_SOURCE_KEY))
-//                                                  .signedBy(SECP_256K1_SOURCE_KEY)
-                                                    .via(TRANSFER_TXN_2);
+    private HapiApiSpec
+            hollowAccountCreationFailWhenAutoCreateFlagEnabledAndLazyFeatureFlagDisabled() {
+        return defaultHapiSpec(
+                        "HollowAccountCreationFailWhenAutoCreateFlagEnabledAndLazyFeatureFlagDisabled")
+                .given(
+                        overriding(AUTO_CREATE_FEATURE_FLAG, "true"),
+                        overriding(LAZY_CREATE_FEATURE_FLAG, "false"),
+                        newKeyNamed(SECP_256K1_SOURCE_KEY).shape(SECP_256K1_SHAPE),
+                        cryptoCreate(LAZY_CREATE_SPONSOR).balance(INITIAL_BALANCE * ONE_HBAR))
+                .when()
+                .then(
+                        withOpContext(
+                                (spec, opLog) -> {
+                                    final var ecdsaKey =
+                                            spec.registry()
+                                                    .getKey(SECP_256K1_SOURCE_KEY)
+                                                    .getECDSASecp256K1()
+                                                    .toByteArray();
+                                    final var evmAddress =
+                                            ByteString.copyFrom(
+                                                    EthTxSigs.recoverAddressFromPubKey(ecdsaKey));
+                                    final var op =
+                                            cryptoTransfer(
+                                                            tinyBarsFromTo(
+                                                                    LAZY_CREATE_SPONSOR,
+                                                                    evmAddress,
+                                                                    ONE_HUNDRED_HBARS))
+                                                    .hasKnownStatus(NOT_SUPPORTED)
+                                                    .via(TRANSFER_TXN);
 
-                                    final var op4 =
-                                            getAliasedAccountInfo(SECP_256K1_SOURCE_KEY)
-                                                    .has(
-                                                            accountWith()
-                                                                    .key(SECP_256K1_SOURCE_KEY)
-                                                                    .alias(evmAddress)
-                                                                    .expectedBalanceWithChargedUsd(
-                                                                            (2 * ONE_HUNDRED_HBARS), 0, 0)
-                                                    );
-
-                                    allRunFor(spec, op3, op4);
-
+                                    allRunFor(spec, op);
+                                    resetToDefault(LAZY_CREATE_FEATURE_FLAG);
+                                    resetToDefault(AUTO_CREATE_FEATURE_FLAG);
                                 }));
     }
 

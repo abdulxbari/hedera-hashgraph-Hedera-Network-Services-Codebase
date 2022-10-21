@@ -33,13 +33,12 @@ import com.hedera.services.legacy.core.jproto.JECDSASecp256k1Key;
 import com.hedera.services.legacy.exception.InvalidAccountIDException;
 import com.hedera.services.legacy.exception.KeyPrefixMismatchException;
 import com.hedera.services.sigs.verification.PrecheckVerifier;
-import com.hedera.services.state.merkle.MerkleAccount;
+import com.hedera.services.state.migration.AccountStorageAdapter;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.accessors.SignedTxnAccessor;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.fee.FeeObject;
-import com.swirlds.merkle.map.MerkleMap;
 import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -66,7 +65,7 @@ public class SolvencyPrecheck {
     private final OptionValidator validator;
     private final PrecheckVerifier precheckVerifier;
     private final Supplier<StateView> stateView;
-    private final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts;
+    private final Supplier<AccountStorageAdapter> accounts;
 
     @Inject
     public SolvencyPrecheck(
@@ -75,7 +74,7 @@ public class SolvencyPrecheck {
             OptionValidator validator,
             PrecheckVerifier precheckVerifier,
             Supplier<StateView> stateView,
-            Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts) {
+            Supplier<AccountStorageAdapter> accounts) {
         this.accounts = accounts;
         this.validator = validator;
         this.stateView = stateView;

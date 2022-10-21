@@ -35,6 +35,9 @@ import java.util.function.ToLongFunction;
 import org.junit.jupiter.api.Assertions;
 
 public class AccountInfoAsserts extends BaseErroringAssertsProvider<AccountInfo> {
+
+    public static final String BAD_ALIAS = "Bad Alias!";
+
     public static AccountInfoAsserts accountWith() {
         return new AccountInfoAsserts();
     }
@@ -276,36 +279,25 @@ public class AccountInfoAsserts extends BaseErroringAssertsProvider<AccountInfo>
         return this;
     }
 
-    public AccountInfoAsserts alias(ByteString alias) {
+    public AccountInfoAsserts alias(String alias) {
         registerProvider(
-                (spec, o) -> assertEquals(alias, ((AccountInfo) o).getAlias(), "Bad Alias!"));
+                (spec, o) ->
+                        assertEquals(
+                                spec.registry().getKey(alias).toByteString(),
+                                ((AccountInfo) o).getAlias(),
+                                BAD_ALIAS));
         return this;
     }
 
-    public AccountInfoAsserts alias(String alias) {
+    public AccountInfoAsserts evmAddressAlias(ByteString evmAddress) {
         registerProvider(
-                (spec, o) -> {
-                    var expectedKey = spec.registry().getKey(alias);
-                    if (expectedKey.getEd25519().size() > 0) {
-                        assertEquals(
-                                expectedKey.toByteString(),
-                                ((AccountInfo) o).getAlias(),
-                                "Bad Ed25519 key alias!");
-                    }
-
-                    if (expectedKey.getECDSASecp256K1().size() > 0) {
-                        assertEquals(
-                                expectedKey.getECDSASecp256K1(),
-                                ((AccountInfo) o).getAlias(),
-                                "Bad ECDSA key alias!");
-                    }
-                });
+                (spec, o) -> assertEquals(evmAddress, ((AccountInfo) o).getAlias(), BAD_ALIAS));
         return this;
     }
 
     public AccountInfoAsserts noAlias() {
         registerProvider(
-                (spec, o) -> assertTrue(((AccountInfo) o).getAlias().isEmpty(), "Bad Alias!"));
+                (spec, o) -> assertTrue(((AccountInfo) o).getAlias().isEmpty(), BAD_ALIAS));
         return this;
     }
 
