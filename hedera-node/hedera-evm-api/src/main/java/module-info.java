@@ -10,6 +10,7 @@ module com.hedera.services.evm {
     requires com.swirlds.common;
     requires tuweni.units;
     requires com.github.benmanes.caffeine;
+    requires com.google.common;
 
     exports com.hedera.services.evm;
     exports com.hedera.services.evm.contracts.execution;
