@@ -44,6 +44,7 @@ import com.hedera.services.contracts.execution.traceability.HederaTracer;
 import com.hedera.services.contracts.execution.traceability.SolidityAction;
 import com.hedera.services.exceptions.InvalidTransactionException;
 import com.hedera.services.exceptions.ResourceLimitException;
+import com.hedera.services.fees.PricesAndFeesImpl;
 import com.hedera.services.ledger.TransactionalLedger;
 import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.ledger.properties.AccountProperty;
@@ -103,7 +104,7 @@ class CallEvmTxProcessorTest {
     private static final int MAX_STACK_SIZE = 1024;
     public static final long ONE_HBAR = 100_000_000L;
 
-    @Mock private LivePricesSource livePricesSource;
+    @Mock private PricesAndFeesImpl pricesAndFees;
     @Mock private HederaWorldState worldState;
     @Mock private CodeCache codeCache;
     @Mock private GlobalDynamicProperties globalDynamicProperties;
@@ -172,7 +173,7 @@ class CallEvmTxProcessorTest {
         callEvmTxProcessor =
                 new CallEvmTxProcessor(
                         worldState,
-                        livePricesSource,
+                        pricesAndFees,
                         codeCache,
                         globalDynamicProperties,
                         gasCalculator,
@@ -278,6 +279,7 @@ class CallEvmTxProcessorTest {
     @Test
     void assertSuccessExecutionChargesCorrectGasWhenGasUsedIsLargerThanMinimum() {
         givenValidMock();
+
         given(globalDynamicProperties.maxGasRefundPercentage()).willReturn(MAX_REFUND_PERCENT);
         given(gasCalculator.transactionIntrinsicGasCost(Bytes.EMPTY, false))
                 .willReturn(INTRINSIC_GAS_COST);
@@ -547,9 +549,7 @@ class CallEvmTxProcessorTest {
                 .willReturn(wrappedRelayerAccount);
         given(mutableRelayerAccount.getBalance()).willReturn(Wei.of(100 * ONE_HBAR));
         final long gasPrice = 40L;
-        given(
-                        livePricesSource.currentGasPrice(
-                                consensusTime, HederaFunctionality.EthereumTransaction))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.EthereumTransaction))
                 .willReturn(gasPrice);
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
@@ -608,9 +608,7 @@ class CallEvmTxProcessorTest {
                 .willReturn(wrappedRelayerAccount);
         given(mutableRelayerAccount.getBalance()).willReturn(Wei.of(100 * ONE_HBAR));
         final long gasPrice = 40L;
-        given(
-                        livePricesSource.currentGasPrice(
-                                consensusTime, HederaFunctionality.EthereumTransaction))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.EthereumTransaction))
                 .willReturn(gasPrice);
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
@@ -659,9 +657,7 @@ class CallEvmTxProcessorTest {
                 .willReturn(wrappedRelayerAccount);
         given(mutableRelayerAccount.getBalance()).willReturn(Wei.of(100 * ONE_HBAR));
         final long gasPrice = 40L;
-        given(
-                        livePricesSource.currentGasPrice(
-                                consensusTime, HederaFunctionality.EthereumTransaction))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.EthereumTransaction))
                 .willReturn(gasPrice);
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
@@ -712,9 +708,7 @@ class CallEvmTxProcessorTest {
                 .willReturn(wrappedRelayerAccount);
         given(mutableRelayerAccount.getBalance()).willReturn(Wei.of(100 * ONE_HBAR));
         final long gasPrice = 40L;
-        given(
-                        livePricesSource.currentGasPrice(
-                                consensusTime, HederaFunctionality.EthereumTransaction))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.EthereumTransaction))
                 .willReturn(gasPrice);
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
@@ -777,9 +771,7 @@ class CallEvmTxProcessorTest {
 
         given(wrappedRelayerAccount.getMutable()).willReturn(mutableRelayerAccount);
         final long gasPrice = 40L;
-        given(
-                        livePricesSource.currentGasPrice(
-                                consensusTime, HederaFunctionality.EthereumTransaction))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.EthereumTransaction))
                 .willReturn(gasPrice);
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
@@ -821,9 +813,7 @@ class CallEvmTxProcessorTest {
         given(updater.getOrCreateSenderAccount(relayer.getId().asEvmAddress()))
                 .willReturn(wrappedRelayerAccount);
         final long gasPrice = 40L;
-        given(
-                        livePricesSource.currentGasPrice(
-                                consensusTime, HederaFunctionality.EthereumTransaction))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.EthereumTransaction))
                 .willReturn(gasPrice);
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
@@ -866,9 +856,7 @@ class CallEvmTxProcessorTest {
                 .willReturn(wrappedRelayerAccount);
         given(mutableRelayerAccount.getBalance()).willReturn(Wei.ONE);
         final long gasPrice = 40L;
-        given(
-                        livePricesSource.currentGasPrice(
-                                consensusTime, HederaFunctionality.EthereumTransaction))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.EthereumTransaction))
                 .willReturn(gasPrice);
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
@@ -912,9 +900,7 @@ class CallEvmTxProcessorTest {
                 .willReturn(wrappedRelayerAccount);
         given(mutableRelayerAccount.getBalance()).willReturn(Wei.of(100 * ONE_HBAR));
         final long gasPrice = 40L;
-        given(
-                        livePricesSource.currentGasPrice(
-                                consensusTime, HederaFunctionality.EthereumTransaction))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.EthereumTransaction))
                 .willReturn(gasPrice);
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
@@ -958,9 +944,7 @@ class CallEvmTxProcessorTest {
         given(updater.getOrCreateSenderAccount(relayer.getId().asEvmAddress()))
                 .willReturn(wrappedRelayerAccount);
         final long gasPrice = 40L;
-        given(
-                        livePricesSource.currentGasPrice(
-                                consensusTime, HederaFunctionality.EthereumTransaction))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.EthereumTransaction))
                 .willReturn(gasPrice);
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
@@ -1019,9 +1003,7 @@ class CallEvmTxProcessorTest {
 
         given(wrappedRelayerAccount.getMutable()).willReturn(mutableRelayerAccount);
         final long gasPrice = 40L;
-        given(
-                        livePricesSource.currentGasPrice(
-                                consensusTime, HederaFunctionality.EthereumTransaction))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.EthereumTransaction))
                 .willReturn(gasPrice);
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
@@ -1065,9 +1047,7 @@ class CallEvmTxProcessorTest {
         given(updater.getOrCreateSenderAccount(relayer.getId().asEvmAddress()))
                 .willReturn(wrappedRelayerAccount);
         final long gasPrice = 40L;
-        given(
-                        livePricesSource.currentGasPrice(
-                                consensusTime, HederaFunctionality.EthereumTransaction))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.EthereumTransaction))
                 .willReturn(gasPrice);
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
@@ -1096,26 +1076,12 @@ class CallEvmTxProcessorTest {
 
     @Test
     void assertThrowsEthereumTransactionWhenSenderGasPriceBiggerThanGasPriceButBalanceNotEnough() {
-        givenValidMockWithoutGetOrCreate(0L);
         given(worldState.updater()).willReturn(updater);
 
         given(gasCalculator.transactionIntrinsicGasCost(Bytes.EMPTY, false)).willReturn(0L);
         given(worldState.updater()).willReturn(updater);
-        final var wrappedSenderAccount = mock(EvmAccount.class);
-        final var mutableSenderAccount = mock(MutableAccount.class);
-        given(wrappedSenderAccount.getMutable()).willReturn(mutableSenderAccount);
-        given(updater.getOrCreateSenderAccount(sender.getId().asEvmAddress()))
-                .willReturn(wrappedSenderAccount);
-        given(mutableSenderAccount.getBalance()).willReturn(Wei.ONE);
-        final var wrappedRelayerAccount = mock(EvmAccount.class);
-        final var mutableRelayerAccount = mock(MutableAccount.class);
-        given(wrappedRelayerAccount.getMutable()).willReturn(mutableRelayerAccount);
-        given(updater.getOrCreateSenderAccount(relayer.getId().asEvmAddress()))
-                .willReturn(wrappedRelayerAccount);
         final long gasPrice = 40L;
-        given(
-                        livePricesSource.currentGasPrice(
-                                consensusTime, HederaFunctionality.EthereumTransaction))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.EthereumTransaction))
                 .willReturn(gasPrice);
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
@@ -1125,7 +1091,7 @@ class CallEvmTxProcessorTest {
                 BigInteger.valueOf(offeredGasPrice).multiply(WEIBARS_TO_TINYBARS);
 
         assertThrows(
-                InvalidTransactionException.class,
+                IllegalStateException.class,
                 () ->
                         callEvmTxProcessor.executeEth(
                                 sender,
@@ -1149,7 +1115,7 @@ class CallEvmTxProcessorTest {
         final var receiverAddress = receiver.getId().asEvmAddress();
         given(aliasManager.resolveForEvm(receiverAddress)).willReturn(receiverAddress);
         final long gasPrice = 10L;
-        given(livePricesSource.currentGasPrice(consensusTime, HederaFunctionality.ContractCall))
+        given(pricesAndFees.currentGasPrice(consensusTime, HederaFunctionality.ContractCall))
                 .willReturn(gasPrice);
 
         var result =

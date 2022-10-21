@@ -50,8 +50,7 @@ public abstract class HederaEvmTxProcessor {
     protected HederaEvmMutableWorldState worldState;
 
     protected final GasCalculator gasCalculator;
-    // FEATURE WORK to be covered by #3949
-    protected final PricesAndFeesProvider livePricesSource;
+    protected final PricesAndFeesProvider pricesAndFeesProvider;
     protected final Map<String, Provider<MessageCallProcessor>> mcps;
     protected final Map<String, Provider<ContractCreationProcessor>> ccps;
     protected AbstractMessageProcessor messageCallProcessor;
@@ -66,12 +65,12 @@ public abstract class HederaEvmTxProcessor {
     protected long sbhRefund;
 
     protected HederaEvmTxProcessor(
-            final PricesAndFeesProvider livePricesSource,
+            final PricesAndFeesProvider pricesAndFeesProvider,
             final EvmProperties dynamicProperties,
             final GasCalculator gasCalculator,
             final Map<String, Provider<MessageCallProcessor>> mcps,
             final Map<String, Provider<ContractCreationProcessor>> ccps) {
-        this(null, livePricesSource, dynamicProperties, gasCalculator, mcps, ccps, null);
+        this(null, pricesAndFeesProvider, dynamicProperties, gasCalculator, mcps, ccps, null);
     }
 
     public void setBlockMetaSource(final BlockMetaSource blockMetaSource) {
@@ -88,14 +87,14 @@ public abstract class HederaEvmTxProcessor {
 
     protected HederaEvmTxProcessor(
             final HederaEvmMutableWorldState worldState,
-            final PricesAndFeesProvider livePricesSource,
+            final PricesAndFeesProvider pricesAndFeesProvider,
             final EvmProperties dynamicProperties,
             final GasCalculator gasCalculator,
             final Map<String, Provider<MessageCallProcessor>> mcps,
             final Map<String, Provider<ContractCreationProcessor>> ccps,
             final BlockMetaSource blockMetaSource) {
         this.worldState = worldState;
-        this.livePricesSource = livePricesSource;
+        this.pricesAndFeesProvider = pricesAndFeesProvider;
         this.dynamicProperties = dynamicProperties;
         this.gasCalculator = gasCalculator;
 
@@ -220,7 +219,7 @@ public abstract class HederaEvmTxProcessor {
     }
 
     protected long gasPriceTinyBarsGiven(final Instant consensusTime, boolean isEthTxn) {
-        return livePricesSource.currentGasPrice(
+        return pricesAndFeesProvider.currentGasPrice(
                 consensusTime,
                 isEthTxn ? HederaFunctionality.EthereumTransaction : getFunctionType());
     }

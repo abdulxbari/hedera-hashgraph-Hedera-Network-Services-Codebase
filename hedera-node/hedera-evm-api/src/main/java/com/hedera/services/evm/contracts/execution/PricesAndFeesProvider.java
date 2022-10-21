@@ -15,9 +15,18 @@
  */
 package com.hedera.services.evm.contracts.execution;
 
+import com.hederahashgraph.api.proto.java.ExchangeRate;
+import com.hederahashgraph.api.proto.java.FeeData;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
+import com.hederahashgraph.api.proto.java.Timestamp;
 import java.time.Instant;
 
 public interface PricesAndFeesProvider {
+    FeeData defaultPricesGiven(HederaFunctionality function, Timestamp at);
+
+    ExchangeRate rate(Timestamp at);
+
+    long estimatedGasPriceInTinybars(HederaFunctionality function, Timestamp at);
+
     long currentGasPrice(final Instant now, final HederaFunctionality function);
 }

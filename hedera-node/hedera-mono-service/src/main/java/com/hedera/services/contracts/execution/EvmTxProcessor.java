@@ -27,6 +27,7 @@ import com.hedera.services.evm.contracts.execution.BlockMetaSource;
 import com.hedera.services.evm.contracts.execution.HederaEvmTxProcessor;
 import com.hedera.services.exceptions.InvalidTransactionException;
 import com.hedera.services.exceptions.ResourceLimitException;
+import com.hedera.services.fees.PricesAndFeesImpl;
 import com.hedera.services.store.contracts.HederaMutableWorldState;
 import com.hedera.services.store.contracts.HederaWorldState;
 import com.hedera.services.store.models.Account;
@@ -58,17 +59,17 @@ import org.hyperledger.besu.evm.processor.MessageCallProcessor;
 abstract class EvmTxProcessor extends HederaEvmTxProcessor {
 
     protected EvmTxProcessor(
-            final LivePricesSource livePricesSource,
+            final PricesAndFeesImpl pricesAndFees,
             final GlobalDynamicProperties dynamicProperties,
             final GasCalculator gasCalculator,
             final Map<String, Provider<MessageCallProcessor>> mcps,
             final Map<String, Provider<ContractCreationProcessor>> ccps) {
-        this(null, livePricesSource, dynamicProperties, gasCalculator, mcps, ccps, null);
+        this(null, pricesAndFees, dynamicProperties, gasCalculator, mcps, ccps, null);
     }
 
     protected EvmTxProcessor(
             final HederaMutableWorldState worldState,
-            final LivePricesSource livePricesSource,
+            final PricesAndFeesImpl pricesAndFees,
             final GlobalDynamicProperties dynamicProperties,
             final GasCalculator gasCalculator,
             final Map<String, Provider<MessageCallProcessor>> mcps,
@@ -76,7 +77,7 @@ abstract class EvmTxProcessor extends HederaEvmTxProcessor {
             final BlockMetaSource blockMetaSource) {
         super(
                 worldState,
-                livePricesSource,
+                pricesAndFees,
                 dynamicProperties,
                 gasCalculator,
                 mcps,
