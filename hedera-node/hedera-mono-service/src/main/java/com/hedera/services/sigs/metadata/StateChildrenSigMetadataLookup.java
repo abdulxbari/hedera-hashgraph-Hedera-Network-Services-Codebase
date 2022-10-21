@@ -226,9 +226,9 @@ public final class StateChildrenSigMetadataLookup implements SigMetadataLookup {
                     return SafeLookupResult.failure(IMMUTABLE_ACCOUNT);
                 } else {
                     return new SafeLookupResult<>(
-                        new AccountSigningMetadata(
-                            new JHollowKey(accountAlias.toByteArray()), account.isReceiverSigRequired()));
-
+                            new AccountSigningMetadata(
+                                    new JHollowKey(accountAlias.toByteArray()),
+                                    account.isReceiverSigRequired()));
                 }
             }
             return new SafeLookupResult<>(

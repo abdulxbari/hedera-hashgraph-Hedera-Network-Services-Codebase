@@ -26,7 +26,6 @@ import com.hedera.services.legacy.core.jproto.JECDSASecp256k1Key;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.sigs.PlatformSigsCreationResult;
 import com.hedera.services.sigs.factories.ReusableBodySigningFactory;
-import com.hedera.services.sigs.sourcing.KeyType;
 import com.hedera.services.utils.accessors.SignedTxnAccessor;
 import com.swirlds.common.crypto.TransactionSignature;
 import java.util.Arrays;
@@ -73,15 +72,17 @@ public class PrecheckVerifier {
             if (payerKey.hasHollowKey()) {
                 // can change this algorithm to use the accessor.getSigMap()
                 // and return immediately when we find the first match
-                accessor.getPkToSigsFn().forEachUnusedSigWithFullPrefix(
-                    (type, pubKey, sig) -> {
-                        if (type.equals(ECDSA_SECP256K1)) {
-                            if (Arrays.equals(payerKey.getHollowKey().getEvmAddress(), EthTxSigs.recoverAddressFromPubKey(pubKey))) {
-                                reqKeys.set(0, new JECDSASecp256k1Key(pubKey));
-                            }
-                        }
-                    }
-                );
+                accessor.getPkToSigsFn()
+                        .forEachUnusedSigWithFullPrefix(
+                                (type, pubKey, sig) -> {
+                                    if (type.equals(ECDSA_SECP256K1)) {
+                                        if (Arrays.equals(
+                                                payerKey.getHollowKey().getEvmAddress(),
+                                                EthTxSigs.recoverAddressFromPubKey(pubKey))) {
+                                            reqKeys.set(0, new JECDSASecp256k1Key(pubKey));
+                                        }
+                                    }
+                                });
             }
             final var availSigs = getAvailSigs(reqKeys, accessor);
             syncVerifier.verifySync(availSigs);

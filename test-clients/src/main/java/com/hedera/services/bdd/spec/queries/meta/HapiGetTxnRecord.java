@@ -47,7 +47,6 @@ import com.hederahashgraph.api.proto.java.AccountAmount;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.AssessedCustomFee;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
-import com.hederahashgraph.api.proto.java.Key;
 import com.hederahashgraph.api.proto.java.NftTransfer;
 import com.hederahashgraph.api.proto.java.Query;
 import com.hederahashgraph.api.proto.java.QueryHeader;
@@ -860,8 +859,9 @@ public class HapiGetTxnRecord extends HapiQueryOp<HapiGetTxnRecord> {
                 spec.registry()
                         .saveAccountId(
                                 rec.getAlias().toStringUtf8(), rec.getReceipt().getAccountID());
-//                spec.registry()
-//                        .saveKey(rec.getAlias().toStringUtf8(), Key.parseFrom(rec.getAlias()));
+                //                spec.registry()
+                //                        .saveKey(rec.getAlias().toStringUtf8(),
+                // Key.parseFrom(rec.getAlias()));
                 LOG.info(
                         "{}  Saving alias {} to registry for Account ID {}",
                         spec::logPrefix,
