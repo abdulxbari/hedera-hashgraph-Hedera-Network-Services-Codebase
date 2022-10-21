@@ -15,8 +15,9 @@
  */
 package com.hedera.services.utils;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.hedera.services.evm.store.contracts.utils.BytesKey;
 import com.swirlds.common.utility.CommonUtils;
 import org.bouncycastle.util.encoders.Hex;
 import org.junit.jupiter.api.Test;

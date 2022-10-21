@@ -37,7 +37,6 @@ package com.hedera.services.store.contracts;
  *
  */
 
-import static com.hedera.services.store.contracts.WorldStateTokenAccount.proxyBytecodeFor;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -47,7 +46,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.hedera.services.context.properties.NodeLocalProperties;
-import com.hedera.services.utils.BytesKey;
+import com.hedera.services.evm.store.contracts.HederaEvmWorldStateTokenAccount;
+import com.hedera.services.evm.store.contracts.utils.BytesKey;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
@@ -67,7 +67,8 @@ class CodeCacheTest {
 
     @BeforeEach
     void setup() {
-        codeCache = new CodeCache(100, entityAccess);
+        given(properties.prefetchCodeCacheTtlSecs()).willReturn(100);
+        codeCache = new CodeCache(properties, entityAccess);
     }
 
     @Test
@@ -96,12 +97,12 @@ class CodeCacheTest {
 
     @Test
     void returnsCachedValue() {
-        Address demoAddress = Address.fromHexString("aaa");
+        Address demoAddress = Address.fromHexString("0xabc");
         BytesKey key = new BytesKey(demoAddress.toArray());
         Code code = Code.EMPTY;
 
         codeCache.cacheValue(key, code);
-
+        final var a = codeCache.getCache().getIfPresent(key);
         Code codeResult = codeCache.getIfPresent(demoAddress);
 
         assertEquals(code, codeResult);
@@ -113,7 +114,7 @@ class CodeCacheTest {
         given(entityAccess.isTokenAccount(any())).willReturn(true);
 
         assertEquals(
-                proxyBytecodeFor(Address.fromHexString("0xabc")),
+                HederaEvmWorldStateTokenAccount.bytecodeForToken(Address.fromHexString("0xabc")),
                 codeCache.getIfPresent(Address.fromHexString("0xabc")).getBytes());
     }
 

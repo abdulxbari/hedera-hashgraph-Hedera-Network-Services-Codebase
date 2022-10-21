@@ -17,13 +17,13 @@ package com.hedera.services.store.contracts;
 
 import static com.hedera.services.exceptions.ValidationUtils.validateTrue;
 import static com.hedera.services.ledger.HederaLedger.CONTRACT_ID_COMPARATOR;
-import static com.hedera.services.store.contracts.WorldStateTokenAccount.TOKEN_PROXY_ACCOUNT_NONCE;
 import static com.hedera.services.utils.EntityIdUtils.accountIdFromEvmAddress;
 import static com.hedera.services.utils.EntityIdUtils.asContract;
 import static com.hedera.services.utils.EntityIdUtils.asTypedEvmAddress;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.FAIL_INVALID;
 
 import com.hedera.services.context.properties.GlobalDynamicProperties;
+import com.hedera.services.evm.store.contracts.HederaEvmWorldStateTokenAccount;
 import com.hedera.services.evm.store.contracts.HederaEvmWorldUpdater;
 import com.hedera.services.ledger.SigImpactHistorian;
 import com.hedera.services.ledger.accounts.ContractCustomizer;
@@ -160,18 +160,13 @@ public class HederaWorldState implements HederaMutableWorldState {
         }
         if (entityAccess.isTokenAccount(address)
                 && dynamicProperties.isRedirectTokenCallsEnabled()) {
-            return new WorldStateTokenAccount(address);
+            return new HederaEvmWorldStateTokenAccount(address);
         }
-        final var accountId = accountIdFromEvmAddress(address);
-        if (!isGettable(accountId)) {
+        if (!entityAccess.isUsable(address)) {
             return null;
         }
-        final long balance = entityAccess.getBalance(accountId);
+        final long balance = entityAccess.getBalance(address);
         return new WorldStateAccount(address, Wei.of(balance), codeCache, entityAccess);
-    }
-
-    private boolean isGettable(final AccountID id) {
-        return entityAccess.isUsable(id);
     }
 
     public static class Updater extends AbstractLedgerWorldUpdater<HederaMutableWorldState, Account>
@@ -313,7 +308,8 @@ public class HederaWorldState implements HederaMutableWorldState {
                         trackIfNewlyCreated(accountId, entityAccess, provisionalCreations);
                     });
             for (final var updatedAccount : updatedAccounts) {
-                if (updatedAccount.getNonce() == TOKEN_PROXY_ACCOUNT_NONCE) {
+                if (updatedAccount.getNonce()
+                        == HederaEvmWorldStateTokenAccount.TOKEN_PROXY_ACCOUNT_NONCE) {
                     continue;
                 }
                 final var accountId = accountIdFromEvmAddress(updatedAccount.getAddress());
@@ -325,7 +321,7 @@ public class HederaWorldState implements HederaMutableWorldState {
                 final AccountID accountId,
                 final EntityAccess entityAccess,
                 final List<ContractID> provisionalContractCreations) {
-            if (!entityAccess.isExtant(accountId)) {
+            if (!entityAccess.isExtant(asTypedEvmAddress(accountId))) {
                 provisionalContractCreations.add(asContract(accountId));
             }
         }

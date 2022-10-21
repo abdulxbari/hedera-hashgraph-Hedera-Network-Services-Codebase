@@ -16,6 +16,8 @@
 package com.hedera.services.store.contracts;
 
 import static com.hedera.services.store.contracts.StaticEntityAccess.explicitCodeFetch;
+import static com.hedera.services.utils.EntityIdUtils.accountIdFromEvmAddress;
+import static com.hedera.services.utils.EntityIdUtils.tokenIdFromEvmAddress;
 import static com.hederahashgraph.api.proto.java.HederaFunctionality.ContractCall;
 import static com.hederahashgraph.api.proto.java.HederaFunctionality.ContractCreate;
 import static com.hederahashgraph.api.proto.java.HederaFunctionality.EthereumTransaction;
@@ -33,7 +35,6 @@ import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.virtual.VirtualBlobKey;
 import com.hedera.services.state.virtual.VirtualBlobValue;
-import com.hedera.services.utils.EntityIdUtils;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.TokenID;
 import com.swirlds.virtualmap.VirtualMap;
@@ -101,28 +102,28 @@ public class MutableEntityAccess implements EntityAccess {
     }
 
     @Override
-    public long getBalance(final AccountID id) {
-        return ledger.getBalance(id);
+    public long getBalance(final Address address) {
+        return ledger.getBalance(accountIdFromEvmAddress(address));
     }
 
     @Override
-    public boolean isExtant(final AccountID id) {
-        return ledger.exists(id);
+    public boolean isExtant(final Address address) {
+        return ledger.exists(accountIdFromEvmAddress(address));
     }
 
     @Override
-    public boolean isUsable(AccountID id) {
-        return ledger.usabilityOf(id) == OK;
+    public boolean isUsable(Address address) {
+        return ledger.usabilityOf(accountIdFromEvmAddress(address)) == OK;
     }
 
     @Override
     public boolean isTokenAccount(Address address) {
-        return tokensLedger.exists(EntityIdUtils.tokenIdFromEvmAddress(address));
+        return tokensLedger.exists(tokenIdFromEvmAddress(address));
     }
 
     @Override
-    public ByteString alias(AccountID id) {
-        return ledger.alias(id);
+    public ByteString alias(final Address address) {
+        return ledger.alias(accountIdFromEvmAddress(address));
     }
 
     @Override
@@ -131,8 +132,8 @@ public class MutableEntityAccess implements EntityAccess {
     }
 
     @Override
-    public UInt256 getStorage(final AccountID id, final UInt256 key) {
-        return sizeLimitedStorage.getStorage(id, key);
+    public UInt256 getStorage(final Address address, final UInt256 key) {
+        return sizeLimitedStorage.getStorage(accountIdFromEvmAddress(address), key);
     }
 
     @Override
@@ -150,8 +151,8 @@ public class MutableEntityAccess implements EntityAccess {
     }
 
     @Override
-    public Bytes fetchCodeIfPresent(final AccountID id) {
-        return explicitCodeFetch(bytecode.get(), id);
+    public Bytes fetchCodeIfPresent(final Address address) {
+        return explicitCodeFetch(bytecode.get(), accountIdFromEvmAddress(address));
     }
 
     @Override

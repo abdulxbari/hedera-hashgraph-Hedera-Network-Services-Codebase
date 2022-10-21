@@ -33,4 +33,5 @@ dependencies {
         exclude("com.google.code.findbugs", "jsr305")
     }
     implementation(libs.javax.inject)
+    implementation(libs.caffeine)
 }
