@@ -27,7 +27,7 @@ import com.hedera.services.records.InProgressChildRecord;
 import com.hedera.services.records.RecordsHistorian;
 import com.hedera.services.sigs.Rationalization;
 import com.hedera.services.state.EntityCreator;
-import com.hedera.services.state.merkle.MerkleAccount;
+import com.hedera.services.state.migration.AccountStorageAdapter;
 import com.hedera.services.stats.MiscSpeedometers;
 import com.hedera.services.store.contracts.precompile.SyntheticTxnFactory;
 import com.hedera.services.txns.span.ExpandHandleSpanMapAccessor;
@@ -35,7 +35,6 @@ import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.accessors.SwirldsTxnAccessor;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.swirlds.common.crypto.TransactionSignature;
-import com.swirlds.merkle.map.MerkleMap;
 import java.util.Collections;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
@@ -54,7 +53,7 @@ public class SigsAndPayerKeyScreen {
     private final MiscSpeedometers speedometers;
     private final TransactionContext txnCtx;
     private final BiPredicate<JKey, TransactionSignature> validityTest;
-    private final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts;
+    private final Supplier<AccountStorageAdapter> accounts;
     private final ExpandHandleSpanMapAccessor spanMapAccessor;
     private final AliasManager aliasManager;
     private EntityCreator creator;
@@ -69,7 +68,7 @@ public class SigsAndPayerKeyScreen {
             final TransactionContext txnCtx,
             final MiscSpeedometers speedometers,
             final BiPredicate<JKey, TransactionSignature> validityTest,
-            final Supplier<MerkleMap<EntityNum, MerkleAccount>> accounts,
+            final Supplier<AccountStorageAdapter> accounts,
             ExpandHandleSpanMapAccessor spanMapAccessor,
             AliasManager aliasManager,
             final EntityCreator creator,
