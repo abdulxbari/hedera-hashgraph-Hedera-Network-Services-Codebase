@@ -15,6 +15,7 @@
  */
 package com.hedera.services.utils;
 
+import static com.hedera.services.keys.HederaKeyActivation.COMPRESSED_SECP256K1_PUBLIC_KEY_LEN;
 import static com.hedera.services.keys.HederaKeyActivation.INVALID_MISSING_SIG;
 import static com.hedera.services.keys.HederaKeyActivation.VALID_IMPLICIT_SIG;
 import static com.hedera.services.keys.HederaKeyActivation.pkToSigMapFrom;
@@ -150,8 +151,7 @@ public class RationalizedSigMeta {
         for (final var sig : rationalizedSigs) {
             // maybe do the hashing of the public key a better way... not coupling to Besu classes?
             final var publicKeyHashed =
-                    Hash.hash(Bytes.of(rationalizedSigs.get(0).getExpandedPublicKey()))
-                            .toArrayUnsafe();
+                    Hash.hash(Bytes.of(sig.getExpandedPublicKey())).toArrayUnsafe();
             if (Arrays.equals(
                     targetEvmAddress,
                     0,
@@ -163,6 +163,10 @@ public class RationalizedSigMeta {
                 // use compressed public key
                 for (final var sigPair : signatureMap.getSigPairList()) {
                     final var keyBytes = sigPair.getPubKeyPrefix().toByteArray();
+                    if (keyBytes.length != COMPRESSED_SECP256K1_PUBLIC_KEY_LEN) {
+                        continue;
+                    }
+
                     if (Arrays.equals(
                             sig.getExpandedPublicKey(),
                             MiscCryptoUtils.decompressSecp256k1(keyBytes))) {

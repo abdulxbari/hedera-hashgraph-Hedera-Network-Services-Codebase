@@ -43,11 +43,11 @@ import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.legacy.core.jproto.JKeyList;
 import com.hedera.services.sigs.order.KeyOrderingFailure;
 import com.hedera.services.sigs.order.LinkedRefs;
-import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.state.merkle.MerkleScheduledTransactions;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTopic;
 import com.hedera.services.state.migration.AccountStorageAdapter;
+import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.submerkle.EntityId;
 import com.hedera.services.state.virtual.EntityNumVirtualKey;
 import com.hedera.services.state.virtual.VirtualBlobKey;
@@ -86,7 +86,7 @@ class StateChildrenSigMetadataLookupTest {
     @Mock private MerkleTopic topic;
     @Mock private MerkleToken token;
     @Mock private ScheduleVirtualValue schedule;
-    @Mock private MerkleAccount account;
+    @Mock private HederaAccount account;
     @Mock private TokenSigningMetadata tokenMeta;
     @Mock private MerkleMap<EntityNum, MerkleToken> tokens;
     @Mock private MerkleMap<EntityNum, MerkleTopic> topics;
@@ -246,10 +246,11 @@ class StateChildrenSigMetadataLookupTest {
     }
 
     @Test
-    void recognizesImmutableAccountWithEmptyKey() {
+    void recognizesImmutableAccountWithEmptyKeyAndEmptyAlias() {
         given(stateChildren.accounts()).willReturn(accounts);
         given(accounts.get(EntityNum.fromAccountId(immutableAccount))).willReturn(account);
         given(account.getAccountKey()).willReturn(BasicTransactionContext.EMPTY_KEY);
+        given(account.getAlias()).willReturn(ByteString.EMPTY);
 
         final var linkedRefs = new LinkedRefs();
         final var result = subject.accountSigningMetaFor(immutableAccount, linkedRefs);
@@ -259,9 +260,10 @@ class StateChildrenSigMetadataLookupTest {
     }
 
     @Test
-    void recognizesImmutableAccountWithUnexpectedNullKey() {
+    void recognizesImmutableAccountWithUnexpectedNullKeyAndEmptyAlias() {
         given(stateChildren.accounts()).willReturn(accounts);
         given(accounts.get(EntityNum.fromAccountId(immutableAccount))).willReturn(account);
+        given(account.getAlias()).willReturn(ByteString.EMPTY);
 
         final var linkedRefs = new LinkedRefs();
         final var result = subject.accountSigningMetaFor(immutableAccount, linkedRefs);

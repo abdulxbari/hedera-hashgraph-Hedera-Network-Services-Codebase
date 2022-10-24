@@ -39,11 +39,11 @@ import java.util.function.Function;
 public final class HederaKeyActivation {
     private static final int ED25519_PUBLIC_KEY_LEN = 32;
     private static final int SECP256K1_COORDINATE_LEN = 32;
-    private static final int COMPRESSED_SECP256K1_PUBLIC_KEY_LEN = 33;
     private static final int UNCOMPRESSED_SECP256K1_PUBLIC_KEY_LEN = 64;
 
     private static final byte PARITY_MASK = (byte) 0x01;
 
+    public static final int COMPRESSED_SECP256K1_PUBLIC_KEY_LEN = 33;
     public static final TransactionSignature VALID_IMPLICIT_SIG = new ValidSignature();
     public static final TransactionSignature INVALID_MISSING_SIG = new InvalidSignature();
 

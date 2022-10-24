@@ -90,13 +90,6 @@ public class TxnChargingPolicyAgent {
             return false;
         }
 
-        if (accessor.getSigMeta().hasReplacedHollowKey()) {
-            // TODO #9 (Michael) If the accessor's RationalizedSigMeta has int replacedHollowKeys =
-            // n,
-            //  we add a n * CryptoUpdate fee to T's FeeObject before final fee charging
-            // (Mitko) --> we will do only 1 probably in any case
-        }
-
         var chargingOutcome = chargingPolicy.apply(fees);
         if (chargingOutcome != OK) {
             txnCtx.setStatus(chargingOutcome);
