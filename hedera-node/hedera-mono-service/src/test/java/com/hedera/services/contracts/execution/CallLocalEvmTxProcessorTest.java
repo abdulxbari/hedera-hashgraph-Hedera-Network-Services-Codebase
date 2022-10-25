@@ -18,8 +18,8 @@ package com.hedera.services.contracts.execution;
 import static com.hedera.services.contracts.ContractsV_0_30Module.EVM_VERSION_0_30;
 import static com.hedera.test.utils.TxnUtils.assertFailsWith;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_CONTRACT_ID;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
@@ -31,7 +31,7 @@ import static org.mockito.Mockito.when;
 
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.evm.contracts.execution.BlockMetaSource;
-import com.hedera.services.fees.PricesAndFeesImpl;
+import com.hedera.services.evm.contracts.execution.HederaBlockValues;
 import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.store.contracts.CodeCache;
 import com.hedera.services.store.contracts.HederaStackedWorldStateUpdater;
@@ -75,7 +75,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class CallLocalEvmTxProcessorTest {
     private static final int MAX_STACK_SIZE = 1024;
 
-    @Mock private PricesAndFeesImpl pricesAndFees;
+    @Mock private LivePricesSource livePricesSource;
     @Mock private HederaWorldState worldState;
     @Mock private CodeCache codeCache;
     @Mock private GlobalDynamicProperties globalDynamicProperties;
@@ -117,7 +117,7 @@ class CallLocalEvmTxProcessorTest {
         callLocalEvmTxProcessor =
                 new CallLocalEvmTxProcessor(
                         codeCache,
-                        pricesAndFees,
+                        livePricesSource,
                         globalDynamicProperties,
                         gasCalculator,
                         mcps,

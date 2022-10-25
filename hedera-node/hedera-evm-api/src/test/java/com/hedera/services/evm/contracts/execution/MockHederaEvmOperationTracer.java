@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Hedera Hashgraph, LLC
+ * Copyright (C) 2022 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,15 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.hedera.services.grpc.marshalling;
+package com.hedera.services.evm.contracts.execution;
 
-import com.hedera.services.state.submerkle.FcCustomFee;
-import com.hedera.services.store.models.Id;
-import java.util.Collections;
-import java.util.List;
+import com.hedera.services.evm.contracts.execution.traceability.HederaEvmOperationTracer;
 
-public record CustomFeeMeta(Id tokenId, Id treasuryId, List<FcCustomFee> customFees) {
-    public static CustomFeeMeta forMissingLookupOf(final Id tokenId) {
-        return new CustomFeeMeta(tokenId, Id.MISSING_ID, Collections.emptyList());
-    }
-}
+public class MockHederaEvmOperationTracer implements HederaEvmOperationTracer {}
