@@ -16,8 +16,10 @@
 package com.hedera.services.bdd.spec.transactions.token;
 
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.asIdForKeyLookUp;
+import static com.hedera.services.bdd.spec.transactions.TxnUtils.asIdWithAlias;
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.asTokenId;
 
+import com.google.protobuf.ByteString;
 import com.google.protobuf.UInt32Value;
 import com.hedera.services.bdd.spec.HapiApiSpec;
 import com.hedera.services.bdd.suites.HapiApiSuite;
@@ -44,6 +46,7 @@ public class TokenMovement {
     private final Optional<Function<HapiApiSpec, String>> receiverFn;
     private int expectedDecimals;
     private boolean isApproval = false;
+    private Optional<ByteString> hollowReceiver;
 
     public static final TokenID HBAR_SENTINEL_TOKEN_ID = TokenID.getDefaultInstance();
 
@@ -95,6 +98,29 @@ public class TokenMovement {
         this.receiver = receiver;
         this.receivers = receivers;
         this.isApproval = isApproval;
+
+        senderFn = Optional.empty();
+        receiverFn = Optional.empty();
+        expectedDecimals = -1;
+    }
+
+    TokenMovement(
+            String token,
+            Optional<String> sender,
+            long amount,
+            long[] serialNums,
+            Optional<String> receiver,
+            Optional<List<String>> receivers,
+            boolean isApproval,
+            Optional<ByteString> hollowReceiver) {
+        this.token = token;
+        this.sender = sender;
+        this.amount = amount;
+        this.serialNums = serialNums;
+        this.receiver = receiver;
+        this.receivers = receivers;
+        this.isApproval = isApproval;
+        this.hollowReceiver = hollowReceiver;
 
         senderFn = Optional.empty();
         receiverFn = Optional.empty();
@@ -183,6 +209,8 @@ public class TokenMovement {
             for (int i = 0, n = targets.size(); i < n; i++) {
                 scopedTransfers.addTransfers(adjustment(targets.get(i), +amountPerReceiver, spec));
             }
+        } else if (hollowReceiver.isPresent()) {
+            scopedTransfers.addTransfers(hollowAdjustment(hollowReceiver.get(), +amount));
         }
         if (expectedDecimals > 0) {
             scopedTransfers.setExpectedDecimals(UInt32Value.of(expectedDecimals));
@@ -207,6 +235,14 @@ public class TokenMovement {
     private AccountAmount adjustment(String name, long value, HapiApiSpec spec) {
         return AccountAmount.newBuilder()
                 .setAccountID(asIdForKeyLookUp(name, spec))
+                .setAmount(value)
+                .setIsApproval(isApproval)
+                .build();
+    }
+
+    private AccountAmount hollowAdjustment(ByteString receiver, long value) {
+        return AccountAmount.newBuilder()
+                .setAccountID(asIdWithAlias(receiver))
                 .setAmount(value)
                 .setIsApproval(isApproval)
                 .build();
