@@ -104,6 +104,7 @@ public class EthereumTransitionLogic implements PreFetchableTransition {
     public void doStateTransition() {
         // Collect everything from the context
         final var accessor = txnCtx.accessor();
+        preFetch(accessor);
         final var callerNum = validatedCallerOf(accessor);
         final var synthTxn = spanMapAccessor.getEthTxBodyMeta(accessor);
         final var ethTxData = spanMapAccessor.getEthTxDataMeta(accessor);
