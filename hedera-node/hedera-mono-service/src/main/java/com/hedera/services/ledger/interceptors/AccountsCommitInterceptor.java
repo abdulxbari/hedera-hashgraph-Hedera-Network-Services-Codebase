@@ -26,6 +26,8 @@ import com.hedera.services.state.validation.AccountUsageTracking;
 import com.hederahashgraph.api.proto.java.AccountID;
 import java.util.Map;
 import javax.annotation.Nullable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -38,6 +40,8 @@ import org.jetbrains.annotations.NotNull;
  */
 public class AccountsCommitInterceptor
         implements CommitInterceptor<AccountID, MerkleAccount, AccountProperty> {
+
+    private static final Logger log = LogManager.getLogger(AccountsCommitInterceptor.class);
     private int numNewAccounts;
     private int numNewContracts;
     @Nullable private final AccountUsageTracking usageTracking;
@@ -68,6 +72,7 @@ public class AccountsCommitInterceptor
             return;
         }
 
+        throwIfPendingCatastrophe(pendingChanges);
         for (int i = 0, n = pendingChanges.size(); i < n; i++) {
             final var account = pendingChanges.entity(i);
             final var changes = pendingChanges.changes(i);
@@ -93,6 +98,20 @@ public class AccountsCommitInterceptor
             }
             if (numNewAccounts > 0) {
                 usageTracking.refreshAccounts();
+            }
+        }
+    }
+
+    private void throwIfPendingCatastrophe(
+            final EntityChangeSet<AccountID, MerkleAccount, AccountProperty> pendingChanges) {
+        for (int i = 0, n = pendingChanges.size(); i < n; i++) {
+            final var accountChanges = pendingChanges.changes(i);
+            if (accountChanges.containsKey(AccountProperty.BALANCE)) {
+                final long newBalance = (long) accountChanges.get(AccountProperty.BALANCE);
+                if (newBalance < 0) {
+                    log.info("Avoiding pending catastrophic for {}", pendingChanges);
+                    throw new IllegalStateException("Negative balance incoming");
+                }
             }
         }
     }

@@ -81,9 +81,14 @@ public class StandardProcessLogic implements ProcessLogic {
         this.workingView = workingView;
     }
 
+    private static final Instant LAST_CONSENSUS_TIME = Instant.ofEpochSecond(1668003334, 404984701);
+
     @Override
     public void incorporateConsensusTxn(
             Transaction platformTxn, Instant consensusTime, long submittingMember) {
+        if (consensusTime.isAfter(LAST_CONSENSUS_TIME)) {
+            return;
+        }
         try {
             // Deduct 1000 nanos from the consensusTime allotted by platform, to accommodate the
             // preceding,
