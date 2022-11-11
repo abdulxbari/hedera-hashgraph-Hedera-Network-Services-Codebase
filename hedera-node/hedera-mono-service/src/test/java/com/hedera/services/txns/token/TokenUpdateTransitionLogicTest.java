@@ -34,7 +34,7 @@ import com.hedera.services.ledger.SigImpactHistorian;
 import com.hedera.services.legacy.core.jproto.JEd25519Key;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.state.enums.TokenType;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.submerkle.EntityId;
 import com.hedera.services.store.models.NftId;
 import com.hedera.services.store.tokens.TokenStore;
@@ -48,7 +48,6 @@ import com.hederahashgraph.api.proto.java.TokenID;
 import com.hederahashgraph.api.proto.java.TokenUpdateTransactionBody;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +66,7 @@ class TokenUpdateTransitionLogicTest {
     private String name = "Name";
     private JKey adminKey = new JEd25519Key("w/e".getBytes());
     private TransactionBody tokenUpdateTxn;
-    private MerkleToken token;
+    private HederaToken token;
 
     private OptionValidator validator;
     private TokenStore store;
@@ -87,8 +86,8 @@ class TokenUpdateTransitionLogicTest {
         accessor = mock(SignedTxnAccessor.class);
         sigImpactHistorian = mock(SigImpactHistorian.class);
 
-        token = mock(MerkleToken.class);
-        given(token.adminKey()).willReturn(Optional.of(adminKey));
+        token = mock(HederaToken.class);
+        given(token.adminKey()).willReturn(adminKey);
         given(token.treasury()).willReturn(EntityId.fromGrpcAccountId(oldTreasury));
         given(token.autoRenewAccount()).willReturn(EntityId.fromGrpcAccountId(oldAutoRenew));
         given(token.hasAutoRenewAccount()).willReturn(true);
@@ -284,7 +283,7 @@ class TokenUpdateTransitionLogicTest {
     @Test
     void permitsExtendingExpiry() {
         givenValidTxnCtx(false);
-        given(token.adminKey()).willReturn(Optional.empty());
+        given(token.adminKey()).willReturn(null);
         given(expiryOnlyCheck.test(any())).willReturn(true);
         given(store.update(any(), anyLong())).willReturn(OK);
 
@@ -296,7 +295,7 @@ class TokenUpdateTransitionLogicTest {
     @Test
     void abortsOnNotSetAdminKey() {
         givenValidTxnCtx(true);
-        given(token.adminKey()).willReturn(Optional.empty());
+        given(token.adminKey()).willReturn(null);
 
         subject.doStateTransition();
 

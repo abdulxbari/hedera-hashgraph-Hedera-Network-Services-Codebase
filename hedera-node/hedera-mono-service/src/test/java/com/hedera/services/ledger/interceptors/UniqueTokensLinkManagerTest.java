@@ -25,6 +25,8 @@ import static org.mockito.Mockito.when;
 
 import com.hedera.services.context.properties.BootstrapProperties;
 import com.hedera.services.context.properties.PropertyNames;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.migration.AccountStorageAdapter;
@@ -50,7 +52,7 @@ import org.mockito.Mockito;
 @ExtendWith(LogCaptureExtension.class)
 class UniqueTokensLinkManagerTest {
     private final MerkleMap<EntityNum, MerkleAccount> accounts = new MerkleMap<>();
-    private final MerkleMap<EntityNum, MerkleToken> tokens = new MerkleMap<>();
+    private final FungibleTokensAdapter tokens = FungibleTokensAdapter.newInMemory();
     private final UniqueTokenMapAdapter uniqueTokens =
             UniqueTokenMapAdapter.wrap(new MerkleMap<>());
     private final UniqueTokenMapAdapter virtualUniqueTokens =
@@ -277,7 +279,7 @@ class UniqueTokensLinkManagerTest {
     final NftNumPair nftNumPair3 = nftKey3.asNftNumPair();
     private final MerkleAccount oldOwnerAccount = new MerkleAccount();
     private final MerkleAccount newOwnerAccount = new MerkleAccount();
-    private final MerkleToken nftToken = new MerkleToken();
+    private final HederaToken nftToken = new MerkleToken();
     private final UniqueTokenAdapter nft1 = UniqueTokenAdapter.newEmptyMerkleToken();
     private final UniqueTokenAdapter nft2 = UniqueTokenAdapter.newEmptyMerkleToken();
     private final UniqueTokenAdapter nft3 = UniqueTokenAdapter.newEmptyMerkleToken();

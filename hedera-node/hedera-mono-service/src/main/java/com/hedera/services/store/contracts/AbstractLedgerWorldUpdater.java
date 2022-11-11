@@ -30,7 +30,7 @@ import com.hedera.services.ledger.accounts.ContractCustomizer;
 import com.hedera.services.ledger.properties.AccountProperty;
 import com.hedera.services.ledger.properties.TokenProperty;
 import com.hedera.services.records.RecordsHistorian;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.submerkle.ExpirableTxnRecord;
 import com.hedera.services.stream.proto.TransactionSidecarRecord;
@@ -356,7 +356,7 @@ public abstract class AbstractLedgerWorldUpdater<W extends WorldView, A extends 
         return trackingLedgers.accounts();
     }
 
-    protected TransactionalLedger<TokenID, TokenProperty, MerkleToken> trackingTokens() {
+    protected TransactionalLedger<TokenID, TokenProperty, HederaToken> trackingTokens() {
         return trackingLedgers.tokens();
     }
 

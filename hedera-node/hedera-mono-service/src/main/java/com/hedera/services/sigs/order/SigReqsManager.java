@@ -29,7 +29,7 @@ import com.hedera.services.sigs.metadata.SigMetadataLookup;
 import com.hedera.services.sigs.metadata.StateChildrenSigMetadataLookup;
 import com.hedera.services.sigs.metadata.TokenMetaUtils;
 import com.hedera.services.sigs.metadata.TokenSigningMetadata;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.utils.accessors.SwirldsTxnAccessor;
 import com.swirlds.common.system.Platform;
 import com.swirlds.common.system.events.Event;
@@ -62,7 +62,7 @@ public class SigReqsManager {
     private static final Logger log = LogManager.getLogger(SigReqsManager.class);
 
     // The token-to-signing-metadata transformation used to construct instances of SigRequirements
-    public static final Function<MerkleToken, TokenSigningMetadata> TOKEN_META_TRANSFORM =
+    public static final Function<HederaToken, TokenSigningMetadata> TOKEN_META_TRANSFORM =
             TokenMetaUtils::signingMetaFrom;
 
     private final FileNumbers fileNumbers;
@@ -179,7 +179,7 @@ public class SigReqsManager {
         SigMetadataLookup from(
                 FileNumbers fileNumbers,
                 StateChildren stateChildren,
-                Function<MerkleToken, TokenSigningMetadata> tokenMetaTransform);
+                Function<HederaToken, TokenSigningMetadata> tokenMetaTransform);
     }
 
     /* --- Only used by unit tests --- */

@@ -45,14 +45,14 @@ import com.swirlds.common.merkle.MerkleLeaf;
 import com.swirlds.common.merkle.impl.PartialMerkleLeaf;
 import com.swirlds.common.merkle.utility.Keyed;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
-public class MerkleToken extends PartialMerkleLeaf implements Keyed<EntityNum>, MerkleLeaf {
+public class MerkleToken extends PartialMerkleLeaf implements Keyed<EntityNum>, MerkleLeaf,
+    HederaToken {
     static final int RELEASE_0160_VERSION = 3;
     static final int RELEASE_0180_VERSION = 4;
     static final int RELEASE_0190_VERSION = 5;
@@ -60,7 +60,6 @@ public class MerkleToken extends PartialMerkleLeaf implements Keyed<EntityNum>, 
     static final int CURRENT_VERSION = RELEASE_0190_VERSION;
     static final long RUNTIME_CONSTRUCTABLE_ID = 0xd23ce8814b35fc2fL;
 
-    private static final long UNUSED_AUTO_RENEW_PERIOD = -1L;
     private static final int UPPER_BOUND_MEMO_UTF8_BYTES = 1024;
 
     public static final JKey UNUSED_KEY = null;
@@ -392,16 +391,12 @@ public class MerkleToken extends PartialMerkleLeaf implements Keyed<EntityNum>, 
         return decimals;
     }
 
-    public boolean hasAdminKey() {
-        return adminKey != UNUSED_KEY;
+    public JKey adminKey() {
+        return adminKey;
     }
 
-    public Optional<JKey> adminKey() {
-        return Optional.ofNullable(adminKey);
-    }
-
-    public Optional<JKey> freezeKey() {
-        return Optional.ofNullable(freezeKey);
+    public JKey freezeKey() {
+        return freezeKey;
     }
 
     public JKey freezeKeyUnsafe() {
@@ -412,20 +407,16 @@ public class MerkleToken extends PartialMerkleLeaf implements Keyed<EntityNum>, 
         return freezeKey != UNUSED_KEY;
     }
 
-    public Optional<JKey> kycKey() {
-        return Optional.ofNullable(kycKey);
+    public JKey kycKey() {
+        return kycKey;
     }
 
     public boolean hasKycKey() {
         return kycKey != UNUSED_KEY;
     }
 
-    public Optional<JKey> pauseKey() {
-        return Optional.ofNullable(pauseKey);
-    }
-
-    public boolean hasPauseKey() {
-        return pauseKey != UNUSED_KEY;
+    public JKey pauseKey() {
+        return pauseKey;
     }
 
     public void setPauseKey(JKey pauseKey) {
@@ -443,16 +434,12 @@ public class MerkleToken extends PartialMerkleLeaf implements Keyed<EntityNum>, 
         this.kycKey = kycKey;
     }
 
-    public Optional<JKey> supplyKey() {
-        return Optional.ofNullable(supplyKey);
+    public JKey supplyKey() {
+        return supplyKey;
     }
 
-    public Optional<JKey> feeScheduleKey() {
-        return Optional.ofNullable(feeScheduleKey);
-    }
-
-    public boolean hasSupplyKey() {
-        return supplyKey != UNUSED_KEY;
+    public JKey feeScheduleKey() {
+        return feeScheduleKey;
     }
 
     public void setSupplyKey(JKey supplyKey) {
@@ -460,12 +447,8 @@ public class MerkleToken extends PartialMerkleLeaf implements Keyed<EntityNum>, 
         this.supplyKey = supplyKey;
     }
 
-    public Optional<JKey> wipeKey() {
-        return Optional.ofNullable(wipeKey);
-    }
-
-    public boolean hasWipeKey() {
-        return wipeKey != UNUSED_KEY;
+    public JKey wipeKey() {
+        return wipeKey;
     }
 
     public void setWipeKey(JKey wipeKey) {
@@ -648,6 +631,10 @@ public class MerkleToken extends PartialMerkleLeaf implements Keyed<EntityNum>, 
         return lastUsedSerialNumber;
     }
 
+    public long lastUsedSerialNumber() {
+        return lastUsedSerialNumber;
+    }
+
     public void setLastUsedSerialNumber(long serialNum) {
         throwIfImmutable("Cannot change this token's last used serial number if it's immutable.");
         this.lastUsedSerialNumber = serialNum;
@@ -699,14 +686,6 @@ public class MerkleToken extends PartialMerkleLeaf implements Keyed<EntityNum>, 
         this.feeSchedule = feeSchedule;
     }
 
-    public List<CustomFee> grpcFeeSchedule() {
-        final List<CustomFee> grpcList = new ArrayList<>();
-        for (var customFee : feeSchedule) {
-            grpcList.add(customFee.asGrpc());
-        }
-        return grpcList;
-    }
-
     @VisibleForTesting
     public void setFeeScheduleFrom(List<CustomFee> grpcFeeSchedule) {
         throwIfImmutable("Cannot change this token's fee schedule from grpc if it's immutable.");
@@ -720,10 +699,6 @@ public class MerkleToken extends PartialMerkleLeaf implements Keyed<EntityNum>, 
 
     public JKey getFeeScheduleKey() {
         return feeScheduleKey;
-    }
-
-    public boolean hasFeeScheduleKey() {
-        return feeScheduleKey != UNUSED_KEY;
     }
 
     @Override

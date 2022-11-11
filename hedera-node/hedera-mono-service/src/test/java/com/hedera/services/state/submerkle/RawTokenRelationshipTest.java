@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.mock;
 
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.TokenFreezeStatus;
 import com.hederahashgraph.api.proto.java.TokenKycStatus;
@@ -38,13 +38,13 @@ class RawTokenRelationshipTest {
     private static final boolean kyc = false;
     private static final boolean automaticAssociation = false;
 
-    private MerkleToken token;
+    private HederaToken token;
     private RawTokenRelationship subject =
             new RawTokenRelationship(balance, 0, 0, num, frozen, kyc, automaticAssociation);
 
     @BeforeEach
     void setUp() {
-        token = mock(MerkleToken.class);
+        token = mock(HederaToken.class);
         given(token.symbol()).willReturn("HEYMA");
     }
 

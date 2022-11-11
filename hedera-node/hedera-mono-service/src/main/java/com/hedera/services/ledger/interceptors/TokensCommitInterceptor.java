@@ -18,7 +18,7 @@ package com.hedera.services.ledger.interceptors;
 import com.hedera.services.ledger.CommitInterceptor;
 import com.hedera.services.ledger.EntityChangeSet;
 import com.hedera.services.ledger.properties.TokenProperty;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.validation.UsageLimits;
 import com.hederahashgraph.api.proto.java.TokenID;
 
@@ -27,7 +27,7 @@ import com.hederahashgraph.api.proto.java.TokenID;
  * tokens are removed directly from the backing map, not as part of a ledger transaction.)
  */
 public class TokensCommitInterceptor
-        implements CommitInterceptor<TokenID, MerkleToken, TokenProperty> {
+        implements CommitInterceptor<TokenID, HederaToken, TokenProperty> {
     private final UsageLimits usageLimits;
     private boolean creation;
 
@@ -37,7 +37,7 @@ public class TokensCommitInterceptor
 
     /** {@inheritDoc} */
     @Override
-    public void preview(final EntityChangeSet<TokenID, MerkleToken, TokenProperty> pendingChanges) {
+    public void preview(final EntityChangeSet<TokenID, HederaToken, TokenProperty> pendingChanges) {
         creation = false;
         final var n = pendingChanges.size();
         if (n == 0) {

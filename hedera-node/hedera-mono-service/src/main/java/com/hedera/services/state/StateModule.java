@@ -26,6 +26,7 @@ import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.context.properties.PropertySource;
 import com.hedera.services.ethereum.EthTxData;
 import com.hedera.services.ethereum.EthTxSigs;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.ledger.ids.EntityIdSource;
 import com.hedera.services.ledger.ids.SeqNoEntityIdSource;
 import com.hedera.services.legacy.core.jproto.JEd25519Key;
@@ -47,7 +48,6 @@ import com.hedera.services.state.merkle.MerkleNetworkContext;
 import com.hedera.services.state.merkle.MerkleScheduledTransactions;
 import com.hedera.services.state.merkle.MerkleSpecialFiles;
 import com.hedera.services.state.merkle.MerkleStakingInfo;
-import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTopic;
 import com.hedera.services.state.migration.AccountStorageAdapter;
 import com.hedera.services.state.migration.RecordsStorageAdapter;
@@ -280,7 +280,7 @@ public interface StateModule {
 
     @Provides
     @Singleton
-    static Supplier<MerkleMap<EntityNum, MerkleToken>> provideWorkingTokens(
+    static Supplier<FungibleTokensAdapter> provideWorkingTokens(
             final MutableStateChildren workingState) {
         return workingState::tokens;
     }

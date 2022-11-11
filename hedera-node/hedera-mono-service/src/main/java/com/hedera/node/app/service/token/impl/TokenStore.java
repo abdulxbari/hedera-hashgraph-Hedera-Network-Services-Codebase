@@ -18,7 +18,7 @@ package com.hedera.node.app.service.token.impl;
 import com.hedera.node.app.spi.state.State;
 import com.hedera.node.app.spi.state.States;
 import com.hedera.services.legacy.core.jproto.JKey;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.submerkle.EntityId;
 import com.hedera.services.state.submerkle.FcCustomFee;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
@@ -34,7 +34,7 @@ import javax.annotation.Nonnull;
  */
 public class TokenStore {
     /** The underlying data storage class that holds the token data. */
-    private final State<Long, MerkleToken> tokenState;
+    private final State<Long, HederaToken> tokenState;
 
     /**
      * Create a new {@link TokenStore} instance.
@@ -79,7 +79,7 @@ public class TokenStore {
         return new TokenMetaOrLookupFailureReason(tokenMetaFrom(token.get()), null);
     }
 
-    private TokenMetadata tokenMetaFrom(final MerkleToken token) {
+    private TokenMetadata tokenMetaFrom(final HederaToken token) {
         boolean hasRoyaltyWithFallback = false;
         final var customFees = token.customFeeSchedule();
         if (!customFees.isEmpty()) {
@@ -91,13 +91,13 @@ public class TokenStore {
             }
         }
         return new TokenMetadata(
-                token.adminKey(),
-                token.kycKey(),
-                token.wipeKey(),
-                token.freezeKey(),
-                token.supplyKey(),
-                token.feeScheduleKey(),
-                token.pauseKey(),
+                Optional.ofNullable(token.adminKey()),
+                Optional.ofNullable(token.kycKey()),
+                Optional.ofNullable(token.wipeKey()),
+                Optional.ofNullable(token.freezeKey()),
+                Optional.ofNullable(token.supplyKey()),
+                Optional.ofNullable(token.feeScheduleKey()),
+                Optional.ofNullable(token.pauseKey()),
                 hasRoyaltyWithFallback,
                 token.treasury());
     }
@@ -114,7 +114,7 @@ public class TokenStore {
      * @param id given tokenId
      * @return merkleToken leaf for the given tokenId
      */
-    private Optional<MerkleToken> getTokenLeaf(final TokenID id) {
+    private Optional<HederaToken> getTokenLeaf(final TokenID id) {
         final var token = tokenState.get(id.getTokenNum());
         if (token.isEmpty()) {
             return Optional.empty();

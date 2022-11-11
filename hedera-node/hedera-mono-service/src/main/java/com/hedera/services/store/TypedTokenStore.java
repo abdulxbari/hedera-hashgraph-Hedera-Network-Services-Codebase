@@ -22,6 +22,7 @@ import com.hedera.services.context.SideEffectsTracker;
 import com.hedera.services.exceptions.InvalidTransactionException;
 import com.hedera.services.ledger.backing.BackingStore;
 import com.hedera.services.records.TransactionRecordService;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTokenRelStatus;
 import com.hedera.services.state.merkle.MerkleUniqueToken;
@@ -71,7 +72,7 @@ public class TypedTokenStore extends ReadOnlyTokenStore {
     @Inject
     public TypedTokenStore(
             final AccountStore accountStore,
-            final BackingStore<TokenID, MerkleToken> tokens,
+            final BackingStore<TokenID, HederaToken> tokens,
             final BackingStore<NftId, UniqueTokenAdapter> uniqueTokens,
             final BackingStore<Pair<AccountID, TokenID>, HederaTokenRel> tokenRels,
             final SideEffectsTracker sideEffectsTracker) {
@@ -150,7 +151,7 @@ public class TypedTokenStore extends ReadOnlyTokenStore {
     }
 
     /**
-     * Instantiates a new {@link MerkleToken} based on the given new mutable {@link Token}. Maps the
+     * Instantiates a new {@link HederaToken} based on the given new mutable {@link Token}. Maps the
      * properties between the mutable and immutable token, and later puts the immutable one in
      * state. Adds the token's treasury to the known treasuries map.
      *
@@ -202,7 +203,7 @@ public class TypedTokenStore extends ReadOnlyTokenStore {
         }
     }
 
-    private void mapModelChanges(Token token, MerkleToken mutableToken) {
+    private void mapModelChanges(Token token, HederaToken mutableToken) {
         final var newAutoRenewAccount = token.getAutoRenewAccount();
         if (newAutoRenewAccount != null) {
             mutableToken.setAutoRenewAccount(new EntityId(newAutoRenewAccount.getId()));

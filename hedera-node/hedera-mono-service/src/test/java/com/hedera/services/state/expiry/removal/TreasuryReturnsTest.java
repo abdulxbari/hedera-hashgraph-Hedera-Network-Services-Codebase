@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.state.enums.TokenType;
 import com.hedera.services.state.expiry.TokenRelsListMutation;
 import com.hedera.services.state.expiry.classification.EntityLookup;
@@ -39,7 +40,6 @@ import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.EntityNumPair;
 import com.hedera.services.utils.NftNumPair;
 import com.hedera.test.factories.accounts.MerkleAccountFactory;
-import com.swirlds.merkle.map.MerkleMap;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +54,7 @@ class TreasuryReturnsTest {
 
     @Mock private EntityLookup entityLookup;
     @Mock private RelRemover relRemover;
-    @Mock private MerkleMap<EntityNum, MerkleToken> tokens;
+    @Mock private FungibleTokensAdapter tokens;
     @Mock private UniqueTokenMapAdapter nfts;
     @Mock private TokenRelStorageAdapter tokenRels;
 

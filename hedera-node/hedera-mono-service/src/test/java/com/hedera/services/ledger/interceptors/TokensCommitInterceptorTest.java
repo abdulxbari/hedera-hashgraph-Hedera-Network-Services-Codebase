@@ -25,6 +25,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import com.hedera.services.ledger.CommitInterceptor;
 import com.hedera.services.ledger.EntityChangeSet;
 import com.hedera.services.ledger.properties.TokenProperty;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.validation.UsageLimits;
 import com.hederahashgraph.api.proto.java.TokenID;
@@ -81,9 +82,9 @@ class TokensCommitInterceptorTest {
         assertDoesNotThrow(subject::postCommit);
     }
 
-    private EntityChangeSet<TokenID, MerkleToken, TokenProperty> pendingChanges(
+    private EntityChangeSet<TokenID, HederaToken, TokenProperty> pendingChanges(
             final boolean includeCreation) {
-        final EntityChangeSet<TokenID, MerkleToken, TokenProperty> pendingChanges =
+        final EntityChangeSet<TokenID, HederaToken, TokenProperty> pendingChanges =
                 new EntityChangeSet<>();
         if (includeCreation) {
             pendingChanges.include(TokenID.newBuilder().setTokenNum(1234).build(), null, Map.of());

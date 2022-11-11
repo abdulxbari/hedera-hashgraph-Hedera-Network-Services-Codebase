@@ -17,13 +17,14 @@ package com.hedera.services.txns.customfees;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.mockito.Mockito.mock;
 
 import com.hedera.services.grpc.marshalling.CustomFeeMeta;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.submerkle.EntityId;
 import com.hedera.services.state.submerkle.FcCustomFee;
 import com.hedera.services.utils.EntityNum;
-import com.swirlds.merkle.map.MerkleMap;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class FcmCustomFeeSchedulesTest {
     private FcmCustomFeeSchedules subject;
 
-    MerkleMap<EntityNum, MerkleToken> tokens = new MerkleMap<>();
+    FungibleTokensAdapter tokens = FungibleTokensAdapter.newInMemory();
 
     private final EntityId aTreasury = new EntityId(0, 0, 12);
     private final EntityId bTreasury = new EntityId(0, 0, 13);
@@ -86,15 +87,15 @@ class FcmCustomFeeSchedulesTest {
     @Test
     void testObjectContract() {
         // given:
-        MerkleMap<EntityNum, MerkleToken> secondMerkleMap = new MerkleMap<>();
+        FungibleTokensAdapter secondMap = FungibleTokensAdapter.newInMemory();
         MerkleToken token = new MerkleToken();
         final var missingFees =
                 List.of(FcCustomFee.fixedFee(50L, missingToken, feeCollector, false).asGrpc());
 
         token.setFeeScheduleFrom(missingFees);
-        secondMerkleMap.put(EntityNum.fromLong(missingToken.num()), new MerkleToken());
+        secondMap.put(EntityNum.fromLong(missingToken.num()), new MerkleToken());
         final var fees1 = new FcmCustomFeeSchedules(() -> tokens);
-        final var fees2 = new FcmCustomFeeSchedules(() -> secondMerkleMap);
+        final var fees2 = new FcmCustomFeeSchedules(() -> secondMap);
 
         // expect:
         assertNotEquals(fees1, fees2);

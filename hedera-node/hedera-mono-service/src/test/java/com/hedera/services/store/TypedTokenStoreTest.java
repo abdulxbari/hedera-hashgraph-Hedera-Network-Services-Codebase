@@ -37,6 +37,7 @@ import com.hedera.services.ledger.backing.BackingStore;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.state.enums.TokenSupplyType;
 import com.hedera.services.state.enums.TokenType;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTokenRelStatus;
 import com.hedera.services.state.merkle.MerkleUniqueToken;
@@ -74,7 +75,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class TypedTokenStoreTest {
     @Mock private SideEffectsTracker sideEffectsTracker;
     @Mock private AccountStore accountStore;
-    @Mock private BackingStore<TokenID, MerkleToken> tokens;
+    @Mock private BackingStore<TokenID, HederaToken> tokens;
     @Mock private BackingStore<NftId, UniqueTokenAdapter> uniqueTokens;
     @Mock private BackingStore<Pair<AccountID, TokenID>, HederaTokenRel> tokenRels;
 
@@ -482,11 +483,11 @@ class TypedTokenStoreTest {
         given(tokenRels.getRef(anAssoc.asAccountTokenRel())).willReturn(aRelationship);
     }
 
-    private void givenToken(final EntityNum anId, final MerkleToken aToken) {
+    private void givenToken(final EntityNum anId, final HederaToken aToken) {
         given(tokens.getImmutableRef(anId.toGrpcTokenId())).willReturn(aToken);
     }
 
-    private void givenModifiableToken(final EntityNum anId, final MerkleToken aToken) {
+    private void givenModifiableToken(final EntityNum anId, final HederaToken aToken) {
         given(tokens.getRef(anId.toGrpcTokenId())).willReturn(aToken);
     }
 
@@ -576,6 +577,6 @@ class TypedTokenStoreTest {
     private final EntityNumPair miscTokenRelId = EntityNumPair.fromLongs(miscAccountNum, tokenNum);
     private final boolean automaticAssociation = true;
     private final TokenRelationship miscTokenRel = new TokenRelationship(token, miscAccount);
-    private MerkleToken merkleToken;
+    private HederaToken merkleToken;
     private MerkleTokenRelStatus miscTokenMerkleRel;
 }

@@ -26,6 +26,7 @@ import static com.hedera.services.ledger.properties.NftProperty.OWNER;
 import static com.hedera.services.ledger.properties.TokenRelProperty.IS_FROZEN;
 import static com.hedera.services.ledger.properties.TokenRelProperty.IS_KYC_GRANTED;
 import static com.hedera.services.ledger.properties.TokenRelProperty.TOKEN_BALANCE;
+import static com.hedera.services.state.merkle.MerkleToken.UNUSED_KEY;
 import static com.hedera.services.state.submerkle.EntityId.MISSING_ENTITY_ID;
 import static com.hedera.test.factories.scenarios.TxnHandlingScenario.COMPLEX_KEY_ACCOUNT_KT;
 import static com.hedera.test.factories.scenarios.TxnHandlingScenario.MISC_ACCOUNT_KT;
@@ -96,7 +97,7 @@ import com.hedera.services.ledger.properties.TokenRelProperty;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.sigs.utils.ImmutableKeyUtils;
 import com.hedera.services.state.enums.TokenType;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.migration.HederaTokenRel;
 import com.hedera.services.state.migration.UniqueTokenAdapter;
@@ -119,7 +120,6 @@ import com.hederahashgraph.api.proto.java.TokenID;
 import com.hederahashgraph.api.proto.java.TokenUpdateTransactionBody;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import org.apache.commons.lang3.tuple.Pair;
@@ -197,18 +197,18 @@ class HederaTokenStoreTest {
     private BackingTokens backingTokens;
     private HederaLedger hederaLedger;
     private UsageLimits usageLimits;
-    private MerkleToken token;
-    private MerkleToken nonfungibleToken;
+    private HederaToken token;
+    private HederaToken nonfungibleToken;
 
     private HederaTokenStore subject;
 
     @BeforeEach
     void setup() {
-        token = mock(MerkleToken.class);
+        token = mock(HederaToken.class);
         given(token.expiry()).willReturn(expiry);
         given(token.symbol()).willReturn(symbol);
         given(token.hasAutoRenewAccount()).willReturn(true);
-        given(token.adminKey()).willReturn(Optional.of(TOKEN_ADMIN_KT.asJKeyUnchecked()));
+        given(token.adminKey()).willReturn(TOKEN_ADMIN_KT.asJKeyUnchecked());
         given(token.name()).willReturn(name);
         given(token.hasAdminKey()).willReturn(true);
         given(token.hasFeeScheduleKey()).willReturn(true);
@@ -216,7 +216,7 @@ class HederaTokenStoreTest {
         given(token.tokenType()).willReturn(TokenType.FUNGIBLE_COMMON);
         given(token.decimals()).willReturn(2);
 
-        nonfungibleToken = mock(MerkleToken.class);
+        nonfungibleToken = mock(HederaToken.class);
         given(nonfungibleToken.hasAdminKey()).willReturn(true);
         given(nonfungibleToken.tokenType()).willReturn(TokenType.NON_FUNGIBLE_UNIQUE);
 
@@ -328,7 +328,7 @@ class HederaTokenStoreTest {
     @Test
     void applicationAlwaysReplacesModifiableToken() {
         final var change = mock(Consumer.class);
-        final var modifiableToken = mock(MerkleToken.class);
+        final var modifiableToken = mock(HederaToken.class);
         given(backingTokens.getRef(misc)).willReturn(modifiableToken);
         willThrow(IllegalStateException.class).given(change).accept(modifiableToken);
 
@@ -356,7 +356,7 @@ class HederaTokenStoreTest {
 
     @Test
     void rejectsDeletionMissingAdminKey() {
-        given(token.adminKey()).willReturn(Optional.empty());
+        given(token.adminKey()).willReturn(null);
 
         final var outcome = subject.delete(misc);
 
@@ -1060,7 +1060,7 @@ class HederaTokenStoreTest {
         final var outcome = subject.update(op, CONSENSUS_NOW);
 
         assertEquals(OK, outcome);
-        verify(token).setAdminKey(MerkleToken.UNUSED_KEY);
+        verify(token).setAdminKey(UNUSED_KEY);
     }
 
     @Test
@@ -1222,7 +1222,7 @@ class HederaTokenStoreTest {
         return op.build();
     }
 
-    private void givenUpdateTarget(final EnumSet<KeyType> keys, final MerkleToken token) {
+    private void givenUpdateTarget(final EnumSet<KeyType> keys, final HederaToken token) {
         if (keys.contains(KeyType.WIPE)) {
             given(token.hasWipeKey()).willReturn(true);
         }
@@ -1262,7 +1262,7 @@ class HederaTokenStoreTest {
 
     @Test
     void freezingRejectsUnfreezableToken() {
-        given(token.freezeKey()).willReturn(Optional.empty());
+        given(token.freezeKey()).willReturn(null);
 
         final var status = subject.freeze(treasury, misc);
 
@@ -1271,7 +1271,7 @@ class HederaTokenStoreTest {
 
     @Test
     void grantingRejectsUnknowableToken() {
-        given(token.kycKey()).willReturn(Optional.empty());
+        given(token.kycKey()).willReturn(null);
 
         final var status = subject.grantKyc(treasury, misc);
 
@@ -1305,7 +1305,7 @@ class HederaTokenStoreTest {
     }
 
     private void givenTokenWithFreezeKey(boolean freezeDefault) {
-        given(token.freezeKey()).willReturn(Optional.of(TOKEN_TREASURY_KT.asJKeyUnchecked()));
+        given(token.freezeKey()).willReturn(TOKEN_TREASURY_KT.asJKeyUnchecked());
         given(token.accountsAreFrozenByDefault()).willReturn(freezeDefault);
     }
 

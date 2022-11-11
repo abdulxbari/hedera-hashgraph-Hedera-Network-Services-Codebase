@@ -28,12 +28,38 @@ import com.hedera.services.context.properties.SerializableSemVers;
 import com.hedera.services.legacy.core.jproto.*;
 import com.hedera.services.state.enums.TokenSupplyType;
 import com.hedera.services.state.enums.TokenType;
-import com.hedera.services.state.merkle.*;
+import com.hedera.services.state.merkle.MerkleAccountState;
+import com.hedera.services.state.merkle.MerkleEntityId;
+import com.hedera.services.state.merkle.MerkleNetworkContext;
+import com.hedera.services.state.merkle.MerklePayerRecords;
+import com.hedera.services.state.merkle.MerkleScheduledTransactionsState;
+import com.hedera.services.state.merkle.MerkleSpecialFiles;
+import com.hedera.services.state.merkle.MerkleStakingInfo;
+import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.MerkleTokenRelStatus;
+import com.hedera.services.state.merkle.MerkleTopic;
+import com.hedera.services.state.merkle.MerkleUniqueToken;
 import com.hedera.services.state.merkle.internals.BitPackUtils;
 import com.hedera.services.state.merkle.internals.BytesElement;
-import com.hedera.services.state.submerkle.*;
+import com.hedera.services.state.submerkle.CurrencyAdjustments;
+import com.hedera.services.state.submerkle.EntityId;
+import com.hedera.services.state.submerkle.EvmFnResult;
+import com.hedera.services.state.submerkle.EvmLog;
+import com.hedera.services.state.submerkle.ExchangeRates;
+import com.hedera.services.state.submerkle.ExpirableTxnRecord;
+import com.hedera.services.state.submerkle.FcAssessedCustomFee;
+import com.hedera.services.state.submerkle.FcCustomFee;
+import com.hedera.services.state.submerkle.FcTokenAllowance;
+import com.hedera.services.state.submerkle.FcTokenAllowanceId;
+import com.hedera.services.state.submerkle.FcTokenAssociation;
+import com.hedera.services.state.submerkle.FixedFeeSpec;
+import com.hedera.services.state.submerkle.NftAdjustments;
+import com.hedera.services.state.submerkle.RichInstant;
+import com.hedera.services.state.submerkle.SequenceNumber;
+import com.hedera.services.state.submerkle.TxnId;
 import com.hedera.services.state.virtual.ContractKey;
 import com.hedera.services.state.virtual.ContractValue;
+import com.hedera.services.state.virtual.entities.FungibleOnDiskToken;
 import com.hedera.services.state.virtual.VirtualBlobKey;
 import com.hedera.services.state.virtual.VirtualBlobValue;
 import com.hedera.services.state.virtual.entities.OnDiskAccount;
@@ -50,6 +76,7 @@ import com.swirlds.common.utility.CommonUtils;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.IntStream;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -116,6 +143,10 @@ public class SeededPropertySource {
             seeded.setRunningHash(nextBytes(48));
         }
         return seeded;
+    }
+
+    public FungibleOnDiskToken nextHederaToken() {
+        throw new NotImplementedException();
     }
 
     public MerkleToken nextToken() {

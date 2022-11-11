@@ -80,7 +80,7 @@ import com.hedera.services.legacy.core.jproto.TxnReceipt;
 import com.hedera.services.pricing.AssetsLoader;
 import com.hedera.services.records.RecordsHistorian;
 import com.hedera.services.state.expiry.ExpiringCreations;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.migration.HederaTokenRel;
 import com.hedera.services.state.migration.UniqueTokenAdapter;
@@ -152,7 +152,7 @@ class MintPrecompilesTest {
             tokenRels;
 
     @Mock private TransactionalLedger<AccountID, AccountProperty, HederaAccount> accounts;
-    @Mock private TransactionalLedger<TokenID, TokenProperty, MerkleToken> tokens;
+    @Mock private TransactionalLedger<TokenID, TokenProperty, HederaToken> tokens;
     @Mock private ExpiringCreations creator;
     @Mock private ImpliedTransfersMarshal impliedTransfers;
     @Mock private FeeCalculator feeCalculator;

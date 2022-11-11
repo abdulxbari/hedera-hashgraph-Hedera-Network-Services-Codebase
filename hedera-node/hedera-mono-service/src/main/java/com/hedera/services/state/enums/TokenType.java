@@ -15,11 +15,10 @@
  */
 package com.hedera.services.state.enums;
 
+import com.hedera.services.state.merkle.HederaToken;
+
 /**
- * Token Types of {@link com.hedera.services.state.merkle.MerkleToken} Apart from fungible and
- * non-fungible, Tokens can have either a common or unique representation. This distinction might
- * seem subtle, but it is important when considering how tokens can be traced and if they can have
- * isolated and unique properties.
+ * Token Types of {@link HederaToken} Apart from fungible and non-fungible, Tokens can have either a common or unique representation. This distinction might seem subtle, but it is important when considering how tokens can be traced and if they can have isolated and unique properties.
  */
 public enum TokenType {
     /**

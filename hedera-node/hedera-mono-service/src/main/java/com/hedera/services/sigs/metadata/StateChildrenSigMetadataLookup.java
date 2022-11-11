@@ -40,7 +40,7 @@ import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.legacy.core.jproto.JContractIDKey;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.sigs.order.LinkedRefs;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.virtual.EntityNumVirtualKey;
 import com.hedera.services.utils.EntityIdUtils;
 import com.hedera.services.utils.EntityNum;
@@ -61,12 +61,12 @@ public final class StateChildrenSigMetadataLookup implements SigMetadataLookup {
     private final AliasManager aliasManager;
     private final StateChildren stateChildren;
     private final Map<FileID, HFileMeta> metaMap;
-    private final Function<MerkleToken, TokenSigningMetadata> tokenMetaTransform;
+    private final Function<HederaToken, TokenSigningMetadata> tokenMetaTransform;
 
     public StateChildrenSigMetadataLookup(
             final FileNumbers fileNumbers,
             final StateChildren stateChildren,
-            final Function<MerkleToken, TokenSigningMetadata> tokenMetaTransform) {
+            final Function<HederaToken, TokenSigningMetadata> tokenMetaTransform) {
         this.fileNumbers = fileNumbers;
         this.stateChildren = stateChildren;
         this.tokenMetaTransform = tokenMetaTransform;

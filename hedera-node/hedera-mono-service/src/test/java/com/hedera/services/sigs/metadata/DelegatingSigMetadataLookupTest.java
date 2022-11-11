@@ -22,8 +22,10 @@ import static org.mockito.Mockito.mock;
 import com.hedera.services.legacy.core.jproto.JEd25519Key;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.sigs.order.KeyOrderingFailure;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.submerkle.EntityId;
+import com.hedera.services.state.virtual.entities.FungibleOnDiskToken;
 import com.hedera.services.store.tokens.TokenStore;
 import com.hedera.test.utils.IdUtils;
 import com.hederahashgraph.api.proto.java.TokenID;
@@ -53,6 +55,20 @@ class DelegatingSigMetadataLookupTest {
                     ACCOUNTS_KYC_GRANTED_BY_DEFAULT,
                     treasury);
     private static final JKey freezeKey = new JEd25519Key("not-a-real-freeze-key".getBytes());
+
+    private static final FungibleOnDiskToken onDiskToken;
+    static {
+        onDiskToken = new FungibleOnDiskToken();
+        onDiskToken.setExpiry(Long.MAX_VALUE);
+        onDiskToken.setTotalSupply(TOTAL_SUPPLY);
+        onDiskToken.setDecimals(DECIMALS);
+        onDiskToken.setSymbol(SYMBOL + "-Fungible");
+        onDiskToken.setName(TOKEN_NAME + "-Fungible");
+        onDiskToken.setAccountsFrozenByDefault(FREEZE_DEFAULT);
+        onDiskToken.setAccountsKycGrantedByDefault(ACCOUNTS_KYC_GRANTED_BY_DEFAULT);
+        onDiskToken.setTreasury(treasury);
+        //??? other props needed here??
+    }
 
     private TokenStore tokenStore;
 
@@ -90,7 +106,16 @@ class DelegatingSigMetadataLookupTest {
     }
 
     @Test
-    void returnsExpectedMetaIfPresent() {
+    void returnsExpectedMerkleMetaIfPresent() {
+        returnsExpectedMetaIfPresent(token);
+    }
+
+    @Test
+    void returnsExpectedOnDiskMetaIfPresent() {
+        returnsExpectedMetaIfPresent(onDiskToken);
+    }
+
+    private void returnsExpectedMetaIfPresent(HederaToken token) {
         token.setFreezeKey(freezeKey);
         final var expected = TokenMetaUtils.signingMetaFrom(token);
         given(tokenStore.resolve(id)).willReturn(id);

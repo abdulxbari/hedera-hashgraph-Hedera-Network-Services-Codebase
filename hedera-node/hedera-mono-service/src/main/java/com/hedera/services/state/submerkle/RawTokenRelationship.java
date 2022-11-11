@@ -23,7 +23,7 @@ import static com.hederahashgraph.api.proto.java.TokenKycStatus.KycNotApplicable
 import static com.hederahashgraph.api.proto.java.TokenKycStatus.Revoked;
 
 import com.google.common.base.MoreObjects;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hederahashgraph.api.proto.java.TokenFreezeStatus;
 import com.hederahashgraph.api.proto.java.TokenID;
 import com.hederahashgraph.api.proto.java.TokenKycStatus;
@@ -80,7 +80,7 @@ public class RawTokenRelationship {
         return TokenID.newBuilder().setTokenNum(tokenNum).build();
     }
 
-    public TokenRelationship asGrpcFor(MerkleToken token) {
+    public TokenRelationship asGrpcFor(HederaToken token) {
         return TokenRelationship.newBuilder()
                 .setBalance(balance)
                 .setDecimals(token.decimals())
@@ -96,14 +96,14 @@ public class RawTokenRelationship {
                 .build();
     }
 
-    private TokenFreezeStatus freezeStatusFor(MerkleToken token) {
+    private TokenFreezeStatus freezeStatusFor(HederaToken token) {
         if (!token.hasFreezeKey()) {
             return FreezeNotApplicable;
         }
         return frozen ? Frozen : Unfrozen;
     }
 
-    private TokenKycStatus kycStatusFor(MerkleToken token) {
+    private TokenKycStatus kycStatusFor(HederaToken token) {
         if (!token.hasKycKey()) {
             return KycNotApplicable;
         }

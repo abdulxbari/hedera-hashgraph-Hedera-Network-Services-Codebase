@@ -60,6 +60,7 @@ import com.hedera.services.ledger.properties.ChangeSummaryManager;
 import com.hedera.services.ledger.properties.NftProperty;
 import com.hedera.services.ledger.properties.TokenProperty;
 import com.hedera.services.ledger.properties.TokenRelProperty;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTokenRelStatus;
@@ -126,7 +127,7 @@ class WorldLedgersTest {
 
     @Mock private TransactionalLedger<AccountID, AccountProperty, HederaAccount> accountsLedger;
     @Mock private TransactionalLedger<NftId, NftProperty, UniqueTokenAdapter> nftsLedger;
-    @Mock private TransactionalLedger<TokenID, TokenProperty, MerkleToken> tokensLedger;
+    @Mock private TransactionalLedger<TokenID, TokenProperty, HederaToken> tokensLedger;
     @Mock private SigImpactHistorian sigImpactHistorian;
     @Mock private ContractAliases aliases;
     @Mock private StaticEntityAccess staticEntityAccess;

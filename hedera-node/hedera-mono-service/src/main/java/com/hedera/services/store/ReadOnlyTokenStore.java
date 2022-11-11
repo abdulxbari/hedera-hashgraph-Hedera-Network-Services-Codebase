@@ -25,7 +25,7 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.TOKEN_WAS_DELE
 
 import com.hedera.services.exceptions.InvalidTransactionException;
 import com.hedera.services.ledger.backing.BackingStore;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.migration.HederaTokenRel;
 import com.hedera.services.state.migration.UniqueTokenAdapter;
 import com.hedera.services.state.submerkle.EntityId;
@@ -65,13 +65,13 @@ import org.apache.commons.lang3.tuple.Pair;
  */
 public class ReadOnlyTokenStore {
     protected final AccountStore accountStore;
-    protected final BackingStore<TokenID, MerkleToken> tokens;
+    protected final BackingStore<TokenID, HederaToken> tokens;
     protected final BackingStore<NftId, UniqueTokenAdapter> uniqueTokens;
     protected final BackingStore<Pair<AccountID, TokenID>, HederaTokenRel> tokenRels;
 
     public ReadOnlyTokenStore(
             final AccountStore accountStore,
-            final BackingStore<TokenID, MerkleToken> tokens,
+            final BackingStore<TokenID, HederaToken> tokens,
             final BackingStore<NftId, UniqueTokenAdapter> uniqueTokens,
             final BackingStore<Pair<AccountID, TokenID>, HederaTokenRel> tokenRels) {
         this.tokens = tokens;
@@ -173,13 +173,13 @@ public class ReadOnlyTokenStore {
      *     and pending removal
      */
     public Token loadToken(Id id) {
-        final var merkleToken = tokens.getImmutableRef(id.asGrpcToken());
+        final var hederaToken = tokens.getImmutableRef(id.asGrpcToken());
 
-        validateUsable(merkleToken);
+        validateUsable(hederaToken);
 
         final var token = new Token(id);
-        initModelAccounts(token, merkleToken.treasury(), merkleToken.autoRenewAccount());
-        initModelFields(token, merkleToken);
+        initModelAccounts(token, hederaToken.treasury(), hederaToken.autoRenewAccount());
+        initModelFields(token, hederaToken);
 
         return token;
     }
@@ -192,14 +192,14 @@ public class ReadOnlyTokenStore {
      * @return a usable model of the token which is possibly paused
      */
     public Token loadPossiblyPausedToken(Id id) {
-        final var merkleToken = tokens.getImmutableRef(id.asGrpcToken());
+        final var hederaToken = tokens.getImmutableRef(id.asGrpcToken());
 
-        validateTrue(merkleToken != null, INVALID_TOKEN_ID);
-        validateFalse(merkleToken.isDeleted(), TOKEN_WAS_DELETED);
+        validateTrue(hederaToken != null, INVALID_TOKEN_ID);
+        validateFalse(hederaToken.isDeleted(), TOKEN_WAS_DELETED);
 
         final var token = new Token(id);
-        initModelAccounts(token, merkleToken.treasury(), merkleToken.autoRenewAccount());
-        initModelFields(token, merkleToken);
+        initModelAccounts(token, hederaToken.treasury(), hederaToken.autoRenewAccount());
+        initModelFields(token, hederaToken);
 
         return token;
     }
@@ -235,6 +235,7 @@ public class ReadOnlyTokenStore {
         final var merkleUniqueToken = uniqueTokens.getImmutableRef(nftId);
         validateUsable(merkleUniqueToken);
         final var uniqueToken = new UniqueToken(tokenId, serialNum);
+        //??? needed? initModelAccounts(...);
         initModelFields(uniqueToken, merkleUniqueToken);
         return uniqueToken;
     }
@@ -284,16 +285,16 @@ public class ReadOnlyTokenStore {
         validateTrue(merkleTokenRelStatus != null, TOKEN_NOT_ASSOCIATED_TO_ACCOUNT);
     }
 
-    private void validateUsable(MerkleToken merkleToken) {
-        validateTrue(merkleToken != null, INVALID_TOKEN_ID);
-        validateFalse(merkleToken.isDeleted(), TOKEN_WAS_DELETED);
-        validateFalse(merkleToken.isPaused(), TOKEN_IS_PAUSED);
+    private void validateUsable(HederaToken hederaToken) {
+        validateTrue(hederaToken != null, INVALID_TOKEN_ID);
+        validateFalse(hederaToken.isDeleted(), TOKEN_WAS_DELETED);
+        validateFalse(hederaToken.isPaused(), TOKEN_IS_PAUSED);
     }
 
-    private void validateUsable(MerkleToken merkleToken, ResponseCodeEnum code) {
-        validateTrue(merkleToken != null, code);
-        validateFalse(merkleToken.isDeleted(), code);
-        validateFalse(merkleToken.isPaused(), code);
+    private void validateUsable(HederaToken hederaToken, ResponseCodeEnum code) {
+        validateTrue(hederaToken != null, code);
+        validateFalse(hederaToken.isDeleted(), code);
+        validateFalse(hederaToken.isPaused(), code);
     }
 
     private void validateUsable(UniqueTokenAdapter uniqueTokenAdapter) {
@@ -314,24 +315,26 @@ public class ReadOnlyTokenStore {
         token.setTreasury(treasury);
     }
 
-    private void initModelFields(Token token, MerkleToken immutableToken) {
+    private void initModelFields(Token token, HederaToken immutableToken) {
         token.initTotalSupply(immutableToken.totalSupply());
         token.initSupplyConstraints(immutableToken.supplyType(), immutableToken.maxSupply());
-        token.setKycKey(immutableToken.getKycKey());
-        token.setFreezeKey(immutableToken.getFreezeKey());
-        token.setSupplyKey(immutableToken.getSupplyKey());
-        token.setWipeKey(immutableToken.getWipeKey());
-        token.setFrozenByDefault(immutableToken.accountsAreFrozenByDefault());
-        token.setAdminKey(immutableToken.getAdminKey());
-        token.setFeeScheduleKey(immutableToken.getFeeScheduleKey());
-        token.setPauseKey(immutableToken.getPauseKey());
-        token.setType(immutableToken.tokenType());
-        token.setLastUsedSerialNumber(immutableToken.getLastUsedSerialNumber());
-        token.setIsDeleted(immutableToken.isDeleted());
-        token.setPaused(immutableToken.isPaused());
-        token.setExpiry(immutableToken.expiry());
-        token.setMemo(immutableToken.memo());
+        token.setAdminKey(immutableToken.adminKey());
         token.setAutoRenewPeriod(immutableToken.autoRenewPeriod());
+        token.setDecimals(immutableToken.decimals());
+        token.setExpiry(immutableToken.expiry());
+        token.setFeeScheduleKey(immutableToken.feeScheduleKey());
+        token.setFreezeKey(immutableToken.freezeKey());
+        token.setFrozenByDefault(immutableToken.accountsAreFrozenByDefault());
+        token.setIsDeleted(immutableToken.isDeleted());
+        token.setKycKey(immutableToken.kycKey());
+        token.setLastUsedSerialNumber(immutableToken.lastUsedSerialNumber());
+        token.setMemo(immutableToken.memo());
+        token.setName(immutableToken.name());
+        token.setPaused(immutableToken.isPaused());
+        token.setPauseKey(immutableToken.pauseKey());
+        token.setSupplyKey(immutableToken.supplyKey());
+        token.setType(immutableToken.tokenType());
+        token.setWipeKey(immutableToken.wipeKey());
     }
 
     private void initModelFields(UniqueToken uniqueToken, UniqueTokenAdapter immutableUniqueToken) {

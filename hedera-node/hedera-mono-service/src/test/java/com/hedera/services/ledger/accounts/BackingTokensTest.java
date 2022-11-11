@@ -23,10 +23,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.hedera.services.ledger.backing.BackingTokens;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.virtual.entities.FungibleOnDiskToken;
 import com.hedera.services.utils.EntityNum;
 import com.hederahashgraph.api.proto.java.TokenID;
-import com.swirlds.merkle.map.MerkleMap;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,33 +36,36 @@ import org.junit.jupiter.api.Test;
 class BackingTokensTest {
     private final TokenID a = asToken("0.0.3");
     private final TokenID b = asToken("0.0.1");
+    private final TokenID c = asToken("0.0.5");
     private final EntityNum aKey = EntityNum.fromTokenId(a);
-    private final MerkleToken aValue = new MerkleToken();
+    private final EntityNum anotherKey = EntityNum.fromTokenId(c);
+    private final HederaToken aValue = new MerkleToken();
+    private final HederaToken anotherValue = new FungibleOnDiskToken();
 
-    private MerkleMap<EntityNum, MerkleToken> map;
-    MerkleMap<EntityNum, MerkleToken> mockedMap;
+    private FungibleTokensAdapter map;
+    private FungibleTokensAdapter mockedMap;
     private BackingTokens subject;
 
     @BeforeEach
     void setup() {
-        map = new MerkleMap<>();
+        map = FungibleTokensAdapter.newInMemory();
 
         map.put(aKey, aValue);
+        map.put(anotherKey, anotherValue);
 
         subject = new BackingTokens(() -> map);
     }
 
     @Test
     void delegatesContains() {
-        // then:
         assertTrue(subject.contains(a));
         assertFalse(subject.contains(b));
-        // and:
+        assertTrue(subject.contains(c));
     }
 
     @Test
     void delegatesIdSet() {
-        var expectedIds = Set.of(a);
+        var expectedIds = Set.of(a, c);
         // expect:
         assertEquals(expectedIds, subject.idSet());
     }
@@ -69,6 +74,7 @@ class BackingTokensTest {
     void delegatesUnsafeGet() {
         // expect:
         assertEquals(aValue, subject.getImmutableRef(a));
+        assertEquals(anotherValue, subject.getImmutableRef(c));
     }
 
     @Test
@@ -94,7 +100,7 @@ class BackingTokensTest {
     @Test
     void delegatesSize() {
         // expect:
-        assertEquals(1, subject.size());
+        assertEquals(2, subject.size());
     }
 
     @Test
@@ -128,7 +134,7 @@ class BackingTokensTest {
     }
 
     void setupMocked() {
-        mockedMap = mock(MerkleMap.class);
+        mockedMap = mock(FungibleTokensAdapter.class);
         subject = new BackingTokens(() -> mockedMap);
     }
 }

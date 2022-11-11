@@ -656,10 +656,11 @@ class ServicesStateTest {
                 .migrateToDiskAsApropos(
                         INSERTIONS_PER_COPY,
                         subject,
-                        new ToDiskMigrations(true, false),
+                        new ToDiskMigrations(true, false, false),
                         virtualMapFactory,
                         ServicesState.accountMigrator,
-                        ServicesState.tokenRelMigrator);
+                        ServicesState.tokenRelMigrator,
+                        ServicesState.nonUniqueTokenMigrator);
 
         ServicesState.setVmFactory(VirtualMapFactory::new);
         ServicesState.setMapToDiskMigration(MapMigrationToDisk::migrateToDiskAsApropos);
@@ -702,13 +703,19 @@ class ServicesStateTest {
                 .migrateToDiskAsApropos(
                         INSERTIONS_PER_COPY,
                         subject,
-                        new ToDiskMigrations(false, true),
+                        new ToDiskMigrations(false, true, false),
                         virtualMapFactory,
                         ServicesState.accountMigrator,
-                        ServicesState.tokenRelMigrator);
+                        ServicesState.tokenRelMigrator,
+                        ServicesState.nonUniqueTokenMigrator);
 
         ServicesState.setVmFactory(VirtualMapFactory::new);
         ServicesState.setMapToDiskMigration(MapMigrationToDisk::migrateToDiskAsApropos);
+    }
+
+    @Test
+    void nonGenesisInitHandlesNonUniqueTokenMigrationToDisk() {
+        //todo
     }
 
     @Test

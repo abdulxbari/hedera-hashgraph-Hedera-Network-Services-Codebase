@@ -45,8 +45,9 @@ import com.hedera.services.ledger.properties.TokenRelProperty;
 import com.hedera.services.legacy.core.jproto.JEd25519Key;
 import com.hedera.services.records.RecordsHistorian;
 import com.hedera.services.state.expiry.ExpiringCreations;
-import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
+import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.migration.HederaTokenRel;
 import com.hedera.services.state.migration.UniqueTokenAdapter;
@@ -67,7 +68,6 @@ import com.hederahashgraph.api.proto.java.TokenID;
 import com.hederahashgraph.api.proto.java.TopicID;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 import org.apache.commons.lang3.tuple.Pair;
 
 public class BaseHederaLedgerTestHelper {
@@ -88,7 +88,7 @@ public class BaseHederaLedgerTestHelper {
     protected TransferLogic transferLogic;
     protected TransactionalLedger<NftId, NftProperty, UniqueTokenAdapter> nftsLedger;
     protected TransactionalLedger<AccountID, AccountProperty, HederaAccount> accountsLedger;
-    protected TransactionalLedger<TokenID, TokenProperty, MerkleToken> tokensLedger;
+    protected TransactionalLedger<TokenID, TokenProperty, HederaToken> tokensLedger;
     protected TransactionalLedger<Pair<AccountID, TokenID>, TokenRelProperty, HederaTokenRel>
             tokenRelsLedger;
     protected AccountID misc = AccountID.newBuilder().setAccountNum(1_234).build();
@@ -96,8 +96,8 @@ public class BaseHederaLedgerTestHelper {
     protected long RAND_BALANCE = 2_345L;
     protected long miscFrozenTokenBalance = 500L;
     protected MerkleAccount account;
-    protected MerkleToken frozenToken;
-    protected MerkleToken token;
+    protected HederaToken frozenToken;
+    protected HederaToken token;
     protected TokenID missingId = IdUtils.tokenWith(333);
     protected TokenID tokenId = IdUtils.tokenWith(222);
     protected TokenID frozenId = IdUtils.tokenWith(111);
@@ -202,10 +202,10 @@ public class BaseHederaLedgerTestHelper {
         account = mock(MerkleAccount.class);
 
         frozenToken = mock(MerkleToken.class);
-        given(frozenToken.freezeKey()).willReturn(Optional.of(freezeKey));
+        given(frozenToken.freezeKey()).willReturn(freezeKey);
         given(frozenToken.accountsAreFrozenByDefault()).willReturn(true);
-        token = mock(MerkleToken.class);
-        given(token.freezeKey()).willReturn(Optional.empty());
+        token = mock(HederaToken.class);
+        given(token.freezeKey()).willReturn(null);
 
         nftsLedger = mock(TransactionalLedger.class);
         accountsLedger = mock(TransactionalLedger.class);
@@ -260,9 +260,9 @@ public class BaseHederaLedgerTestHelper {
 
     protected static class TokenInfo {
         final long balance;
-        final MerkleToken token;
+        final HederaToken token;
 
-        public TokenInfo(long balance, MerkleToken token) {
+        public TokenInfo(long balance, HederaToken token) {
             this.balance = balance;
             this.token = token;
         }

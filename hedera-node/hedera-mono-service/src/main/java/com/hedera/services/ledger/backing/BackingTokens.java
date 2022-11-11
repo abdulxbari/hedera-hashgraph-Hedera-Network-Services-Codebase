@@ -17,28 +17,28 @@ package com.hedera.services.ledger.backing;
 
 import static com.hedera.services.utils.EntityNum.fromTokenId;
 
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.utils.EntityNum;
 import com.hederahashgraph.api.proto.java.TokenID;
-import com.swirlds.merkle.map.MerkleMap;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class BackingTokens implements BackingStore<TokenID, MerkleToken> {
-    private final Supplier<MerkleMap<EntityNum, MerkleToken>> delegate;
+public class BackingTokens implements BackingStore<TokenID, HederaToken> {
+    private final Supplier<FungibleTokensAdapter> delegate;
 
-    public BackingTokens(Supplier<MerkleMap<EntityNum, MerkleToken>> delegate) {
+    public BackingTokens(Supplier<FungibleTokensAdapter> delegate) {
         this.delegate = delegate;
     }
 
     @Override
-    public MerkleToken getRef(TokenID id) {
+    public HederaToken getRef(TokenID id) {
         return delegate.get().getForModify(fromTokenId(id));
     }
 
     @Override
-    public void put(TokenID id, MerkleToken token) {
+    public void put(TokenID id, HederaToken token) {
         final var tokens = delegate.get();
         final var eId = fromTokenId(id);
         if (!tokens.containsKey(eId)) {
@@ -69,12 +69,12 @@ public class BackingTokens implements BackingStore<TokenID, MerkleToken> {
     }
 
     @Override
-    public MerkleToken getImmutableRef(TokenID id) {
+    public HederaToken getImmutableRef(TokenID id) {
         return delegate.get().get(fromTokenId(id));
     }
 
     /* -- only for unit tests */
-    public Supplier<MerkleMap<EntityNum, MerkleToken>> getDelegate() {
+    public Supplier<FungibleTokensAdapter> getDelegate() {
         return delegate;
     }
 }

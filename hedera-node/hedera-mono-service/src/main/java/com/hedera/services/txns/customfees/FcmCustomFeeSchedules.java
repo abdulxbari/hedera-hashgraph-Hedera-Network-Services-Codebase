@@ -16,10 +16,9 @@
 package com.hedera.services.txns.customfees;
 
 import com.hedera.services.grpc.marshalling.CustomFeeMeta;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.store.models.Id;
 import com.hedera.services.utils.EntityNum;
-import com.swirlds.merkle.map.MerkleMap;
 import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -29,10 +28,10 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 /** Active CustomFeeSchedules for an entity in the tokens FCMap */
 @Singleton
 public class FcmCustomFeeSchedules implements CustomFeeSchedules {
-    private final Supplier<MerkleMap<EntityNum, MerkleToken>> tokens;
+    private final Supplier<FungibleTokensAdapter> tokens;
 
     @Inject
-    public FcmCustomFeeSchedules(Supplier<MerkleMap<EntityNum, MerkleToken>> tokens) {
+    public FcmCustomFeeSchedules(Supplier<FungibleTokensAdapter> tokens) {
         this.tokens = tokens;
     }
 
@@ -48,7 +47,7 @@ public class FcmCustomFeeSchedules implements CustomFeeSchedules {
                 tokenId, merkleToken.treasury().asId(), merkleToken.customFeeSchedule());
     }
 
-    public Supplier<MerkleMap<EntityNum, MerkleToken>> getTokens() {
+    public Supplier<FungibleTokensAdapter> getTokens() {
         return tokens;
     }
 

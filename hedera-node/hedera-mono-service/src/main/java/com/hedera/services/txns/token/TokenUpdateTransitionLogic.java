@@ -23,7 +23,7 @@ import com.hedera.services.context.TransactionContext;
 import com.hedera.services.ledger.HederaLedger;
 import com.hedera.services.ledger.SigImpactHistorian;
 import com.hedera.services.state.enums.TokenType;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.store.models.NftId;
 import com.hedera.services.store.tokens.TokenStore;
 import com.hedera.services.store.tokens.annotations.AreTreasuryWildcardsEnabled;
@@ -95,7 +95,7 @@ public class TokenUpdateTransitionLogic implements TransitionLogic {
         }
 
         ResponseCodeEnum outcome;
-        MerkleToken token = store.get(id);
+        final var token = store.get(id);
 
         if (op.hasExpiry() && !validator.isValidExpiry(op.getExpiry())) {
             txnCtx.setStatus(INVALID_EXPIRATION_TIME);
@@ -206,7 +206,7 @@ public class TokenUpdateTransitionLogic implements TransitionLogic {
     }
 
     private ResponseCodeEnum autoRenewAttachmentCheck(
-            TokenUpdateTransactionBody op, MerkleToken token) {
+            TokenUpdateTransactionBody op, HederaToken token) {
         if (op.hasAutoRenewAccount()) {
             final var newAutoRenew = op.getAutoRenewAccount();
             final var newAutoRenewStatus = ledger.usabilityOf(newAutoRenew);
@@ -227,7 +227,7 @@ public class TokenUpdateTransitionLogic implements TransitionLogic {
 
     private ResponseCodeEnum prepTreasuryChange(
             final TokenID id,
-            final MerkleToken token,
+            final HederaToken token,
             final AccountID newTreasury,
             final AccountID oldTreasury) {
         var status = OK;

@@ -35,8 +35,10 @@ import com.hedera.services.config.MockFileNumbers;
 import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.files.HFileMeta;
 import com.hedera.services.ledger.accounts.AliasManager;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.legacy.core.jproto.JEd25519Key;
 import com.hedera.services.legacy.core.jproto.JKeyList;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.migration.AccountStorageAdapter;
@@ -82,7 +84,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class OpUsageCtxHelperTest {
     private final FileNumbers fileNumbers = new MockFileNumbers();
 
-    @Mock private MerkleMap<EntityNum, MerkleToken> tokens;
+    @Mock private FungibleTokensAdapter tokens;
     @Mock private StateView workingView;
 
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
@@ -365,7 +367,7 @@ class OpUsageCtxHelperTest {
                             new JEd25519Key(
                                     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                                             .getBytes(StandardCharsets.UTF_8))));
-    private final MerkleToken extant =
+    private final HederaToken extant =
             new MerkleToken(
                     now,
                     1,

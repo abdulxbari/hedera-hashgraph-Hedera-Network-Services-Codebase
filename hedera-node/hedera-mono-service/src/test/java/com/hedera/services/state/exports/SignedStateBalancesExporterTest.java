@@ -40,8 +40,9 @@ import com.hedera.services.ServicesState;
 import com.hedera.services.config.MockGlobalDynamicProps;
 import com.hedera.services.context.properties.PropertySource;
 import com.hedera.services.exceptions.NegativeAccountBalanceException;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleAccount;
-import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTokenRelStatus;
 import com.hedera.services.state.migration.AccountStorageAdapter;
 import com.hedera.services.state.migration.TokenRelStorageAdapter;
@@ -91,13 +92,13 @@ import org.mockito.ArgumentCaptor;
 @ExtendWith(LogCaptureExtension.class)
 class SignedStateBalancesExporterTest {
     private static final NodeId nodeId = new NodeId(false, 1);
-    private final MerkleMap<EntityNum, MerkleToken> tokens = new MerkleMap<>();
+    private final FungibleTokensAdapter tokens = FungibleTokensAdapter.newInMemory();
     private final MerkleMap<EntityNum, MerkleAccount> accounts = new MerkleMap<>();
     private final TokenRelStorageAdapter tokenRels =
             TokenRelStorageAdapter.fromInMemory(new MerkleMap<>());
 
-    private MerkleToken token;
-    private MerkleToken deletedToken;
+    private HederaToken token;
+    private HederaToken deletedToken;
 
     private static final long ledgerFloat = 1_000;
     private static final long thisNodeBalance = 400;
@@ -168,14 +169,14 @@ class SignedStateBalancesExporterTest {
         secondNonNodeAccount.setNumAssociations(2);
         accounts.put(fromAccountId(deleted), deletedAccount);
 
-        token = mock(MerkleToken.class);
+        token = mock(HederaToken.class);
         given(token.isDeleted()).willReturn(false);
         given(token.decimals()).willReturn(1);
         given(token.symbol()).willReturn("existingToken");
         given(token.hasFreezeKey()).willReturn(true);
         given(token.hasKycKey()).willReturn(true);
         given(token.grpcId()).willReturn(theToken);
-        deletedToken = mock(MerkleToken.class);
+        deletedToken = mock(HederaToken.class);
         given(deletedToken.isDeleted()).willReturn(true);
         given(deletedToken.decimals()).willReturn(3);
         given(deletedToken.symbol()).willReturn("deletedToken");

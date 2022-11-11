@@ -18,7 +18,7 @@ package com.hedera.services.state.expiry.removal;
 import static com.hedera.services.state.submerkle.EntityId.MISSING_ENTITY_ID;
 import static com.hedera.services.utils.NftNumPair.MISSING_NFT_NUM_PAIR;
 
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.migration.TokenRelStorageAdapter;
 import com.hedera.services.state.migration.UniqueTokenMapAdapter;
 import com.hedera.services.state.submerkle.CurrencyAdjustments;
@@ -47,7 +47,7 @@ public class TreasuryReturnHelper {
     boolean updateNftReturns(
             final EntityNum expiredNum,
             final EntityNum tokenNum,
-            final MerkleToken token,
+            final HederaToken token,
             final long serialNo,
             final List<EntityId> tokenTypes,
             final List<NftAdjustments> returnExchanges) {
@@ -89,7 +89,7 @@ public class TreasuryReturnHelper {
     void updateFungibleReturns(
             final EntityNum expiredNum,
             final EntityNum tokenNum,
-            final MerkleToken token,
+            final HederaToken token,
             final long balance,
             final List<CurrencyAdjustments> returnTransfers,
             final TokenRelStorageAdapter curRels) {
@@ -104,7 +104,7 @@ public class TreasuryReturnHelper {
     }
 
     private boolean incrementTreasuryBalance(
-            final MerkleToken token,
+            final HederaToken token,
             final EntityNum tokenNum,
             final long balance,
             final TokenRelStorageAdapter curRels) {
@@ -127,7 +127,7 @@ public class TreasuryReturnHelper {
 
     private void addProperReturn(
             final EntityNum expiredAccountNum,
-            final MerkleToken token,
+            final HederaToken token,
             final long balance,
             final List<CurrencyAdjustments> returnTransfers) {
 

@@ -34,10 +34,15 @@ import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.ledger.TransactionalLedger;
 import com.hedera.services.ledger.accounts.ContractAliases;
 import com.hedera.services.ledger.accounts.HederaAccountCustomizer;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.ledger.properties.AccountProperty;
 import com.hedera.services.state.enums.TokenType;
-import com.hedera.services.state.merkle.MerkleToken;
-import com.hedera.services.state.migration.*;
+import com.hedera.services.state.merkle.HederaToken;
+import com.hedera.services.state.migration.AccountStorageAdapter;
+import com.hedera.services.state.migration.HederaAccount;
+import com.hedera.services.state.migration.TokenRelStorageAdapter;
+import com.hedera.services.state.migration.UniqueTokenAdapter;
+import com.hedera.services.state.migration.UniqueTokenMapAdapter;
 import com.hedera.services.state.submerkle.FcTokenAllowanceId;
 import com.hedera.services.state.virtual.ContractKey;
 import com.hedera.services.state.virtual.IterableContractValue;
@@ -49,7 +54,6 @@ import com.hedera.services.utils.EntityIdUtils;
 import com.hedera.services.utils.EntityNum;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.TokenID;
-import com.swirlds.merkle.map.MerkleMap;
 import com.swirlds.virtualmap.VirtualMap;
 import java.util.function.Function;
 import javax.annotation.Nullable;
@@ -62,7 +66,7 @@ public class StaticEntityAccess implements EntityAccess {
     private final StateView view;
     private final ContractAliases aliases;
     private final OptionValidator validator;
-    private final MerkleMap<EntityNum, MerkleToken> tokens;
+    private final FungibleTokensAdapter tokens;
     private final AccountStorageAdapter accounts;
     private final UniqueTokenMapAdapter nfts;
     private final TokenRelStorageAdapter tokenAssociations;
@@ -386,7 +390,7 @@ public class StaticEntityAccess implements EntityAccess {
         return getter.apply(nft);
     }
 
-    private MerkleToken lookupToken(final TokenID tokenId) {
+    private HederaToken lookupToken(final TokenID tokenId) {
         final var token = tokens.get(EntityNum.fromTokenId(tokenId));
         validateTrue(token != null, INVALID_TOKEN_ID);
         return token;

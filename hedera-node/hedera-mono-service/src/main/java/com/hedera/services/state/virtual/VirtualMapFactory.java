@@ -15,6 +15,7 @@
  */
 package com.hedera.services.state.virtual;
 
+import com.hedera.services.state.virtual.entities.FungibleOnDiskToken;
 import com.hedera.services.state.virtual.entities.OnDiskAccount;
 import com.hedera.services.state.virtual.entities.OnDiskAccountSupplier;
 import com.hedera.services.state.virtual.entities.OnDiskTokenRel;
@@ -39,6 +40,7 @@ import com.swirlds.jasperdb.files.DataFileCommon;
 import com.swirlds.virtualmap.VirtualKey;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualValue;
+import org.apache.commons.lang3.NotImplementedException;
 
 public class VirtualMapFactory {
     private static final short CURRENT_SERIALIZATION_VERSION = 1;
@@ -61,6 +63,10 @@ public class VirtualMapFactory {
     private static final String ON_DISK_ACCOUNT_STORAGE_VM_NAME = "accountStore";
     private static final String ON_DISK_TOKEN_RELS_STORAGE_VM_NAME = "tokenRelStore";
     private static final String UNIQUE_TOKENS_VM_NAME = "uniqueTokenStore";
+
+//    public MerkleNode newVirtualizedNonUniqueTokenStorage() {
+//        throw new NotImplementedException();
+//    }     //??? needed???
 
     @FunctionalInterface
     public interface JasperDbBuilderFactory {
@@ -289,5 +295,9 @@ public class VirtualMapFactory {
                 .preferDiskBasedIndexes(false)
                 .internalHashesRamToDiskThreshold(MAX_IN_MEMORY_INTERNAL_HASHES);
         return new VirtualMap<>(UNIQUE_TOKENS_VM_NAME, dsBuilder);
+    }
+
+    public VirtualMap<EntityNumVirtualKey, FungibleOnDiskToken> newVirtualizedNonUniqueTokenStorage() {
+        throw new NotImplementedException();
     }
 }

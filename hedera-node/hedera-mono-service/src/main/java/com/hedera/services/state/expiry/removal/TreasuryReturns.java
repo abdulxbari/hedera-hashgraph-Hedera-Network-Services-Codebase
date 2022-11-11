@@ -20,13 +20,23 @@ import static com.hedera.services.state.expiry.removal.FungibleTreasuryReturns.F
 import static com.hedera.services.state.expiry.removal.FungibleTreasuryReturns.UNFINISHED_NOOP_FUNGIBLE_RETURNS;
 import static com.hedera.services.state.expiry.removal.NonFungibleTreasuryReturns.FINISHED_NOOP_NON_FUNGIBLE_RETURNS;
 import static com.hedera.services.state.expiry.removal.NonFungibleTreasuryReturns.UNFINISHED_NOOP_NON_FUNGIBLE_RETURNS;
-import static com.hedera.services.throttling.MapAccessType.*;
+import static com.hedera.services.throttling.MapAccessType.ACCOUNTS_GET;
+import static com.hedera.services.throttling.MapAccessType.ACCOUNTS_GET_FOR_MODIFY;
+import static com.hedera.services.throttling.MapAccessType.NFTS_GET;
+import static com.hedera.services.throttling.MapAccessType.NFTS_GET_FOR_MODIFY;
+import static com.hedera.services.throttling.MapAccessType.NFTS_REMOVE;
+import static com.hedera.services.throttling.MapAccessType.TOKENS_GET;
+import static com.hedera.services.throttling.MapAccessType.TOKEN_ASSOCIATIONS_GET;
+import static com.hedera.services.throttling.MapAccessType.TOKEN_ASSOCIATIONS_GET_FOR_MODIFY;
+import static com.hedera.services.throttling.MapAccessType.TOKEN_ASSOCIATIONS_REMOVE;
 import static com.hedera.services.utils.EntityNumPair.MISSING_NUM_PAIR;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.state.enums.TokenType;
 import com.hedera.services.state.expiry.TokenRelsListMutation;
 import com.hedera.services.state.expiry.classification.EntityLookup;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.migration.TokenRelStorageAdapter;
@@ -39,7 +49,6 @@ import com.hedera.services.throttling.MapAccessType;
 import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.EntityNumPair;
 import com.hedera.services.utils.MapValueListUtils;
-import com.swirlds.merkle.map.MerkleMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -52,7 +61,7 @@ import org.apache.logging.log4j.Logger;
 @Singleton
 public class TreasuryReturns {
     private static final Logger log = LogManager.getLogger(TreasuryReturns.class);
-    private static final MerkleToken STANDIN_DELETED_TOKEN = new MerkleToken();
+    private static final HederaToken STANDIN_DELETED_TOKEN = new MerkleToken();
 
     static {
         STANDIN_DELETED_TOKEN.setDeleted(true);
@@ -73,7 +82,7 @@ public class TreasuryReturns {
     static final List<MapAccessType> TREASURY_BALANCE_INCREMENT =
             List.of(ACCOUNTS_GET, TOKEN_ASSOCIATIONS_GET_FOR_MODIFY);
 
-    private final Supplier<MerkleMap<EntityNum, MerkleToken>> tokens;
+    private final Supplier<FungibleTokensAdapter> tokens;
     private final Supplier<UniqueTokenMapAdapter> nfts;
     private final Supplier<TokenRelStorageAdapter> tokenRels;
 
@@ -86,7 +95,7 @@ public class TreasuryReturns {
     @Inject
     public TreasuryReturns(
             final EntityLookup entityLookup,
-            final Supplier<MerkleMap<EntityNum, MerkleToken>> tokens,
+            final Supplier<FungibleTokensAdapter> tokens,
             final Supplier<UniqueTokenMapAdapter> nfts,
             final Supplier<TokenRelStorageAdapter> tokenRels,
             final ExpiryThrottle expiryThrottle,

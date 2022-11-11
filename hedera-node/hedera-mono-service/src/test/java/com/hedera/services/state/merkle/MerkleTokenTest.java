@@ -37,7 +37,6 @@ import com.hedera.test.factories.fees.CustomFeeBuilder;
 import com.hederahashgraph.api.proto.java.CustomFee;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -557,14 +556,14 @@ class MerkleTokenTest {
     void objectContractPropertiesCheck() {
         subject.setPauseKey(pauseKey);
         assertTrue(subject.hasAdminKey());
-        assertEquals(adminKey, subject.adminKey().get());
-        assertEquals(freezeKey, subject.freezeKey().get());
+        assertEquals(adminKey, subject.adminKey());
+        assertEquals(freezeKey, subject.freezeKey());
         assertTrue(subject.hasFreezeKey());
-        assertEquals(kycKey, subject.kycKey().get());
+        assertEquals(kycKey, subject.kycKey());
         assertTrue(subject.hasKycKey());
-        assertEquals(supplyKey, subject.supplyKey().get());
+        assertEquals(supplyKey, subject.supplyKey());
         assertTrue(subject.hasSupplyKey());
-        assertEquals(wipeKey, subject.wipeKey().get());
+        assertEquals(wipeKey, subject.wipeKey());
         assertTrue(subject.hasWipeKey());
         assertTrue(subject.isDeleted());
         assertEquals(symbol, subject.symbol());
@@ -572,14 +571,14 @@ class MerkleTokenTest {
         assertTrue(subject.accountsKycGrantedByDefault());
         assertEquals(autoRenewAccount, subject.autoRenewAccount());
         assertTrue(subject.hasAutoRenewAccount());
-        assertEquals(supplyKey, subject.getSupplyKey());
-        assertEquals(wipeKey, subject.getWipeKey());
-        assertEquals(pauseKey, subject.getPauseKey());
-        assertEquals(adminKey, subject.getAdminKey());
-        assertEquals(kycKey, subject.getKycKey());
-        assertEquals(freezeKey, subject.getFreezeKey());
+        assertEquals(supplyKey, subject.supplyKey());
+        assertEquals(wipeKey, subject.wipeKey());
+        assertEquals(pauseKey, subject.pauseKey());
+        assertEquals(adminKey, subject.adminKey());
+        assertEquals(kycKey, subject.kycKey());
+        assertEquals(freezeKey, subject.freezeKey());
         assertEquals(memo, subject.memo());
-        assertEquals(pauseKey, subject.pauseKey().get());
+        assertEquals(pauseKey, subject.pauseKey());
         assertTrue(subject.hasPauseKey());
     }
 
@@ -590,8 +589,8 @@ class MerkleTokenTest {
         subject.setFeeScheduleKey(feeScheduleKey);
 
         assertTrue(subject.hasFeeScheduleKey());
-        assertEquals(feeScheduleKey, subject.getFeeScheduleKey());
-        assertEquals(Optional.of(feeScheduleKey), subject.feeScheduleKey());
+        assertEquals(feeScheduleKey, subject.feeScheduleKey());
+        assertEquals(feeScheduleKey, subject.feeScheduleKey());
     }
 
     @Test
@@ -600,7 +599,7 @@ class MerkleTokenTest {
         assertTrue(subject.isPaused());
     }
 
-    private void setOptionalElements(final MerkleToken token) {
+    private void setOptionalElements(final HederaToken token) {
         token.setDeleted(isDeleted);
         token.setAdminKey(adminKey);
         token.setFreezeKey(freezeKey);
@@ -634,7 +633,7 @@ class MerkleTokenTest {
         identicalSubject.setTokenType(TokenType.FUNGIBLE_COMMON);
         identicalSubject.setSupplyType(TokenSupplyType.INFINITE);
         identicalSubject.setMaxSupply(subject.maxSupply());
-        identicalSubject.setLastUsedSerialNumber(subject.getLastUsedSerialNumber());
+        identicalSubject.setLastUsedSerialNumber(subject.lastUsedSerialNumber());
         identicalSubject.setKey(EntityNum.fromInt(number));
 
         final var other =
@@ -650,7 +649,7 @@ class MerkleTokenTest {
         other.setTokenType(0);
         other.setSupplyType(0);
         other.setMaxSupply(subject.maxSupply());
-        other.setLastUsedSerialNumber(subject.getLastUsedSerialNumber());
+        other.setLastUsedSerialNumber(subject.lastUsedSerialNumber());
 
         assertNotEquals(subject.hashCode(), defaultSubject.hashCode());
         assertNotEquals(subject.hashCode(), other.hashCode());
@@ -751,4 +750,6 @@ class MerkleTokenTest {
         // then:
         assertEquals(BitPackUtils.codeFromNum(bigNum), subject.getKey().intValue());
     }
+
+    //todo add new tests for HederaToken methods
 }

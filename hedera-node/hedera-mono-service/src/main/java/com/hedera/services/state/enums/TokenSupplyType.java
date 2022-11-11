@@ -15,9 +15,10 @@
  */
 package com.hedera.services.state.enums;
 
+import com.hedera.services.state.merkle.HederaToken;
+
 /**
- * Token Supply Types of {@link com.hedera.services.state.merkle.MerkleToken} Indicates how many
- * tokens can have during its lifetime.
+ * Token Supply Types of {@link HederaToken} Indicates how many tokens can have during its lifetime.
  */
 public enum TokenSupplyType {
     // Indicates that tokens of that type have an upper bound of Long.MAX_VALUE.

@@ -60,6 +60,7 @@ import com.hedera.services.ledger.properties.TokenRelProperty;
 import com.hedera.services.records.RecordsHistorian;
 import com.hedera.services.state.EntityCreator;
 import com.hedera.services.state.enums.TokenType;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTokenRelStatus;
@@ -97,11 +98,11 @@ class LedgerBalanceChangesTest {
     private final BackingStore<NftId, UniqueTokenAdapter> backingNfts = new HashMapBackingNfts();
     private final BackingStore<AccountID, HederaAccount> backingAccounts =
             new HashMapBackingAccounts();
-    private final BackingStore<TokenID, MerkleToken> backingTokens = new HashMapBackingTokens();
+    private final BackingStore<TokenID, HederaToken> backingTokens = new HashMapBackingTokens();
     private final BackingStore<Pair<AccountID, TokenID>, HederaTokenRel> backingRels =
             new HashMapBackingTokenRels();
     private HederaTokenStore tokenStore;
-    private TransactionalLedger<TokenID, TokenProperty, MerkleToken> tokensLedger;
+    private TransactionalLedger<TokenID, TokenProperty, HederaToken> tokensLedger;
     private TransactionalLedger<AccountID, AccountProperty, HederaAccount> accountsLedger;
     private TransactionalLedger<Pair<AccountID, TokenID>, TokenRelProperty, HederaTokenRel>
             tokenRelsLedger;
@@ -587,7 +588,7 @@ class LedgerBalanceChangesTest {
                 .build();
     }
 
-    private MerkleToken fungibleTokenWithTreasury(AccountID treasury) {
+    private HederaToken fungibleTokenWithTreasury(AccountID treasury) {
         final var token = new MerkleToken();
         token.setTreasury(
                 new EntityId(
@@ -596,7 +597,7 @@ class LedgerBalanceChangesTest {
         return token;
     }
 
-    private MerkleToken nonFungibleTokenWithTreasury(AccountID treasury) {
+    private HederaToken nonFungibleTokenWithTreasury(AccountID treasury) {
         final var token = new MerkleToken();
         token.setTreasury(
                 new EntityId(

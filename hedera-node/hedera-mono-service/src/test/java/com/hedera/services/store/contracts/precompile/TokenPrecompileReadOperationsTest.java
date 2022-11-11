@@ -38,9 +38,12 @@ import com.hedera.services.fees.FeeCalculator;
 import com.hedera.services.fees.HbarCentExchange;
 import com.hedera.services.fees.calculation.UsagePricesProvider;
 import com.hedera.services.grpc.marshalling.ImpliedTransfersMarshal;
+import com.hedera.services.state.enums.TokenType;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.pricing.AssetsLoader;
 import com.hedera.services.records.RecordsHistorian;
 import com.hedera.services.state.expiry.ExpiringCreations;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.submerkle.EntityId;
 import com.hedera.services.store.contracts.HederaStackedWorldStateUpdater;
@@ -55,7 +58,6 @@ import com.hedera.services.utils.EntityNum;
 import com.hedera.services.utils.accessors.AccessorFactory;
 import com.hederahashgraph.api.proto.java.TokenID;
 import com.hederahashgraph.api.proto.java.TransactionBody;
-import com.swirlds.merkle.map.MerkleMap;
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.tuweni.bytes.Bytes;
@@ -93,9 +95,9 @@ class TokenPrecompileReadOperationsTest {
     @Mock private HbarCentExchange exchange;
     @Mock private TransactionBody.Builder mockSynthBodyBuilder;
     @Mock private InfrastructureFactory infrastructureFactory;
-    @Mock private MerkleMap<EntityNum, MerkleToken> tokenMerkleMap;
+    @Mock private FungibleTokensAdapter tokenMerkleMap;
     @Mock private AssetsLoader assetLoader;
-    private MerkleToken merkleToken;
+    private HederaToken hederaToken;
     private final TokenID tokenID = asToken("0.0.5");
 
     private HTSPrecompiledContract subject;
@@ -127,7 +129,7 @@ class TokenPrecompileReadOperationsTest {
                         stateView,
                         precompilePricingUtils,
                         infrastructureFactory);
-        merkleToken =
+        hederaToken =
                 new MerkleToken(
                         Long.MAX_VALUE,
                         100,
@@ -137,7 +139,7 @@ class TokenPrecompileReadOperationsTest {
                         true,
                         true,
                         EntityId.fromGrpcTokenId(tokenID));
-        merkleToken.setTokenType(0);
+        hederaToken.setTokenType(TokenType.FUNGIBLE_COMMON);
         isTokenPrecompile = Mockito.mockStatic(IsTokenPrecompile.class);
         getTokenTypePrecompile = Mockito.mockStatic(GetTokenTypePrecompile.class);
     }
@@ -223,7 +225,7 @@ class TokenPrecompileReadOperationsTest {
 
         given(stateView.tokens()).willReturn(tokenMerkleMap);
         given(tokenMerkleMap.getOrDefault(EntityNum.fromTokenId(tokenID), null))
-                .willReturn(merkleToken);
+                .willReturn(hederaToken);
         givenMinimalContextForSuccessfulCall();
         given(syntheticTxnFactory.createTransactionCall(1L, pretendArguments))
                 .willReturn(mockSynthBodyBuilder);

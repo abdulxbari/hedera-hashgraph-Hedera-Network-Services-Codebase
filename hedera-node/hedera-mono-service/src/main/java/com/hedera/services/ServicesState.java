@@ -20,6 +20,7 @@ import static com.hedera.services.context.properties.PropertyNames.*;
 import static com.hedera.services.context.properties.SemanticVersions.SEMANTIC_VERSIONS;
 import static com.hedera.services.state.migration.MapMigrationToDisk.INSERTIONS_PER_COPY;
 import static com.hedera.services.state.migration.StateChildIndices.NUM_025X_CHILDREN;
+import static com.hedera.services.state.migration.StateChildIndices.TOKENS;
 import static com.hedera.services.state.migration.StateChildIndices.TOKEN_ASSOCIATIONS;
 import static com.hedera.services.state.migration.StateVersions.CURRENT_VERSION;
 import static com.hedera.services.state.migration.StateVersions.MINIMUM_SUPPORTED_VERSION;
@@ -30,6 +31,7 @@ import static com.swirlds.common.system.InitTrigger.*;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.hedera.services.context.properties.BootstrapProperties;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.state.merkle.*;
 import com.hedera.services.state.migration.*;
 import com.hedera.services.state.org.StateMetadata;
@@ -37,6 +39,7 @@ import com.hedera.services.state.submerkle.ExchangeRates;
 import com.hedera.services.state.submerkle.SequenceNumber;
 import com.hedera.services.state.virtual.*;
 import com.hedera.services.state.virtual.VirtualMapFactory.JasperDbBuilderFactory;
+import com.hedera.services.state.virtual.entities.FungibleOnDiskToken;
 import com.hedera.services.state.virtual.entities.OnDiskAccount;
 import com.hedera.services.state.virtual.entities.OnDiskTokenRel;
 import com.hedera.services.stream.RecordsRunningHashLeaf;
@@ -90,6 +93,7 @@ public class ServicesState extends PartialNaryMerkleInternal
     private boolean enabledVirtualNft;
     private boolean enableVirtualAccounts;
     private boolean enableVirtualTokenRels;
+    private boolean enableVirtualNonUniqueTokens;
 
     private final BootstrapProperties bootstrapProperties;
 
@@ -119,6 +123,7 @@ public class ServicesState extends PartialNaryMerkleInternal
         this.bootstrapProperties = that.bootstrapProperties;
         this.enableVirtualAccounts = that.enableVirtualAccounts;
         this.enableVirtualTokenRels = that.enableVirtualTokenRels;
+        this.enableVirtualNonUniqueTokens = that.enableVirtualNonUniqueTokens;
     }
 
     /** Log out the sizes the state children. */
@@ -210,10 +215,11 @@ public class ServicesState extends PartialNaryMerkleInternal
                 mapToDiskMigration.migrateToDiskAsApropos(
                         INSERTIONS_PER_COPY,
                         this,
-                        new ToDiskMigrations(enableVirtualAccounts, enableVirtualTokenRels),
+                        new ToDiskMigrations(enableVirtualAccounts, enableVirtualTokenRels, enableVirtualNonUniqueTokens),
                         vmFactory.apply(JasperDbBuilder::new),
                         accountMigrator,
-                        tokenRelMigrator);
+                        tokenRelMigrator,
+                        nonUniqueTokenMigrator);
             }
         }
     }
@@ -245,6 +251,7 @@ public class ServicesState extends PartialNaryMerkleInternal
         enableVirtualAccounts = bootstrapProps.getBooleanProperty(ACCOUNTS_STORE_ON_DISK);
         enableVirtualTokenRels = bootstrapProps.getBooleanProperty(TOKENS_STORE_RELS_ON_DISK);
         enabledVirtualNft = bootstrapProps.getBooleanProperty(TOKENS_NFTS_USE_VIRTUAL_MERKLE);
+        enableVirtualNonUniqueTokens = bootstrapProps.getBooleanProperty(TOKENS_FTS_USE_VIRTUAL_MERKLE);
         return internalInit(platform, bootstrapProps, dualState, trigger, deserializedVersion);
     }
 
@@ -261,6 +268,7 @@ public class ServicesState extends PartialNaryMerkleInternal
         enableVirtualAccounts = bootstrapProps.getBooleanProperty(ACCOUNTS_STORE_ON_DISK);
         enableVirtualTokenRels = bootstrapProps.getBooleanProperty(TOKENS_STORE_RELS_ON_DISK);
         enabledVirtualNft = bootstrapProps.getBooleanProperty(TOKENS_NFTS_USE_VIRTUAL_MERKLE);
+        enableVirtualNonUniqueTokens = bootstrapProps.getBooleanProperty(TOKENS_FTS_USE_VIRTUAL_MERKLE);
         createGenesisChildren(addressBook, seqStart, bootstrapProps);
 
         internalInit(platform, bootstrapProps, dualState, GENESIS, null);
@@ -447,8 +455,9 @@ public class ServicesState extends PartialNaryMerkleInternal
         return getChild(StateChildIndices.TOPICS);
     }
 
-    public MerkleMap<EntityNum, MerkleToken> tokens() {
-        return getChild(StateChildIndices.TOKENS);
+    public FungibleTokensAdapter tokens() {
+        final var tokenStorage = getChild(StateChildIndices.TOKENS);
+        return (tokenStorage instanceof VirtualMap) ? FungibleTokensAdapter.fromOnDisk((VirtualMap<EntityNumVirtualKey, FungibleOnDiskToken>) tokenStorage) : FungibleTokensAdapter.fromInMemory((MerkleMap<EntityNum, MerkleToken>) tokenStorage);  //todo
     }
 
     @SuppressWarnings("unchecked")
@@ -514,6 +523,13 @@ public class ServicesState extends PartialNaryMerkleInternal
             final BootstrapProperties bootstrapProperties) {
         final var virtualMapFactory = new VirtualMapFactory(JasperDbBuilder::new);
 
+        if (enableVirtualNonUniqueTokens) {
+            setChild(
+                    StateChildIndices.TOKENS,
+                    virtualMapFactory.newVirtualizedNonUniqueTokenStorage());
+        } else {
+            setChild(StateChildIndices.TOKENS, new MerkleMap<>());
+        }
         if (enabledVirtualNft) {
             setChild(
                     StateChildIndices.UNIQUE_TOKENS,
@@ -533,7 +549,6 @@ public class ServicesState extends PartialNaryMerkleInternal
         } else {
             setChild(StateChildIndices.ACCOUNTS, new MerkleMap<>());
         }
-        setChild(StateChildIndices.TOKENS, new MerkleMap<>());
         setChild(StateChildIndices.NETWORK_CTX, genesisNetworkCtxWith(seqStart));
         setChild(StateChildIndices.SPECIAL_FILES, new MerkleSpecialFiles());
         setChild(StateChildIndices.SCHEDULE_TXS, new MerkleScheduledTransactions());
@@ -571,6 +586,7 @@ public class ServicesState extends PartialNaryMerkleInternal
     static final Function<MerkleAccountState, OnDiskAccount> accountMigrator = OnDiskAccount::from;
     static final Function<MerkleTokenRelStatus, OnDiskTokenRel> tokenRelMigrator =
             OnDiskTokenRel::from;
+    static final Function<MerkleToken, FungibleOnDiskToken> nonUniqueTokenMigrator = FungibleOnDiskToken::from;
 
     @VisibleForTesting
     void migrateFrom(@NotNull final SoftwareVersion deserializedVersion) {
@@ -587,7 +603,7 @@ public class ServicesState extends PartialNaryMerkleInternal
     }
 
     boolean shouldMigrateSomethingToDisk() {
-        return shouldMigrateAccountsToDisk() || shouldMigrateTokenRelsToDisk();
+        return shouldMigrateAccountsToDisk() || shouldMigrateTokenRelsToDisk() || shouldMigrateNonUniqueTokensToDisk();
     }
 
     boolean shouldMigrateAccountsToDisk() {
@@ -595,7 +611,15 @@ public class ServicesState extends PartialNaryMerkleInternal
     }
 
     boolean shouldMigrateTokenRelsToDisk() {
-        return enableVirtualTokenRels && getChild(TOKEN_ASSOCIATIONS) instanceof MerkleMap<?, ?>;
+        return enableVirtualTokenRels && isMerkleMap(() -> getChild(TOKEN_ASSOCIATIONS));
+    }
+
+    boolean shouldMigrateNonUniqueTokensToDisk() {
+        return enableVirtualNonUniqueTokens && isMerkleMap(() -> getChild(TOKENS));
+    }
+
+    private boolean isMerkleMap(Supplier<MerkleNode> supplier) {
+        return supplier.get() instanceof MerkleMap<?, ?>;
     }
 
     private BootstrapProperties getBootstrapProperties() {
@@ -616,7 +640,8 @@ public class ServicesState extends PartialNaryMerkleInternal
                 final ToDiskMigrations toDiskMigrations,
                 final VirtualMapFactory virtualMapFactory,
                 final Function<MerkleAccountState, OnDiskAccount> accountMigrator,
-                final Function<MerkleTokenRelStatus, OnDiskTokenRel> tokenRelMigrator);
+                final Function<MerkleTokenRelStatus, OnDiskTokenRel> tokenRelMigrator,
+                final Function<MerkleToken, FungibleOnDiskToken> nonUniqueTokenMigrator);
     }
 
     @VisibleForTesting

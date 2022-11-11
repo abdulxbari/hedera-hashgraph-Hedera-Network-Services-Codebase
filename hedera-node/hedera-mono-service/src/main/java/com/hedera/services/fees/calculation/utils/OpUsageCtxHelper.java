@@ -30,7 +30,7 @@ import com.hedera.services.config.FileNumbers;
 import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.files.HFileMeta;
 import com.hedera.services.ledger.accounts.AliasManager;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.state.submerkle.FcCustomFee;
 import com.hedera.services.usage.crypto.ExtantCryptoContext;
 import com.hedera.services.usage.file.FileAppendMeta;
@@ -44,7 +44,6 @@ import com.hedera.services.utils.accessors.TxnAccessor;
 import com.hederahashgraph.api.proto.java.Key;
 import com.hederahashgraph.api.proto.java.TokenFeeScheduleUpdateTransactionBody;
 import com.hederahashgraph.api.proto.java.TransactionBody;
-import com.swirlds.merkle.map.MerkleMap;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
@@ -61,14 +60,14 @@ public class OpUsageCtxHelper {
     private final StateView workingView;
     private final FileNumbers fileNumbers;
     private final TokenOpsUsage tokenOpsUsage = new TokenOpsUsage();
-    private final Supplier<MerkleMap<EntityNum, MerkleToken>> tokens;
+    private final Supplier<FungibleTokensAdapter> tokens;
     private final AliasManager aliasManager;
 
     @Inject
     public OpUsageCtxHelper(
             final StateView workingView,
             final FileNumbers fileNumbers,
-            final Supplier<MerkleMap<EntityNum, MerkleToken>> tokens,
+            final Supplier<FungibleTokensAdapter> tokens,
             final AliasManager aliasManager) {
         this.tokens = tokens;
         this.fileNumbers = fileNumbers;

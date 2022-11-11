@@ -22,11 +22,11 @@ import static org.mockito.BDDMockito.given;
 
 import com.google.protobuf.ByteString;
 import com.hedera.services.ServicesState;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.state.merkle.MerkleNetworkContext;
 import com.hedera.services.state.merkle.MerkleScheduledTransactions;
 import com.hedera.services.state.merkle.MerkleSpecialFiles;
 import com.hedera.services.state.merkle.MerkleStakingInfo;
-import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTopic;
 import com.hedera.services.state.migration.AccountStorageAdapter;
 import com.hedera.services.state.migration.TokenRelStorageAdapter;
@@ -54,7 +54,7 @@ class MutableStateChildrenTest {
     @Mock private VirtualMap<VirtualBlobKey, VirtualBlobValue> storage;
     @Mock private VirtualMap<ContractKey, IterableContractValue> contractStorage;
     @Mock private MerkleMap<EntityNum, MerkleTopic> topics;
-    @Mock private MerkleMap<EntityNum, MerkleToken> tokens;
+    @Mock private FungibleTokensAdapter tokens;
     @Mock private TokenRelStorageAdapter tokenAssociations;
     @Mock private MerkleScheduledTransactions scheduleTxs;
     @Mock private MerkleNetworkContext networkCtx;
@@ -94,7 +94,7 @@ class MutableStateChildrenTest {
         given(storage.size()).willReturn(2L);
         given(contractStorage.size()).willReturn(3L);
         given(scheduleTxs.getNumSchedules()).willReturn(4L);
-        given(tokens.size()).willReturn(5);
+        given(tokens.size()).willReturn(5L);
         given(tokenAssociations.size()).willReturn(6L);
         given(topics.size()).willReturn(7);
         given(uniqueTokens.size()).willReturn(8L);

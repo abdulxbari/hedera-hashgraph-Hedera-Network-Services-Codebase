@@ -22,8 +22,9 @@ import static com.hedera.services.utils.MapValueListUtils.unlinkInPlaceFromMapVa
 
 import com.hedera.services.context.properties.BootstrapProperties;
 import com.hedera.services.context.properties.PropertyNames;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.state.expiry.UniqueTokensListMutation;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleUniqueToken;
 import com.hedera.services.state.migration.AccountStorageAdapter;
 import com.hedera.services.state.migration.HederaAccount;
@@ -32,7 +33,6 @@ import com.hedera.services.state.migration.UniqueTokenMapAdapter;
 import com.hedera.services.state.virtual.UniqueTokenValue;
 import com.hedera.services.store.models.NftId;
 import com.hedera.services.utils.EntityNum;
-import com.swirlds.merkle.map.MerkleMap;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -44,14 +44,14 @@ public class UniqueTokensLinkManager {
     private static final Logger log = LogManager.getLogger(UniqueTokensLinkManager.class);
 
     private final Supplier<AccountStorageAdapter> accounts;
-    private final Supplier<MerkleMap<EntityNum, MerkleToken>> tokens;
+    private final Supplier<FungibleTokensAdapter> tokens;
     private final Supplier<UniqueTokenMapAdapter> uniqueTokens;
     private final boolean enableVirtualNft;
 
     @Inject
     public UniqueTokensLinkManager(
             final Supplier<AccountStorageAdapter> accounts,
-            final Supplier<MerkleMap<EntityNum, MerkleToken>> tokens,
+            final Supplier<FungibleTokensAdapter> tokens,
             final Supplier<UniqueTokenMapAdapter> uniqueTokens,
             final BootstrapProperties bootstrapProperties) {
         this.accounts = accounts;
@@ -126,7 +126,7 @@ public class UniqueTokensLinkManager {
         return insertedNft;
     }
 
-    private boolean isValidAndNotTreasury(EntityNum accountNum, MerkleToken token) {
+    private boolean isValidAndNotTreasury(EntityNum accountNum, HederaToken token) {
         return accountNum != null
                 && !accountNum.equals(MISSING_NUM)
                 && !accountNum.equals(token.treasuryNum());

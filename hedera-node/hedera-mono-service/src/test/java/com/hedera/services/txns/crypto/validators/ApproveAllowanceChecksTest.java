@@ -52,8 +52,8 @@ import com.hedera.services.ledger.backing.BackingTokenRels;
 import com.hedera.services.ledger.backing.BackingTokens;
 import com.hedera.services.state.enums.TokenSupplyType;
 import com.hedera.services.state.enums.TokenType;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleAccount;
-import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleUniqueToken;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.migration.HederaTokenRel;
@@ -70,7 +70,6 @@ import com.hedera.services.store.models.Token;
 import com.hedera.services.store.models.UniqueToken;
 import com.hedera.services.txns.validation.OptionValidator;
 import com.hedera.services.utils.EntityNum;
-import com.hedera.services.utils.EntityNumPair;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.CryptoAllowance;
 import com.hederahashgraph.api.proto.java.CryptoApproveAllowanceTransactionBody;
@@ -99,8 +98,8 @@ class ApproveAllowanceChecksTest {
     @Mock private Account treasury;
     @Mock private Account payerAccount;
     @Mock private StateView view;
-    @Mock private MerkleToken merkleTokenFungible;
-    @Mock private MerkleToken merkleTokenNFT;
+    @Mock private HederaToken merkleTokenFungible;
+    @Mock private HederaToken merkleTokenNFT;
     @Mock private OptionValidator validator;
     @Mock private MerkleAccount ownerAccount;
     @Mock private UniqueToken uniqueToken;
@@ -196,7 +195,7 @@ class ApproveAllowanceChecksTest {
         given(merkleTokenNFT.tokenType()).willReturn(TokenType.NON_FUNGIBLE_UNIQUE);
 
         final BackingStore<AccountID, HederaAccount> store = mock(BackingAccounts.class);
-        final BackingStore<TokenID, MerkleToken> tokens = mock(BackingTokens.class);
+        final BackingStore<TokenID, HederaToken> tokens = mock(BackingTokens.class);
         final BackingStore<NftId, UniqueTokenAdapter> nfts = mock(BackingNfts.class);
         uniqueTokenAdapter =
                 UniqueTokenAdapter.wrap(
@@ -480,7 +479,7 @@ class ApproveAllowanceChecksTest {
         given(dynamicProperties.maxAllowanceLimitPerTransaction()).willReturn(120);
 
         final BackingStore<AccountID, HederaAccount> store = mock(BackingAccounts.class);
-        final BackingStore<TokenID, MerkleToken> tokens = mock(BackingTokens.class);
+        final BackingStore<TokenID, HederaToken> tokens = mock(BackingTokens.class);
         final BackingStore<NftId, UniqueTokenAdapter> nfts = mock(BackingNfts.class);
         given(view.asReadOnlyAccountStore()).willReturn(store);
         given(view.asReadOnlyTokenStore()).willReturn(tokens);
@@ -610,8 +609,6 @@ class ApproveAllowanceChecksTest {
         final var allowanceKey =
                 FcTokenAllowanceId.from(
                         EntityNum.fromTokenId(token2), EntityNum.fromAccountId(spender1));
-        final NftId token1Nft1 = new NftId(0, 0, token2.getTokenNum(), 1L);
-        final EntityNumPair numpair = EntityNumPair.fromNftId(token1Nft1);
 
         given(owner.getId()).willReturn(Id.fromGrpcAccount(ownerId1));
         given(tokenStore.loadPossiblyPausedToken(token2Model.getId())).willReturn(token2Model);

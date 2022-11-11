@@ -29,7 +29,7 @@ import com.hedera.services.ledger.HederaLedger;
 import com.hedera.services.ledger.TransactionalLedger;
 import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.ledger.properties.TokenProperty;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.submerkle.EntityId;
 import com.hedera.services.state.validation.ContractStorageLimits;
 import com.hedera.services.state.validation.UsageLimits;
@@ -111,7 +111,7 @@ public interface ContractsModule {
             final HederaLedger ledger,
             final TransactionContext txnCtx,
             final SizeLimitedStorage storage,
-            final TransactionalLedger<TokenID, TokenProperty, MerkleToken> tokensLedger,
+            final TransactionalLedger<TokenID, TokenProperty, HederaToken> tokensLedger,
             final Supplier<VirtualMap<VirtualBlobKey, VirtualBlobValue>> bytecode) {
         return new MutableEntityAccess(
                 ledger, aliasManager, txnCtx, storage, tokensLedger, bytecode);

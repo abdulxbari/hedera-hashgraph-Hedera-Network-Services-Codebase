@@ -41,9 +41,11 @@ import com.google.protobuf.ByteString;
 import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.ledger.accounts.ContractAliases;
 import com.hedera.services.ledger.accounts.HederaAccountCustomizer;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.legacy.core.jproto.JEd25519Key;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.state.enums.TokenType;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTokenRelStatus;
@@ -86,7 +88,7 @@ class StaticEntityAccessTest {
     @Mock private StateView stateView;
     @Mock private ContractAliases aliases;
     @Mock private HederaAccountCustomizer customizer;
-    @Mock private MerkleMap<EntityNum, MerkleToken> tokens;
+    @Mock private FungibleTokensAdapter tokens;
     @Mock private AccountStorageAdapter accounts;
     @Mock private VirtualMap<ContractKey, IterableContractValue> storage;
     @Mock private VirtualMap<VirtualBlobKey, VirtualBlobValue> blobs;
@@ -460,7 +462,7 @@ class StaticEntityAccessTest {
     private static final TokenID tokenId = tokenNum.toGrpcTokenId();
     private static final AccountID accountId = accountNum.toGrpcAccountId();
     private static final AccountID spenderId = spenderNum.toGrpcAccountId();
-    private static final MerkleToken token =
+    private static final HederaToken token =
             new MerkleToken(
                     someExpiry,
                     totalSupply,

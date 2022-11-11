@@ -42,8 +42,8 @@ import com.hedera.services.ledger.backing.BackingTokenRels;
 import com.hedera.services.ledger.backing.BackingTokens;
 import com.hedera.services.state.enums.TokenSupplyType;
 import com.hedera.services.state.enums.TokenType;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleAccount;
-import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleUniqueToken;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.migration.HederaTokenRel;
@@ -88,7 +88,7 @@ class DeleteAllowanceChecksTest {
     @Mock private Account ownerAccount;
     @Mock private StateView view;
     @Mock private OptionValidator validator;
-    @Mock private MerkleToken merkleToken;
+    @Mock private HederaToken hederaToken;
     @Mock private MerkleAccount ownerMerkleAccount;
     @Mock private UniqueToken uniqueToken;
 
@@ -371,7 +371,7 @@ class DeleteAllowanceChecksTest {
     private void setUpForTest() {
         given(payer.getId()).willReturn(Id.fromGrpcAccount(ownerId));
         final BackingStore<AccountID, HederaAccount> store = mock(BackingAccounts.class);
-        final BackingStore<TokenID, MerkleToken> tokens = mock(BackingTokens.class);
+        final BackingStore<TokenID, HederaToken> tokens = mock(BackingTokens.class);
         final BackingStore<NftId, UniqueTokenAdapter> nfts = mock(BackingNfts.class);
 
         uniqueTokenAdapter =
@@ -390,12 +390,12 @@ class DeleteAllowanceChecksTest {
         given(ownerMerkleAccount.getNumPositiveBalances()).willReturn(0);
 
         given(store.getImmutableRef(ownerId)).willReturn(ownerMerkleAccount);
-        given(tokens.getImmutableRef(nftToken)).willReturn(merkleToken);
+        given(tokens.getImmutableRef(nftToken)).willReturn(hederaToken);
         given(nfts.getImmutableRef(nft1)).willReturn(uniqueTokenAdapter);
         given(nfts.getImmutableRef(nft2)).willReturn(uniqueTokenAdapter);
         given(rels.contains(Pair.of(ownerId, nftToken))).willReturn(true);
 
-        given(merkleToken.treasury()).willReturn(EntityId.fromGrpcAccountId(ownerId));
-        given(merkleToken.tokenType()).willReturn(TokenType.NON_FUNGIBLE_UNIQUE);
+        given(hederaToken.treasury()).willReturn(EntityId.fromGrpcAccountId(ownerId));
+        given(hederaToken.tokenType()).willReturn(TokenType.NON_FUNGIBLE_UNIQUE);
     }
 }

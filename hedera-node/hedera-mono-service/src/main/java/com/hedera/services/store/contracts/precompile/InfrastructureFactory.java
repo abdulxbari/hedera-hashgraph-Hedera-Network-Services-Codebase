@@ -32,7 +32,7 @@ import com.hedera.services.ledger.properties.AccountProperty;
 import com.hedera.services.ledger.properties.NftProperty;
 import com.hedera.services.ledger.properties.TokenRelProperty;
 import com.hedera.services.records.RecordsHistorian;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.migration.HederaTokenRel;
 import com.hedera.services.state.migration.UniqueTokenAdapter;
@@ -126,7 +126,7 @@ public class InfrastructureFactory {
     public TypedTokenStore newTokenStore(
             final AccountStore accountStore,
             final SideEffectsTracker sideEffects,
-            final BackingStore<TokenID, MerkleToken> tokens,
+            final BackingStore<TokenID, HederaToken> tokens,
             final BackingStore<NftId, UniqueTokenAdapter> uniqueTokens,
             final BackingStore<Pair<AccountID, TokenID>, HederaTokenRel> tokenRels) {
         return new TypedTokenStore(accountStore, tokens, uniqueTokens, tokenRels, sideEffects);
@@ -134,7 +134,7 @@ public class InfrastructureFactory {
 
     public HederaTokenStore newHederaTokenStore(
             final SideEffectsTracker sideEffects,
-            final BackingStore<TokenID, MerkleToken> backingTokens,
+            final BackingStore<TokenID, HederaToken> backingTokens,
             final TransactionalLedger<NftId, NftProperty, UniqueTokenAdapter> nftsLedger,
             final TransactionalLedger<Pair<AccountID, TokenID>, TokenRelProperty, HederaTokenRel>
                     tokenRelsLedger) {

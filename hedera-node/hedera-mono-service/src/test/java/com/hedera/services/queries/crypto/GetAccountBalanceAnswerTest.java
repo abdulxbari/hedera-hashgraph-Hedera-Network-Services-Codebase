@@ -37,6 +37,7 @@ import com.hedera.services.context.MutableStateChildren;
 import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.ledger.accounts.AliasManager;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.legacy.core.jproto.JEd25519Key;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.legacy.proto.utils.ByteStringUtils;
@@ -355,7 +356,7 @@ class GetAccountBalanceAnswerTest {
         tokenRels.put(dKey, dRel);
         dRel.setPrev(cToken.getTokenNum());
 
-        MerkleMap<EntityNum, MerkleToken> tokens = new MerkleMap<>();
+        var tokens = FungibleTokensAdapter.newInMemory();
         tokens.put(EntityNum.fromTokenId(aToken), notDeleted);
         tokens.put(EntityNum.fromTokenId(bToken), alsoNotDeleted);
         tokens.put(EntityNum.fromTokenId(cToken), deleted);

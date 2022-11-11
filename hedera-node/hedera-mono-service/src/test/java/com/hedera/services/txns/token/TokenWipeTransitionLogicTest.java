@@ -41,7 +41,7 @@ import com.hedera.services.context.TransactionContext;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.exceptions.InvalidTransactionException;
 import com.hedera.services.state.enums.TokenType;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.store.AccountStore;
 import com.hedera.services.store.TypedTokenStore;
 import com.hedera.services.store.models.Account;
@@ -68,7 +68,7 @@ class TokenWipeTransitionLogicTest {
     private TransactionContext txnCtx;
     private TokenWipeAccessor accessor;
     private SwirldsTxnAccessor swirldsTxnAccessor;
-    private MerkleToken merkleToken;
+    private HederaToken hederaToken;
     private Token token;
 
     private TransactionBody tokenWipeTxnBody;
@@ -82,7 +82,7 @@ class TokenWipeTransitionLogicTest {
     @BeforeEach
     void setup() {
         swirldsTxnAccessor = mock(SwirldsTxnAccessor.class);
-        merkleToken = mock(MerkleToken.class);
+        hederaToken = mock(HederaToken.class);
         token = mock(Token.class);
         account = mock(Account.class);
 
@@ -275,8 +275,8 @@ class TokenWipeTransitionLogicTest {
                         .build();
         addToTxn();
         given(txnCtx.accessor()).willReturn(accessor);
-        given(merkleToken.totalSupply()).willReturn(totalAmount);
-        given(merkleToken.tokenType()).willReturn(TokenType.FUNGIBLE_COMMON);
+        given(hederaToken.totalSupply()).willReturn(totalAmount);
+        given(hederaToken.tokenType()).willReturn(TokenType.FUNGIBLE_COMMON);
         given(typedTokenStore.loadToken(any())).willReturn(token);
         given(token.getType()).willReturn(TokenType.FUNGIBLE_COMMON);
         given(accountStore.loadAccount(any())).willReturn(account);
@@ -295,8 +295,8 @@ class TokenWipeTransitionLogicTest {
                         .build();
         addToTxn();
         given(txnCtx.accessor()).willReturn(accessor);
-        given(merkleToken.totalSupply()).willReturn(totalAmount);
-        given(merkleToken.tokenType()).willReturn(TokenType.NON_FUNGIBLE_UNIQUE);
+        given(hederaToken.totalSupply()).willReturn(totalAmount);
+        given(hederaToken.tokenType()).willReturn(TokenType.NON_FUNGIBLE_UNIQUE);
         given(typedTokenStore.loadToken(any())).willReturn(token);
         given(token.getType()).willReturn(TokenType.NON_FUNGIBLE_UNIQUE);
     }

@@ -15,22 +15,22 @@
  */
 package com.hedera.services.ledger.backing;
 
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hederahashgraph.api.proto.java.TokenID;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class HashMapBackingTokens implements BackingStore<TokenID, MerkleToken> {
-    private Map<TokenID, MerkleToken> tokens = new HashMap<>();
+public class HashMapBackingTokens implements BackingStore<TokenID, HederaToken> {
+    private final Map<TokenID, HederaToken> tokens = new HashMap<>();
 
     @Override
-    public MerkleToken getRef(TokenID id) {
+    public HederaToken getRef(TokenID id) {
         return tokens.get(id);
     }
 
     @Override
-    public void put(TokenID id, MerkleToken Token) {
+    public void put(TokenID id, HederaToken Token) {
         tokens.put(id, Token);
     }
 
@@ -55,7 +55,7 @@ public class HashMapBackingTokens implements BackingStore<TokenID, MerkleToken> 
     }
 
     @Override
-    public MerkleToken getImmutableRef(TokenID id) {
+    public HederaToken getImmutableRef(TokenID id) {
         return tokens.get(id);
     }
 }

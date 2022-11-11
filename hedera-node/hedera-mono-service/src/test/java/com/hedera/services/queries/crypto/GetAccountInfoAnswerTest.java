@@ -46,10 +46,11 @@ import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.ledger.accounts.staking.RewardCalculator;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.legacy.core.jproto.JKey;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.state.merkle.MerkleStakingInfo;
-import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTokenRelStatus;
 import com.hedera.services.state.migration.AccountStorageAdapter;
 import com.hedera.services.state.migration.TokenRelStorageAdapter;
@@ -90,10 +91,10 @@ class GetAccountInfoAnswerTest {
     @Mock private ScheduleStore scheduleStore;
     @Mock private AccountStorageAdapter accounts;
     @Mock private MerkleMap<EntityNum, MerkleStakingInfo> stakingInfo;
-    @Mock private MerkleMap<EntityNum, MerkleToken> tokens;
+    @Mock private FungibleTokensAdapter tokens;
     @Mock private OptionValidator optionValidator;
-    @Mock private MerkleToken token;
-    @Mock private MerkleToken deletedToken;
+    @Mock private HederaToken token;
+    @Mock private HederaToken deletedToken;
     @Mock private NetworkInfo networkInfo;
     @Mock private AliasManager aliasManager;
     @Mock private GlobalDynamicProperties dynamicProperties;
@@ -256,7 +257,7 @@ class GetAccountInfoAnswerTest {
     @SuppressWarnings("unchecked")
     void getsTheAccountInfo() throws Throwable {
         given(dynamicProperties.maxTokensRelsPerInfoQuery()).willReturn(maxTokensPerAccountInfo);
-        final MerkleMap<EntityNum, MerkleToken> tokens = mock(MerkleMap.class);
+        final var tokens = mock(FungibleTokensAdapter.class);
         children.setTokens(tokens);
 
         given(token.hasKycKey()).willReturn(true);

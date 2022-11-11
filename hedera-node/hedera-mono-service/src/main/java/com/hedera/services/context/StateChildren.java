@@ -16,11 +16,11 @@
 package com.hedera.services.context;
 
 import com.google.protobuf.ByteString;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.state.merkle.MerkleNetworkContext;
 import com.hedera.services.state.merkle.MerkleScheduledTransactions;
 import com.hedera.services.state.merkle.MerkleSpecialFiles;
 import com.hedera.services.state.merkle.MerkleStakingInfo;
-import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTopic;
 import com.hedera.services.state.migration.AccountStorageAdapter;
 import com.hedera.services.state.migration.RecordsStorageAdapter;
@@ -45,7 +45,7 @@ public interface StateChildren {
 
     MerkleMap<EntityNum, MerkleTopic> topics();
 
-    MerkleMap<EntityNum, MerkleToken> tokens();
+    FungibleTokensAdapter tokens();
 
     MerkleScheduledTransactions schedules();
 

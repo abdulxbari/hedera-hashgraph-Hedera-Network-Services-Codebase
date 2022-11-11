@@ -68,6 +68,7 @@ import com.hedera.services.ledger.backing.BackingAccounts;
 import com.hedera.services.ledger.backing.BackingNfts;
 import com.hedera.services.ledger.backing.BackingTokenRels;
 import com.hedera.services.ledger.backing.BackingTokens;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.legacy.core.jproto.JECDSASecp256k1Key;
 import com.hedera.services.legacy.core.jproto.JEd25519Key;
 import com.hedera.services.legacy.core.jproto.JKey;
@@ -187,7 +188,7 @@ class StateViewTest {
     private Map<FileID, byte[]> contents;
     private Map<FileID, HFileMeta> attrs;
 
-    private MerkleMap<EntityNum, MerkleToken> tokens;
+    private FungibleTokensAdapter tokens;
     private MerkleMap<EntityNum, MerkleTopic> topics;
     private AccountStorageAdapter contracts;
     private UniqueTokenMapAdapter uniqueTokens;
@@ -284,7 +285,7 @@ class StateViewTest {
         tokenRels.put(tokenAssociationId, tokenAccountRel);
         tokenRels.put(nftAssociationId, nftAccountRel);
 
-        tokens = (MerkleMap<EntityNum, MerkleToken>) mock(MerkleMap.class);
+        tokens = mock(FungibleTokensAdapter.class);
         token =
                 new MerkleToken(
                         Long.MAX_VALUE,
@@ -715,7 +716,7 @@ class StateViewTest {
 
     @Test
     void getTokenTypeException() {
-        given(tokens.get(tokenId)).willThrow(new RuntimeException());
+        given(tokens.get(EntityNum.fromTokenId(tokenId))).willThrow(new RuntimeException());    //??? is this entitynum conversion ok?
 
         final var actualTokenType = subject.tokenType(tokenId);
 
@@ -1192,7 +1193,7 @@ class StateViewTest {
 
     @Test
     void abortsNftGetWhenMissingTreasuryAsExpected() {
-        tokens = mock(MerkleMap.class);
+        tokens = mock(FungibleTokensAdapter.class);
         targetNft.setOwner(MISSING_ENTITY_ID);
 
         final var optionalNftInfo = subject.infoForNft(targetNftId);

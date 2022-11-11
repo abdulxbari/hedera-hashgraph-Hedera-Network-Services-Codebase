@@ -26,7 +26,7 @@ import com.hedera.services.context.annotations.CompositeProps;
 import com.hedera.services.context.primitives.StateView;
 import com.hedera.services.context.properties.GlobalDynamicProperties;
 import com.hedera.services.context.properties.PropertySource;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.migration.TokenRelStorageAdapter;
 import com.hedera.services.stream.proto.AllAccountBalances;
@@ -40,7 +40,6 @@ import com.swirlds.common.crypto.Cryptography;
 import com.swirlds.common.crypto.HashingOutputStream;
 import com.swirlds.common.crypto.Signature;
 import com.swirlds.common.system.NodeId;
-import com.swirlds.merkle.map.MerkleMap;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -262,7 +261,7 @@ public class SignedStateBalancesExporter implements BalancesExporter {
     private void addTokenBalances(
             final HederaAccount account,
             final SingleAccountBalances.Builder sabBuilder,
-            final MerkleMap<EntityNum, MerkleToken> tokens,
+            final FungibleTokensAdapter tokens,
             final TokenRelStorageAdapter tokenAssociations) {
         doBoundedIteration(
                 tokenAssociations,

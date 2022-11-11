@@ -30,6 +30,7 @@ import com.hedera.services.ServicesState;
 import com.hedera.services.state.merkle.*;
 import com.hedera.services.state.submerkle.ExpirableTxnRecord;
 import com.hedera.services.state.virtual.EntityNumVirtualKey;
+import com.hedera.services.state.virtual.entities.FungibleOnDiskToken;
 import com.hedera.services.state.virtual.VirtualMapFactory;
 import com.hedera.services.state.virtual.entities.OnDiskAccount;
 import com.hedera.services.state.virtual.entities.OnDiskTokenRel;
@@ -63,13 +64,14 @@ class MapMigrationToDiskTest {
     @Mock private VirtualMap<EntityNumVirtualKey, OnDiskTokenRel> tokenRelStore;
     @Mock private Function<MerkleAccountState, OnDiskAccount> accountMigrator;
     @Mock private Function<MerkleTokenRelStatus, OnDiskTokenRel> tokenRelMigrator;
+    @Mock private Function<MerkleToken, FungibleOnDiskToken> nonUniqueTokenMigrator;
 
     @Test
     @SuppressWarnings("unchecked")
     void migratesAccountsAsExpected() throws ConstructableRegistryException {
         registerForAccountsMerkleMap();
 
-        final var accountsOnly = new ToDiskMigrations(true, false);
+        final var accountsOnly = new ToDiskMigrations(true, false, false);
         final var aAccount = nextAccount(false);
         final var bAccount = nextAccount(true);
         final MerkleMap<EntityNum, MerkleAccount> liveAccounts = new MerkleMap<>();
@@ -93,7 +95,8 @@ class MapMigrationToDiskTest {
                 accountsOnly,
                 virtualMapFactory,
                 accountMigrator,
-                tokenRelMigrator);
+                tokenRelMigrator,
+            nonUniqueTokenMigrator);
 
         verify(mutableState).setChild(ACCOUNTS, accountStore);
         verify(mutableState).setChild(eq(StateChildIndices.PAYER_RECORDS), captor.capture());
@@ -116,7 +119,7 @@ class MapMigrationToDiskTest {
     void migratesTokenRelsAsExpected() throws ConstructableRegistryException {
         registerForTokenRelsMerkleMap();
 
-        final var relsOnly = new ToDiskMigrations(false, true);
+        final var relsOnly = new ToDiskMigrations(false, true, false);
         final var aRel = nextRelStats(false);
         final var bRel = nextRelStats(true);
         final MerkleMap<EntityNumPair, MerkleTokenRelStatus> liveRels = new MerkleMap<>();
@@ -135,7 +138,8 @@ class MapMigrationToDiskTest {
         given(tokenRelMigrator.apply(bRel)).willReturn(bPretendOnDiskRel);
 
         MapMigrationToDisk.migrateToDiskAsApropos(
-                1, mutableState, relsOnly, virtualMapFactory, accountMigrator, tokenRelMigrator);
+                1, mutableState, relsOnly, virtualMapFactory, accountMigrator, tokenRelMigrator,
+            nonUniqueTokenMigrator);
 
         verify(mutableState).setChild(TOKEN_ASSOCIATIONS, tokenRelStore);
         // and:
@@ -143,6 +147,10 @@ class MapMigrationToDiskTest {
         verify(tokenRelStore).put(EntityNumVirtualKey.fromPair(bNumPair), bPretendOnDiskRel);
         // and:
         verify(tokenRelStore, times(2)).copy();
+    }
+
+    void migratesNonUniqueTokensAsExpected() throws ConstructableRegistryException {
+        //todo
     }
 
     private MerkleAccount nextAccount(final boolean withRecords) {

@@ -49,8 +49,8 @@ import com.hedera.services.ledger.properties.TokenRelProperty;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.records.RecordsHistorian;
 import com.hedera.services.state.EntityCreator;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleAccount;
-import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.migration.HederaTokenRel;
 import com.hedera.services.state.migration.UniqueTokenAdapter;
@@ -108,7 +108,7 @@ public class HederaLedger {
     private final OptionValidator validator;
     private final SideEffectsTracker sideEffectsTracker;
     private final RecordsHistorian historian;
-    private final TransactionalLedger<TokenID, TokenProperty, MerkleToken> tokensLedger;
+    private final TransactionalLedger<TokenID, TokenProperty, HederaToken> tokensLedger;
     private final TransactionalLedger<AccountID, AccountProperty, HederaAccount> accountsLedger;
 
     private MutableEntityAccess mutableEntityAccess;
@@ -125,7 +125,7 @@ public class HederaLedger {
             final OptionValidator validator,
             final SideEffectsTracker sideEffectsTracker,
             final RecordsHistorian historian,
-            final TransactionalLedger<TokenID, TokenProperty, MerkleToken> tokensLedger,
+            final TransactionalLedger<TokenID, TokenProperty, HederaToken> tokensLedger,
             final TransactionalLedger<AccountID, AccountProperty, HederaAccount> accountsLedger,
             final TransferLogic transferLogic,
             final AutoCreationLogic autoCreationLogic) {

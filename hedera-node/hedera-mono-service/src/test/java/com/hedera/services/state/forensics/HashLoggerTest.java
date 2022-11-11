@@ -18,10 +18,10 @@ package com.hedera.services.state.forensics;
 import static org.mockito.BDDMockito.given;
 
 import com.hedera.services.ServicesState;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.state.merkle.MerkleNetworkContext;
 import com.hedera.services.state.merkle.MerkleScheduledTransactions;
 import com.hedera.services.state.merkle.MerkleSpecialFiles;
-import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTopic;
 import com.hedera.services.state.migration.AccountStorageAdapter;
 import com.hedera.services.state.migration.TokenRelStorageAdapter;
@@ -47,7 +47,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class HashLoggerTest {
     @Mock private AccountStorageAdapter accounts;
     @Mock private MerkleMap<EntityNum, MerkleTopic> topics;
-    @Mock private MerkleMap<EntityNum, MerkleToken> tokens;
+    @Mock private FungibleTokensAdapter tokens;
     @Mock private UniqueTokenMapAdapter uniqueTokens;
     @Mock private MerkleScheduledTransactions schedules;
     @Mock private TokenRelStorageAdapter tokenAssociations;

@@ -23,7 +23,7 @@ import com.hedera.services.ledger.properties.AccountProperty;
 import com.hedera.services.ledger.properties.TokenProperty;
 import com.hedera.services.records.RecordsHistorian;
 import com.hedera.services.state.EntityCreator;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.store.schedule.ScheduleStore;
 import com.hedera.services.store.tokens.TokenStore;
@@ -52,7 +52,7 @@ public interface LedgerModule {
             final OptionValidator validator,
             final SideEffectsTracker sideEffectsTracker,
             final RecordsHistorian recordsHistorian,
-            final TransactionalLedger<TokenID, TokenProperty, MerkleToken> tokensLedger,
+            final TransactionalLedger<TokenID, TokenProperty, HederaToken> tokensLedger,
             final TransactionalLedger<AccountID, AccountProperty, HederaAccount> accountsLedger,
             final AutoCreationLogic autoCreationLogic,
             final TransferLogic transferLogic) {

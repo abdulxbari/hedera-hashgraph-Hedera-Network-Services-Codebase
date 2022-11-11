@@ -23,8 +23,8 @@ import static org.mockito.Mockito.verify;
 import com.hedera.services.context.MutableStateChildren;
 import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.ledger.backing.BackingStore;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleAccount;
-import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.migration.AccountStorageAdapter;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.migration.HederaTokenRel;
@@ -53,7 +53,7 @@ class StoreInitializationFlowTest {
     @Mock private AliasManager aliasManager;
     @Mock private BackingStore<AccountID, HederaAccount> backingAccounts;
     @Mock private BackingStore<NftId, UniqueTokenAdapter> backingNfts;
-    @Mock private BackingStore<TokenID, MerkleToken> backingTokens;
+    @Mock private BackingStore<TokenID, HederaToken> backingTokens;
     @Mock private BackingStore<Pair<AccountID, TokenID>, HederaTokenRel> backingTokenRels;
     @Mock private MerkleMap<EntityNum, MerkleAccount> accounts;
 

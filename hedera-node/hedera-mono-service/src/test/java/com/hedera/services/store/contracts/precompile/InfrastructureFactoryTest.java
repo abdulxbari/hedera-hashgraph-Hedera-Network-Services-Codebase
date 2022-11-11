@@ -32,7 +32,7 @@ import com.hedera.services.ledger.properties.AccountProperty;
 import com.hedera.services.ledger.properties.NftProperty;
 import com.hedera.services.ledger.properties.TokenRelProperty;
 import com.hedera.services.records.RecordsHistorian;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.migration.HederaTokenRel;
 import com.hedera.services.state.migration.UniqueTokenAdapter;
@@ -94,7 +94,7 @@ class InfrastructureFactoryTest {
             tokenRelsLedger;
 
     @Mock private TransactionalLedger<AccountID, AccountProperty, HederaAccount> accounts;
-    @Mock private BackingStore<TokenID, MerkleToken> tokens;
+    @Mock private BackingStore<TokenID, HederaToken> tokens;
     @Mock private BackingStore<NftId, UniqueTokenAdapter> uniqueTokens;
     @Mock private BackingStore<Pair<AccountID, TokenID>, HederaTokenRel> tokenRels;
     @Mock private MessageFrame frame;

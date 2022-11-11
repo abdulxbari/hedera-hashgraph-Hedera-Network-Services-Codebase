@@ -31,7 +31,7 @@ import com.hedera.services.ledger.accounts.AliasManager;
 import com.hedera.services.ledger.accounts.HederaAccountCustomizer;
 import com.hedera.services.ledger.properties.AccountProperty;
 import com.hedera.services.ledger.properties.TokenProperty;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.migration.HederaAccount;
 import com.hedera.services.state.virtual.VirtualBlobKey;
 import com.hedera.services.state.virtual.VirtualBlobValue;
@@ -52,7 +52,7 @@ public class MutableEntityAccess implements EntityAccess {
     private final TransactionContext txnCtx;
     private final SizeLimitedStorage sizeLimitedStorage;
     private final Supplier<VirtualMap<VirtualBlobKey, VirtualBlobValue>> bytecode;
-    private final TransactionalLedger<TokenID, TokenProperty, MerkleToken> tokensLedger;
+    private final TransactionalLedger<TokenID, TokenProperty, HederaToken> tokensLedger;
 
     @Inject
     public MutableEntityAccess(
@@ -60,7 +60,7 @@ public class MutableEntityAccess implements EntityAccess {
             final AliasManager aliasManager,
             final TransactionContext txnCtx,
             final SizeLimitedStorage sizeLimitedStorage,
-            final TransactionalLedger<TokenID, TokenProperty, MerkleToken> tokensLedger,
+            final TransactionalLedger<TokenID, TokenProperty, HederaToken> tokensLedger,
             final Supplier<VirtualMap<VirtualBlobKey, VirtualBlobValue>> bytecode) {
         this.txnCtx = txnCtx;
         this.ledger = ledger;

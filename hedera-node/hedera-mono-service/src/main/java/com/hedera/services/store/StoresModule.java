@@ -33,17 +33,23 @@ import com.hedera.services.ledger.backing.BackingNfts;
 import com.hedera.services.ledger.backing.BackingStore;
 import com.hedera.services.ledger.backing.BackingTokenRels;
 import com.hedera.services.ledger.backing.BackingTokens;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.ledger.interceptors.*;
 import com.hedera.services.ledger.properties.AccountProperty;
 import com.hedera.services.ledger.properties.ChangeSummaryManager;
 import com.hedera.services.ledger.properties.NftProperty;
 import com.hedera.services.ledger.properties.TokenProperty;
 import com.hedera.services.ledger.properties.TokenRelProperty;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.state.merkle.MerkleNetworkContext;
 import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTokenRelStatus;
-import com.hedera.services.state.migration.*;
+import com.hedera.services.state.migration.HederaAccount;
+import com.hedera.services.state.migration.HederaTokenRel;
+import com.hedera.services.state.migration.TokenRelStorageAdapter;
+import com.hedera.services.state.migration.UniqueTokenAdapter;
+import com.hedera.services.state.migration.UniqueTokenMapAdapter;
 import com.hedera.services.state.validation.UsageLimits;
 import com.hedera.services.state.virtual.entities.OnDiskAccount;
 import com.hedera.services.state.virtual.entities.OnDiskTokenRel;
@@ -53,10 +59,8 @@ import com.hedera.services.store.schedule.ScheduleStore;
 import com.hedera.services.store.tokens.HederaTokenStore;
 import com.hedera.services.store.tokens.TokenStore;
 import com.hedera.services.store.tokens.annotations.AreTreasuryWildcardsEnabled;
-import com.hedera.services.utils.EntityNum;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.TokenID;
-import com.swirlds.merkle.map.MerkleMap;
 import dagger.Binds;
 import dagger.Module;
 import dagger.Provides;
@@ -104,9 +108,9 @@ public interface StoresModule {
 
     @Provides
     @Singleton
-    static TransactionalLedger<TokenID, TokenProperty, MerkleToken> provideTokensLedger(
+    static TransactionalLedger<TokenID, TokenProperty, HederaToken> provideTokensLedger(
             final UsageLimits usageLimits,
-            final Supplier<MerkleMap<EntityNum, MerkleToken>> tokens) {
+            final Supplier<FungibleTokensAdapter> tokens) {
         final var interceptor = new TokensCommitInterceptor(usageLimits);
         final var tokensLedger =
                 new TransactionalLedger<>(
@@ -120,8 +124,8 @@ public interface StoresModule {
 
     @Binds
     @Singleton
-    BackingStore<TokenID, MerkleToken> bindBackingTokens(
-            TransactionalLedger<TokenID, TokenProperty, MerkleToken> tokensLedger);
+    BackingStore<TokenID, HederaToken> bindBackingTokens(
+            TransactionalLedger<TokenID, TokenProperty, HederaToken> tokensLedger);
 
     @Binds
     @Singleton

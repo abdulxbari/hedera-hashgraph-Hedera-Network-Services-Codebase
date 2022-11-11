@@ -31,7 +31,7 @@ import com.hedera.services.context.SideEffectsTracker;
 import com.hedera.services.exceptions.InvalidTransactionException;
 import com.hedera.services.ledger.SigImpactHistorian;
 import com.hedera.services.state.enums.TokenType;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.store.contracts.WorldLedgers;
 import com.hedera.services.store.models.Id;
 import com.hedera.services.store.models.NftId;
@@ -76,7 +76,7 @@ public class TokenUpdateLogic {
         if (op.hasExpiry()) {
             validateTrueOrRevert(validator.isValidExpiry(op.getExpiry()), INVALID_EXPIRATION_TIME);
         }
-        MerkleToken token = tokenStore.get(tokenID);
+        final var token = tokenStore.get(tokenID);
         checkTokenPreconditions(token, op);
 
         assertAutoRenewValidity(op, token);
@@ -148,7 +148,7 @@ public class TokenUpdateLogic {
         if (op.hasExpiry()) {
             validateTrueOrRevert(validator.isValidExpiry(op.getExpiry()), INVALID_EXPIRATION_TIME);
         }
-        MerkleToken token = tokenStore.get(tokenID);
+        final var token = tokenStore.get(tokenID);
         checkTokenPreconditions(token, op);
         assertAutoRenewValidity(op, token);
 
@@ -161,7 +161,7 @@ public class TokenUpdateLogic {
 
     public void updateTokenKeys(TokenUpdateTransactionBody op, long now) {
         final var tokenID = tokenValidityCheck(op);
-        MerkleToken token = tokenStore.get(tokenID);
+        final var token = tokenStore.get(tokenID);
         checkTokenPreconditions(token, op);
         final var outcome = tokenStore.update(op, now);
 
@@ -177,7 +177,7 @@ public class TokenUpdateLogic {
         return tokenID;
     }
 
-    private void checkTokenPreconditions(MerkleToken token, TokenUpdateTransactionBody op) {
+    private void checkTokenPreconditions(HederaToken token, TokenUpdateTransactionBody op) {
         if (!token.hasAdminKey())
             validateTrueOrRevert((affectsExpiryAtMost(op)), TOKEN_IS_IMMUTABLE);
         validateFalseOrRevert(token.isDeleted(), TOKEN_WAS_DELETED);
@@ -188,7 +188,7 @@ public class TokenUpdateLogic {
         return TokenUpdateValidator.validate(txnBody, validator);
     }
 
-    private void assertAutoRenewValidity(TokenUpdateTransactionBody op, MerkleToken token) {
+    private void assertAutoRenewValidity(TokenUpdateTransactionBody op, HederaToken token) {
         if (op.hasAutoRenewAccount()) {
             final var newAutoRenew = op.getAutoRenewAccount();
             validateTrueOrRevert(
@@ -209,7 +209,7 @@ public class TokenUpdateLogic {
 
     private ResponseCodeEnum prepTreasuryChange(
             final TokenID id,
-            final MerkleToken token,
+            final HederaToken token,
             final AccountID newTreasury,
             final AccountID oldTreasury) {
         var status = OK;

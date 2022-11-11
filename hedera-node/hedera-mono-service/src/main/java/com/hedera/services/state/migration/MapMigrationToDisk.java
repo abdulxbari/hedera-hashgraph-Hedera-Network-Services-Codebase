@@ -23,8 +23,10 @@ import com.hedera.services.ServicesState;
 import com.hedera.services.state.merkle.MerkleAccount;
 import com.hedera.services.state.merkle.MerkleAccountState;
 import com.hedera.services.state.merkle.MerklePayerRecords;
+import com.hedera.services.state.merkle.MerkleToken;
 import com.hedera.services.state.merkle.MerkleTokenRelStatus;
 import com.hedera.services.state.virtual.EntityNumVirtualKey;
+import com.hedera.services.state.virtual.entities.FungibleOnDiskToken;
 import com.hedera.services.state.virtual.VirtualMapFactory;
 import com.hedera.services.state.virtual.entities.OnDiskAccount;
 import com.hedera.services.state.virtual.entities.OnDiskTokenRel;
@@ -35,6 +37,7 @@ import com.swirlds.merkle.map.MerkleMap;
 import com.swirlds.virtualmap.VirtualMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -49,13 +52,17 @@ public class MapMigrationToDisk {
             final ToDiskMigrations toDiskMigrations,
             final VirtualMapFactory virtualMapFactory,
             final Function<MerkleAccountState, OnDiskAccount> accountMigrator,
-            final Function<MerkleTokenRelStatus, OnDiskTokenRel> tokenRelMigrator) {
+            final Function<MerkleTokenRelStatus, OnDiskTokenRel> tokenRelMigrator,
+            final Function<MerkleToken, FungibleOnDiskToken> nonUniqueTokenMigrator) {
         if (toDiskMigrations.doAccounts()) {
             migrateAccountsToDisk(
                     insertionsPerCopy, mutableState, virtualMapFactory, accountMigrator);
         }
         if (toDiskMigrations.doTokenRels()) {
             migrateRelsToDisk(insertionsPerCopy, mutableState, virtualMapFactory, tokenRelMigrator);
+        }
+        if (toDiskMigrations.doNonUniqueTokens()) {
+          migrateNonUniqueTokensToDisk(insertionsPerCopy, mutableState, virtualMapFactory, nonUniqueTokenMigrator);
         }
     }
 
@@ -132,6 +139,15 @@ public class MapMigrationToDisk {
                 "token-rels-to-disk migration");
         mutableState.setChild(TOKEN_ASSOCIATIONS, onDiskRels.get());
     }
+
+  private static void migrateNonUniqueTokensToDisk(
+      final int insertionsPerCopy,
+      final ServicesState mutableState,
+      final VirtualMapFactory virtualMapFactory,
+      final Function<MerkleToken, FungibleOnDiskToken> nonUniqueTokensMigrator) {
+
+      throw new NotImplementedException();
+  }
 
     private MapMigrationToDisk() {
         throw new UnsupportedOperationException("Utility Class");

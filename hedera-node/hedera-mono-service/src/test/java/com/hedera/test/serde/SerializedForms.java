@@ -62,6 +62,7 @@ import com.hedera.services.state.submerkle.TxnId;
 import com.hedera.services.state.submerkle.TxnIdSerdeTest;
 import com.hedera.services.state.virtual.ContractKey;
 import com.hedera.services.state.virtual.ContractValue;
+import com.hedera.services.state.virtual.entities.FungibleOnDiskToken;
 import com.hedera.services.state.virtual.VirtualBlobKey;
 import com.hedera.services.state.virtual.VirtualBlobValue;
 import com.hedera.services.state.virtual.entities.OnDiskAccount;
@@ -237,6 +238,10 @@ public class SerializedForms {
                     entry(
                             MerkleSpecialFiles.class,
                             SeededPropertySource::nextMerkleSpecialFiles,
+                            MIN_TEST_CASES_PER_VERSION),
+                    entry(
+                            FungibleOnDiskToken.class,
+                            SeededPropertySource::nextHederaToken,
                             MIN_TEST_CASES_PER_VERSION),
                     entry(
                             MerkleToken.class,

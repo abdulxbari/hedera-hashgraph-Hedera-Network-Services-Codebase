@@ -23,7 +23,7 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.TOKEN_WAS_DELE
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.UNEXPECTED_TOKEN_DECIMALS;
 
 import com.hedera.services.ledger.BalanceChange;
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.store.Store;
 import com.hedera.services.store.models.NftId;
 import com.hederahashgraph.api.proto.java.AccountID;
@@ -33,9 +33,9 @@ import com.hederahashgraph.api.proto.java.TokenUpdateTransactionBody;
 import java.util.function.Consumer;
 
 /** Defines a type able to manage arbitrary tokens. */
-public interface TokenStore extends Store<TokenID, MerkleToken> {
+public interface TokenStore extends Store<TokenID, HederaToken> {
     TokenID MISSING_TOKEN = TokenID.getDefaultInstance();
-    Consumer<MerkleToken> DELETION = token -> token.setDeleted(true);
+    Consumer<HederaToken> DELETION = token -> token.setDeleted(true);
 
     boolean associationExists(AccountID aId, TokenID tId);
 

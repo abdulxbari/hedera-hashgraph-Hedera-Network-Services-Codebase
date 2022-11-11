@@ -49,9 +49,11 @@ import com.hedera.services.ledger.backing.BackingNfts;
 import com.hedera.services.ledger.backing.BackingStore;
 import com.hedera.services.ledger.backing.BackingTokenRels;
 import com.hedera.services.ledger.backing.BackingTokens;
+import com.hedera.services.state.migration.FungibleTokensAdapter;
 import com.hedera.services.legacy.core.jproto.JKey;
 import com.hedera.services.legacy.core.jproto.JKeyList;
 import com.hedera.services.sigs.sourcing.KeyType;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.merkle.MerkleNetworkContext;
 import com.hedera.services.state.merkle.MerkleStakingInfo;
 import com.hedera.services.state.merkle.MerkleToken;
@@ -120,7 +122,7 @@ public class StateView {
     static final byte[] EMPTY_BYTES = new byte[0];
 
     public static final JKey EMPTY_WACL = new JKeyList();
-    public static final MerkleToken REMOVED_TOKEN =
+    public static final HederaToken REMOVED_TOKEN =
             new MerkleToken(0L, 0L, 0, "", "", false, false, MISSING_ENTITY_ID);
 
     private final ScheduleStore scheduleStore;
@@ -131,7 +133,7 @@ public class StateView {
     Map<FileID, byte[]> fileContents;
     Map<FileID, HFileMeta> fileAttrs;
 
-    private BackingStore<TokenID, MerkleToken> backingTokens = null;
+    private BackingStore<TokenID, HederaToken> backingTokens = null;
     private BackingStore<AccountID, HederaAccount> backingAccounts = null;
     private BackingStore<NftId, UniqueTokenAdapter> backingNfts = null;
     private BackingStore<Pair<AccountID, TokenID>, HederaTokenRel> backingRels = null;
@@ -168,7 +170,7 @@ public class StateView {
         return Optional.ofNullable(contractBytecode.get(contractId.toRawEvmAddress()));
     }
 
-    public Optional<MerkleToken> tokenWith(final TokenID id) {
+    public Optional<HederaToken> tokenWith(final TokenID id) {
         return Optional.ofNullable(stateChildren.tokens().get(EntityNum.fromTokenId(id)));
     }
 
@@ -195,10 +197,10 @@ public class StateView {
                             .setDecimals(token.decimals())
                             .setExpiry(Timestamp.newBuilder().setSeconds(token.expiry()));
 
-            final var adminCandidate = token.adminKey();
+            final var adminCandidate = Optional.ofNullable(token.adminKey());
             adminCandidate.ifPresent(k -> info.setAdminKey(asKeyUnchecked(k)));
 
-            final var freezeCandidate = token.freezeKey();
+            final var freezeCandidate = Optional.ofNullable(token.freezeKey());
             freezeCandidate.ifPresentOrElse(
                     k -> {
                         info.setDefaultFreezeStatus(tfsFor(token.accountsAreFrozenByDefault()));
@@ -206,7 +208,7 @@ public class StateView {
                     },
                     () -> info.setDefaultFreezeStatus(TokenFreezeStatus.FreezeNotApplicable));
 
-            final var kycCandidate = token.kycKey();
+            final var kycCandidate = Optional.ofNullable(token.kycKey());
             kycCandidate.ifPresentOrElse(
                     k -> {
                         info.setDefaultKycStatus(tksFor(token.accountsKycGrantedByDefault()));
@@ -214,14 +216,14 @@ public class StateView {
                     },
                     () -> info.setDefaultKycStatus(TokenKycStatus.KycNotApplicable));
 
-            final var supplyCandidate = token.supplyKey();
+            final var supplyCandidate = Optional.ofNullable(token.supplyKey());
             supplyCandidate.ifPresent(k -> info.setSupplyKey(asKeyUnchecked(k)));
-            final var wipeCandidate = token.wipeKey();
+            final var wipeCandidate = Optional.ofNullable(token.wipeKey());
             wipeCandidate.ifPresent(k -> info.setWipeKey(asKeyUnchecked(k)));
-            final var feeScheduleCandidate = token.feeScheduleKey();
+            final var feeScheduleCandidate = Optional.ofNullable(token.feeScheduleKey());
             feeScheduleCandidate.ifPresent(k -> info.setFeeScheduleKey(asKeyUnchecked(k)));
 
-            final var pauseCandidate = token.pauseKey();
+            final var pauseCandidate = Optional.ofNullable(token.pauseKey());
             pauseCandidate.ifPresentOrElse(
                     k -> {
                         info.setPauseKey(asKeyUnchecked(k));
@@ -688,11 +690,11 @@ public class StateView {
         return Objects.requireNonNull(stateChildren).contractStorage();
     }
 
-    public MerkleMap<EntityNum, MerkleToken> tokens() {
+    public FungibleTokensAdapter tokens() {
         return Objects.requireNonNull(stateChildren).tokens();
     }
 
-    public BackingStore<TokenID, MerkleToken> asReadOnlyTokenStore() {
+    public BackingStore<TokenID, HederaToken> asReadOnlyTokenStore() {
         if (backingTokens == null) {
             backingTokens = new BackingTokens(stateChildren::tokens);
         }
@@ -780,9 +782,9 @@ public class StateView {
      */
     public static void doBoundedIteration(
             final TokenRelStorageAdapter tokenRels,
-            final MerkleMap<EntityNum, MerkleToken> tokens,
+            final FungibleTokensAdapter tokens,
             final HederaAccount account,
-            final BiConsumer<MerkleToken, HederaTokenRel> visitor) {
+            final BiConsumer<HederaToken, HederaTokenRel> visitor) {
         final var maxRels = account.getNumAssociations();
         final var firstRel = account.getLatestAssociation();
         doBoundedIteration(tokenRels, tokens, firstRel, maxRels, visitor);
@@ -802,10 +804,10 @@ public class StateView {
      */
     public static void doBoundedIteration(
             final TokenRelStorageAdapter tokenRels,
-            final MerkleMap<EntityNum, MerkleToken> tokens,
+            final FungibleTokensAdapter tokens,
             final EntityNumPair firstRel,
             final int maxRels,
-            final BiConsumer<MerkleToken, HederaTokenRel> visitor) {
+            final BiConsumer<HederaToken, HederaTokenRel> visitor) {
         final var accountNum = firstRel.getHiOrderAsLong();
         var tokenNum = firstRel.getLowOrderAsLong();
         var key = firstRel;

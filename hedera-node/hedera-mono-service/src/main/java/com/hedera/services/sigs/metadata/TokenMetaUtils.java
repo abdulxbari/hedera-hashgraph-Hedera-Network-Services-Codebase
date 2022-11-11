@@ -15,15 +15,16 @@
  */
 package com.hedera.services.sigs.metadata;
 
-import com.hedera.services.state.merkle.MerkleToken;
+import com.hedera.services.state.merkle.HederaToken;
 import com.hedera.services.state.submerkle.FcCustomFee;
+import java.util.Optional;
 
 public final class TokenMetaUtils {
     private TokenMetaUtils() {
         throw new UnsupportedOperationException("Utility Class");
     }
 
-    public static TokenSigningMetadata signingMetaFrom(final MerkleToken token) {
+    public static TokenSigningMetadata signingMetaFrom(final HederaToken token) {
         var hasRoyaltyWithFallback = false;
         final var customFees = token.customFeeSchedule();
         if (!customFees.isEmpty()) {
@@ -35,13 +36,13 @@ public final class TokenMetaUtils {
             }
         }
         return new TokenSigningMetadata(
-                token.adminKey(),
-                token.kycKey(),
-                token.wipeKey(),
-                token.freezeKey(),
-                token.supplyKey(),
-                token.feeScheduleKey(),
-                token.pauseKey(),
+                Optional.ofNullable(token.adminKey()),
+                Optional.ofNullable(token.kycKey()),
+                Optional.ofNullable(token.wipeKey()),
+                Optional.ofNullable(token.freezeKey()),
+                Optional.ofNullable(token.supplyKey()),
+                Optional.ofNullable(token.feeScheduleKey()),
+                Optional.ofNullable(token.pauseKey()),
                 hasRoyaltyWithFallback,
                 token.treasury());
     }
