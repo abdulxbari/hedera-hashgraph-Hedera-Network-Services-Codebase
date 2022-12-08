@@ -34,6 +34,7 @@ import static com.swirlds.common.system.InitTrigger.RESTART;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.hedera.node.app.service.mono.context.properties.BootstrapProperties;
 import com.hedera.node.app.service.mono.state.merkle.MerkleAccount;
 import com.hedera.node.app.service.mono.state.merkle.MerkleAccountState;
@@ -72,6 +73,7 @@ import com.hedera.node.app.service.mono.stream.RecordsRunningHashLeaf;
 import com.hedera.node.app.service.mono.utils.EntityNum;
 import com.hedera.node.app.service.mono.utils.EntityNumPair;
 import com.hederahashgraph.api.proto.java.AccountID;
+import com.hederahashgraph.api.proto.java.TransactionBody;
 import com.swirlds.common.crypto.CryptographyHolder;
 import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.crypto.ImmutableHash;
@@ -88,6 +90,7 @@ import com.swirlds.common.system.SwirldDualState;
 import com.swirlds.common.system.SwirldState2;
 import com.swirlds.common.system.address.AddressBook;
 import com.swirlds.common.system.events.Event;
+import com.swirlds.common.system.transaction.Transaction;
 import com.swirlds.fchashmap.FCHashMap;
 import com.swirlds.jasperdb.JasperDbBuilder;
 import com.swirlds.merkle.map.MerkleMap;
@@ -261,8 +264,26 @@ public class ServicesState extends PartialNaryMerkleInternal
         app.logic().incorporateConsensus(round);
     }
 
+    private transient AccountStorageAdapter accountStorageAdapter;
     @Override
     public void preHandle(final Event event) {
+        event.forEachTransaction((Transaction tx) -> {
+            if (enableVirtualAccounts && accountStorageAdapter.getOnDiskAccounts() != null) {
+                final var vmap = accountStorageAdapter.getOnDiskAccounts();
+                try {
+                    var parsedTx = TransactionBody.parseFrom(tx.getContents());
+                    // if the transaction is a crypto account creation transaction,
+                    // warm the cache with the payer account:
+                    if (parsedTx.getCryptoCreateAccount().getKey() != null) {
+                        var payer = parsedTx.getTransactionID().getAccountID();
+                        vmap.warm(EntityNumVirtualKey.from(EntityNum.fromAccountId(payer)));
+                    }
+                } catch (InvalidProtocolBufferException e) {
+                    log.warn("Unable to warm cache for tx (size {})", tx.getSize());
+                }
+            }
+        });
+
         metadata.app().eventExpansion().expandAllSigs(event, this);
     }
 
