@@ -17,6 +17,7 @@ package com.hedera.services.yahcli.commands.signedstate.evminfo;
 
 import com.hedera.services.yahcli.commands.signedstate.evminfo.Assembly.Columns;
 import com.hedera.services.yahcli.commands.signedstate.evminfo.Assembly.Variant;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Arrays;
 
 /**
@@ -26,7 +27,7 @@ import java.util.Arrays;
  * the instruction is in the bytecode, and an optional comment.
  */
 public record CodeLine(int codeOffset, int opcode, byte[] operandBytes, String eolComment)
-        implements Assembly.Line, Assembly.Code {
+        implements Assembly.Code {
 
     public CodeLine {
         opcode = opcode & 0xFF; // convert to unsigned (in case it's not)
@@ -36,15 +37,20 @@ public record CodeLine(int codeOffset, int opcode, byte[] operandBytes, String e
     }
 
     @Override
-    public void formatLine(StringBuilder sb) {
+    public @NonNull String mnemonic() {
+        return Opcodes.getOpcode(opcode).mnemonic();
+    }
+
+    @Override
+    public void formatLine(@NonNull StringBuilder sb) {
         if (Variant.DISPLAY_CODE_OFFSET.getValue()) {
             extendWithBlanksTo(sb, Columns.CODE_OFFSET.getColumn());
-            sb.append(String.format("%5X", codeOffset));
+            sb.append("%5X".formatted(codeOffset));
         }
 
         if (Variant.DISPLAY_OPCODE_HEX.getValue()) {
             extendWithBlanksTo(sb, Columns.OPCODE.getColumn());
-            sb.append(String.format("  %02X", opcode()));
+            sb.append("  %02X".formatted(opcode()));
         }
 
         extendWithBlanksTo(sb, Columns.MNEMONIC.getColumn());
@@ -94,8 +100,8 @@ public record CodeLine(int codeOffset, int opcode, byte[] operandBytes, String e
 
     @Override
     public String toString() {
-        return String.format(
-                "CodeLine[codeOffset=%04X, opcode=%d (%02X), operandBytes=%s, eolComment='%s']",
-                codeOffset, opcode, opcode(), hexer().formatHex(operandBytes), eolComment);
+        return "CodeLine[codeOffset=%04X, opcode=%d (%02X), operandBytes=%s, eolComment='%s']"
+                .formatted(
+                        codeOffset, opcode, opcode(), hexer().formatHex(operandBytes), eolComment);
     }
 }

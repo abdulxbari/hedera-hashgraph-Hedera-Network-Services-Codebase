@@ -27,7 +27,8 @@ import picocli.CommandLine.ParentCommand;
             CommandLine.HelpCommand.class,
             SummarizeSignedStateFileCommand.class,
             DumpRawContractsCommand.class,
-            DecompileContractCommand.class
+            DecompileContractCommand.class,
+            ResolveSelectorCommand.class
         },
         description = "Dealing with signed state files")
 public class SignedStateCommand implements Callable<Integer> {

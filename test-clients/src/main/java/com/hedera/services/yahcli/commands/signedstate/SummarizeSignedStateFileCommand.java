@@ -18,6 +18,7 @@ package com.hedera.services.yahcli.commands.signedstate;
 import static com.hedera.services.yahcli.commands.signedstate.SignedStateHolder.getContracts;
 
 import com.hedera.services.yahcli.commands.signedstate.SignedStateHolder.Contract;
+import com.hedera.services.yahcli.commands.signedstate.evminfo.CodeRecognizerManager;
 import java.lang.reflect.Array;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
@@ -40,6 +41,11 @@ public class SummarizeSignedStateFileCommand implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
+
+        System.out.printf(
+                "Assembly: %d code recognizers found.%n",
+                CodeRecognizerManager.recognizerClasses.size());
+
         final var knownContracts = getContracts(inputFile);
 
         final int contractsWithBytecodeFound = knownContracts.contracts().size();
@@ -51,7 +57,7 @@ public class SummarizeSignedStateFileCommand implements Callable<Integer> {
 
         System.out.printf(
                 "SummarizeSignedStateFile: %d contractIDs found %d contracts found in file store"
-                        + " (%d bytes total)",
+                        + " (%d bytes total)%n",
                 knownContracts.registeredContractsCount(), contractsWithBytecodeFound, bytesFound);
 
         return 0;

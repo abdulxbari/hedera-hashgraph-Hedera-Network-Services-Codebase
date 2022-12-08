@@ -23,6 +23,9 @@ import com.google.common.collect.ImmutableSortedMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -34,10 +37,24 @@ import java.util.stream.Stream;
  */
 public class Opcodes {
 
-    // Describes an EVM opcode
-    // - extraBytes is the # of bytes in the codestream, following the opcode, which are
-    //   part of this instruction (the `PUSHnn` instructions only)
-    // - assigned is true for all _assigned_ opcodes (including 0xFE `INVALID`)
+    /** Properties associated with EVM opcodes, categorizing them */
+    public enum Properties {
+        CALL,
+        RETURN,
+        JUMP1WAY,
+        JUMP2WAY,
+        JUMPDEST,
+        TERMINAL,
+        UNASSIGNED;
+
+        public static Set<Properties> parse(final String s) {
+            if (null == s || s.isEmpty()) return EnumSet.noneOf(Properties.class);
+            final var values = splitter.splitAsStream(s).map(Properties::valueOf).toList();
+            return EnumSet.copyOf(values);
+        }
+
+        private static final Pattern splitter = Pattern.compile(",");
+    }
 
     /**
      * Describes an EVM opcode
@@ -45,20 +62,58 @@ public class Opcodes {
      * @param opcode - value of the opcode, e.g., 0x62 for a "push 2 bytes" instruction
      * @param extraBytes - how many extra bytes go with this opcode, e.g., 2 for "push 2 bytes"
      * @param mnemonic - mnemonic for this opcode, e.g., "PUSH2" for "push 2 bytes" instruction
-     * @param assigned - true if this is an _assigned_ EVM opcode (e.g., a _legal_ opcode)
      */
-    public record Descr(int opcode, int extraBytes, String mnemonic, boolean assigned) {
+    public record Descr(int opcode, int extraBytes, String mnemonic, Set<Properties> properties) {
 
-        public Descr(int opcode, final String mnemonic) {
-            this(opcode, 0, mnemonic, true);
+        public Descr {
+            properties = null != properties ? properties : EnumSet.noneOf(Properties.class);
         }
 
-        public Descr(int opcode, final String mnemonic, boolean assigned) {
-            this(opcode, 0, mnemonic, assigned);
+        public Descr(int opcode, final @NonNull String mnemonic) {
+            this(opcode, 0, mnemonic, null);
         }
 
-        public Descr(int opcode, int extraBytes, final String mnemonic) {
-            this(opcode, extraBytes, mnemonic, true);
+        public Descr(
+                int opcode, final @NonNull String mnemonic, @NonNull Set<Properties> properties) {
+            this(opcode, 0, mnemonic, properties);
+        }
+
+        public Descr(int opcode, int extraBytes, final @NonNull String mnemonic) {
+            this(opcode, extraBytes, mnemonic, null);
+        }
+
+        public boolean isAssigned() {
+            return !properties.contains(Properties.UNASSIGNED);
+        }
+
+        public boolean isBasicBlockStart() {
+            return properties.contains(Properties.JUMPDEST);
+        }
+
+        public boolean isBasicBlockEnd() {
+            return properties.contains(Properties.JUMP1WAY)
+                    || properties.contains(Properties.JUMP2WAY)
+                    || properties.contains(Properties.RETURN)
+                    || properties.contains(Properties.TERMINAL);
+            // The definition of the _end_ of a basic block includes _call_ instructions that
+            // _can not return_.  But this predicate isn't strong enough to determine that (since
+            // it requires context of the _called_ basic block).  So, for a _call_ instruction,
+            // this will always return _false_.
+        }
+
+        public boolean isTerminal() {
+            return properties.contains(Properties.TERMINAL);
+        }
+
+        @Override
+        public String toString() {
+            final var extra = extraBytes > 0 ? "+%d".formatted(extraBytes) : "";
+            final var props = properties.isEmpty() ? "" : trimMatched("[]", properties.toString());
+            var sb = new StringBuilder();
+            sb.append(extra);
+            if (!extra.isEmpty() && !props.isEmpty()) sb.append(", ");
+            sb.append(props);
+            return "%s(%#02X)[%s]".formatted(mnemonic, opcode, sb);
         }
     }
 
@@ -78,7 +133,7 @@ public class Opcodes {
         final var descr = Opcodes.byMnemonic.get(mnemonic.toUpperCase());
         if (null == descr)
             throw new IllegalArgumentException(
-                    String.format("opcode '%s' not found in table", mnemonic));
+                    "opcode '%s' not found in table".formatted(mnemonic));
         return descr;
     }
 
@@ -89,7 +144,7 @@ public class Opcodes {
 
         // Start with all the unique/ordinary opcodes
         """
-          00 STOP
+          00 STOP           TERMINAL
           01 ADD
           02 MUL
           03 SUB
@@ -147,29 +202,30 @@ public class Opcodes {
           53 MSTORE8
           54 SLOAD
           55 SSTORE
-          56 JUMP
-          57 JUMPI
+          56 JUMP           JUMP1WAY
+          57 JUMPI          JUMP2WAY
           58 PC
           59 MSIZE
           5A GAS
-          5B JUMPDEST
+          5B JUMPDEST       JUMPDEST
           F0 CREATE
-          F1 CALL
-          F2 CALLCODE
-          F3 RETURN
-          F4 DELEGATECALL
+          F1 CALL           CALL
+          F2 CALLCODE       CALL
+          F3 RETURN         RETURN
+          F4 DELEGATECALL   CALL
           F5 CREATE2
-          FA STATICCALL
-          FD REVERT
-          FE INVALID
-          FF SELFDESTRUCT
+          FA STATICCALL     CALL
+          FD REVERT         TERMINAL
+          FE INVALID        TERMINAL
+          FF SELFDESTRUCT   TERMINAL
           """
                 .lines()
                 .forEach(
                         line -> {
-                            final var no = line.split(" ");
+                            final var no = line.split(" +");
                             final var op = Integer.parseUnsignedInt(no[0], 16);
-                            descrs.add(new Descr(op, no[1]));
+                            final var properties = Properties.parse(no.length > 2 ? no[2] : "");
+                            descrs.add(new Descr(op, no[1], properties));
                         });
 
         // Add all the "multiple" opcodes
@@ -200,8 +256,12 @@ public class Opcodes {
                 // idea, because ... I dunno ...)
                 .forEach(
                         i -> {
-                            final var n = String.format("%02X", i);
-                            descrs.add(new Descr(i, "UNASSIGNED-" + n, false));
+                            final var n = "%02X".formatted(i);
+                            descrs.add(
+                                    new Descr(
+                                            i,
+                                            "UNASSIGNED-" + n,
+                                            EnumSet.of(Properties.UNASSIGNED)));
                         });
 
         // Validate we've got all 256 opcodes defined
@@ -210,9 +270,8 @@ public class Opcodes {
         // sanity check this data constructor ...
         if (256 != allOpcodes.size()) {
             throw new IllegalStateException(
-                    String.format(
-                            "EVM opcode table incomplete, only %s opcodes present",
-                            allOpcodes.size()));
+                    "EVM opcode table incomplete, only %s opcodes present"
+                            .formatted(allOpcodes.size()));
         }
 
         descrs.sort(Comparator.comparingInt(Descr::opcode));
@@ -232,6 +291,39 @@ public class Opcodes {
         Stream<Integer> s = Stream.empty();
         for (var str : sis) s = Stream.concat(s, str);
         return s;
+    }
+
+    /** Utility method to trim matched "brackets" from the ends of a string */
+    private static @NonNull String trimMatched(
+            final @NonNull String brackets, final @NonNull String s) {
+        if (brackets.length() < 2) throw new IllegalArgumentException("brackets too short");
+        if (s.length() < 2) return s;
+        if (s.charAt(0) != brackets.charAt(0)) return s;
+        if (s.charAt(s.length() - 1) != brackets.charAt(1)) return s;
+        return s.substring(1, s.length() - 1);
+    }
+
+    /** Provide a formatted EVM opcode table (as a multi-line string) */
+    public static @NonNull String formatOpcodeTable() {
+        final var LARGE_BLUE_CIRCLE = "\uD83D\uDD35";
+        var sb = new StringBuilder();
+        for (int i = 0; i < 256; i++) {
+            final var opcode = getOpcode(i);
+            final var bbstart = opcode.isBasicBlockStart();
+            final var bbend = opcode.isBasicBlockEnd();
+            final var lineStart = sb.length();
+            sb.append("%3d: ".formatted(i));
+            sb.append(opcode);
+            if (bbstart || bbend) {
+                sb.append("                                        ");
+                sb.setLength(lineStart + 40);
+                sb.append(LARGE_BLUE_CIRCLE + " basic block");
+                if (bbstart) sb.append(" START");
+                if (bbend) sb.append(" END");
+            }
+            sb.append('\n');
+        }
+        return sb.toString();
     }
 
     private Opcodes() {

@@ -85,8 +85,8 @@ public class DumpRawContractsCommand implements Callable<Integer> {
                 totalContractsPresentInFileStore + zeroLengthCount[0],
                 zeroLengthCount[0],
                 emitUnique
-                        ? String.format(
-                                ", %d unique (by bytecode)", totalUniqueContractsPresentInFileStore)
+                        ? ", %d unique (by bytecode)"
+                                .formatted(totalUniqueContractsPresentInFileStore)
                         : "");
         for (var s : formattedContracts) System.out.println(s);
 

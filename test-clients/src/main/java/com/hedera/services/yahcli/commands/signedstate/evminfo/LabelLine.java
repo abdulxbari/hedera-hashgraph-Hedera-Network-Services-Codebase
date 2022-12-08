@@ -17,12 +17,18 @@ package com.hedera.services.yahcli.commands.signedstate.evminfo;
 
 import com.hedera.services.yahcli.commands.signedstate.evminfo.Assembly.Columns;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /** Represents a label in the generated assembly (a named offset in the code) */
-public record LabelLine(@NonNull String label) implements Assembly.Line {
+public record LabelLine(int codeOffset, @NonNull String label, @NonNull String comment)
+        implements Assembly.Code {
 
     public static final String LABEL_PREFIX = "";
     public static final String LABEL_SUFFIX = ":";
+
+    public LabelLine(int codeOffset, @NonNull String label) {
+        this(codeOffset, label, "");
+    }
 
     @Override
     public void formatLine(StringBuilder sb) {
@@ -30,5 +36,27 @@ public record LabelLine(@NonNull String label) implements Assembly.Line {
         sb.append(LABEL_PREFIX);
         sb.append(label);
         sb.append(LABEL_SUFFIX);
+
+        if (!comment.isEmpty()) {
+            extendWithBlanksTo(sb, Columns.EOL_COMMENT.getColumn());
+            sb.append(Assembly.EOL_COMMENT_PREFIX);
+            sb.append(comment);
+        }
+    }
+
+    @Override
+    public int getCodeOffset() {
+        return codeOffset;
+    }
+
+    @Override
+    public int getCodeSize() {
+        return 0;
+    }
+
+    @NotNull
+    @Override
+    public String mnemonic() {
+        return LABEL_PREFIX + label + LABEL_SUFFIX;
     }
 }

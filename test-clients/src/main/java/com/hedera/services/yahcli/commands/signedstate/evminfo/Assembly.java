@@ -44,7 +44,7 @@ public class Assembly {
     public static interface Line {
 
         /** Formats the line into a string suitable for directly putting in the disassembly */
-        void formatLine(StringBuilder sb);
+        void formatLine(@NonNull StringBuilder sb);
 
         /**
          * Formats the line into a string suitable for directly putting in the disassembly
@@ -52,7 +52,7 @@ public class Assembly {
          * <p>Convenience method so that holders of Lines don't have to create their own
          * StringBuilder
          */
-        default String formatLine() {
+        default @NonNull String formatLine() {
             var sb = new StringBuilder(MAX_EXPECTED_LINE);
             formatLine(sb);
             return sb.toString();
@@ -64,7 +64,7 @@ public class Assembly {
          * <p>Utility function useful for lining up fields (opcode, mnemonic, comment, etc.) into
          * columns.
          */
-        default void extendWithBlanksTo(StringBuilder sb, int goalColumn) {
+        default void extendWithBlanksTo(@NonNull StringBuilder sb, int goalColumn) {
             if (goalColumn <= sb.length()) {
                 // Already past the goal column ... just pad with a couple of blanks
                 sb.append("  ");
@@ -89,8 +89,12 @@ public class Assembly {
             return this instanceof CodeLine codeLine && codeLine.opcode() == opcode;
         }
 
+        default boolean thisLineIsA(@NonNull String mnemonic) {
+            return this instanceof CodeLine codeLine && codeLine.isA(mnemonic);
+        }
+
         /** Make a HexFormatter available to all Lines */
-        default HexFormat hexer() {
+        default @NonNull HexFormat hexer() {
             return Assembly.UPPERCASE_HEX_FORMATTER;
         }
     }
@@ -101,13 +105,25 @@ public class Assembly {
      * <p>A line of _code_ in the disassembly (could be an opcode, maybe a pseudo-op like `DATA`, or
      * maybe a (discovered) macro.
      */
-    public static interface Code {
+    public static interface Code extends Line {
 
         /** Returns the code offset of this line of code */
         public abstract int getCodeOffset();
 
         /** Returns the number of bytes of this line of code */
         public abstract int getCodeSize();
+
+        /** "name" of this line */
+        public abstract @NonNull String mnemonic();
+
+        /** Easy identification of this line */
+        public default boolean isA(@NonNull String mnemonic) {
+            return mnemonic().equals(mnemonic);
+        }
+
+        public default int getNextCodeOffset() {
+            return getCodeOffset() + getCodeSize();
+        }
     }
 
     /**
@@ -123,7 +139,9 @@ public class Assembly {
     public enum Variant {
         DISPLAY_CODE_OFFSET,
         DISPLAY_OPCODE_HEX,
-        WITHOUT_DECODE_BEFORE_METADATA;
+        WITHOUT_DECODE_BEFORE_METADATA,
+        RECOGNIZE_CODE_SEQUENCES,
+        FETCH_SELECTOR_NAMES;
 
         private boolean value = false;
 
@@ -142,7 +160,7 @@ public class Assembly {
 
         // First: take the desired disassembly variants (passed in as a map) and use them to set
         // the Options enum instances "ON" appropriately.
-        for (var o : options) {
+        for (final var o : options) {
             switch (o) {
                 case DISPLAY_CODE_OFFSET -> {
                     Variant.DISPLAY_CODE_OFFSET.setOptionOn();
@@ -155,8 +173,17 @@ public class Assembly {
                 case WITHOUT_DECODE_BEFORE_METADATA -> {
                     Variant.WITHOUT_DECODE_BEFORE_METADATA.setOptionOn();
                 }
+
+                case RECOGNIZE_CODE_SEQUENCES -> {
+                    Variant.RECOGNIZE_CODE_SEQUENCES.setOptionOn();
+                }
+
+                case FETCH_SELECTOR_NAMES -> {
+                    Variant.FETCH_SELECTOR_NAMES.setOptionOn();
+                }
             }
         }
+
         this.metrics = metrics;
     }
 
@@ -234,9 +261,8 @@ public class Assembly {
         // bytecode.  That can't be right.
         if (haveExtraBytes && codeOffset + instructionLength > bytecode.length)
             throw new IndexOutOfBoundsException(
-                    String.format(
-                            "opcode %s at offset %d overruns bytecode (of length %d)",
-                            descr.mnemonic(), codeOffset, bytecode.length));
+                    "opcode %s at offset %d overruns bytecode (of length %d)"
+                            .formatted(descr.mnemonic(), codeOffset, bytecode.length));
 
         // Pull out the operand bytes, if any
         final var operandBytes =
@@ -247,7 +273,7 @@ public class Assembly {
 
         // The comment field will be used to flag uses of unassigned opcodes.  (We're most
         // likely decoding "instructions" in a code data block.)
-        final var comment = descr.assigned() ? "" : "**UNASSIGNED OPCODE**";
+        final var comment = descr.isAssigned() ? "" : "**UNASSIGNED OPCODE**";
 
         // Assemble the instruction and give it to the caller
         final var line = new CodeLine(codeOffset, opcode, operandBytes, comment);
@@ -309,9 +335,9 @@ public class Assembly {
                 // `METADATA` pseudo-op.
                 if (0 == atMetadataOffset.apply(currentOffset)) {
                     final var comment =
-                            String.format(
-                                    "(metadata %d (%04X) bytes)",
-                                    metadataByteRange.length(), metadataByteRange.length());
+                            "(metadata %d (%04X) bytes)"
+                                    .formatted(
+                                            metadataByteRange.length(), metadataByteRange.length());
                     final var data =
                             getBytecodeRangeAsData(
                                     bytecode,
@@ -378,9 +404,8 @@ public class Assembly {
                                     fromCode.getCodeOffset(), toCode.getCodeOffset());
                         } else
                             throw new IllegalStateException(
-                                    String.format(
-                                            "Expected Code at line index %d or %d (%s, %s)",
-                                            lr.from(), lr.to(), fromLine, toLine));
+                                    "Expected Code at line index %d or %d (%s, %s)"
+                                            .formatted(lr.from(), lr.to(), fromLine, toLine));
                     };
 
             // Search backwards from the metadata to an `INVALID` or `STOP` (if present).
@@ -439,7 +464,7 @@ public class Assembly {
                     lineRangeFrom++;
                     if (lineRangeFrom == lineRangeTo)
                         return Range.empty(); // This would be if there was no data block between
-                    // INVALID/STOP and the metadate/end
+                    // INVALID/STOP and the metadata/end
                     return new Range<>(lineRangeFrom, lineRangeTo);
                 }
             }
@@ -512,13 +537,26 @@ public class Assembly {
     }
 
     /** Given a range, return, as a `DATA` pseudo-op, the contract bytecodes in that range */
-    public @NonNull Line getBytecodeRangeAsData(
+    public @NonNull DataPseudoOpLine getBytecodeRangeAsData(
             @NonNull final byte[] bytecode,
             @NonNull final Range<Byte> range,
             @NonNull final String comment,
             @NonNull final DataPseudoOpLine.Kind kind) {
         final var dataBytes = Arrays.copyOfRange(bytecode, range.from(), range.to());
         return new DataPseudoOpLine(range.from(), kind, dataBytes, comment);
+    }
+
+    /** Recognize and analyze bytecode sequences */
+    public @NonNull CodeRecognizer.Results analyze(@NonNull List<Line> lines) {
+        final CodeRecognizerManager codeRecognizerManager = new CodeRecognizerManager(this);
+        final CodeRecognizer recognizer = codeRecognizerManager.getDistributor();
+
+        recognizer.begin();
+        for (final var line : lines) {
+            if (line instanceof DataPseudoOpLine data) recognizer.acceptDataLine(data);
+            else if (line instanceof CodeLine code) recognizer.acceptCodeLine(code);
+        }
+        return recognizer.end();
     }
 
     public static final int INVALID_OPCODE = Opcodes.getDescrFor("INVALID").opcode();

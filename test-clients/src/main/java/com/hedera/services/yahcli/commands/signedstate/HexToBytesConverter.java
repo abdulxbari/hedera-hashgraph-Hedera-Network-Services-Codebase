@@ -16,6 +16,7 @@
 package com.hedera.services.yahcli.commands.signedstate;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.nio.ByteBuffer;
 import java.util.HexFormat;
 import java.util.regex.Pattern;
 import picocli.CommandLine.ITypeConverter;
@@ -26,7 +27,7 @@ import picocli.CommandLine.TypeConversionException;
  *
  * <p>For Picocli library - implements a type-specific converter from hex string to bytes.
  */
-public class HexStringConverter implements ITypeConverter<HexStringConverter.Bytes> {
+public class HexToBytesConverter implements ITypeConverter<HexToBytesConverter.Bytes> {
 
     // Unfortunately can't return `byte[]` directly from the custom type converter because Piccoli
     // gets confused: When the argument is declared (at the command class) it thinks it wants a
@@ -52,5 +53,15 @@ public class HexStringConverter implements ITypeConverter<HexStringConverter.Byt
         if (!Pattern.compile("[0-9a-fA-F]+").matcher(value).matches())
             throw new TypeConversionException("-b bytecode has invalid characters (not hexits)");
         return new Bytes(HexFormat.of().parseHex(value));
+    }
+
+    public static long asUnsignedInt(@NonNull Bytes bytes) {
+        return ByteBuffer.allocate(8)
+                .put(
+                        8 - Math.min(8, bytes.contents.length),
+                        bytes.contents,
+                        0,
+                        bytes.contents.length)
+                .getLong();
     }
 }

@@ -28,7 +28,7 @@ import java.util.Arrays;
  */
 public record DataPseudoOpLine(
         int codeOffset, @NonNull Kind kind, byte[] operandBytes, String eolComment)
-        implements Assembly.Line, Assembly.Code {
+        implements Assembly.Code {
 
     public enum Kind {
         DATA,
@@ -42,6 +42,11 @@ public record DataPseudoOpLine(
         eolComment = null != eolComment ? eolComment : "";
     }
 
+    @Override
+    public @NonNull String mnemonic() {
+        return kind.name();
+    }
+
     // NOTTODO: There's a LOT of commonality here with CodeLine! like maybe this should be a
     // subclass (except: can't do that because it's a record, and this doesn't seem like the
     // kind of thing that should be a default method of the interface ...)
@@ -49,7 +54,7 @@ public record DataPseudoOpLine(
     public void formatLine(StringBuilder sb) {
         if (Variant.DISPLAY_CODE_OFFSET.getValue()) {
             extendWithBlanksTo(sb, Columns.CODE_OFFSET.getColumn());
-            sb.append(String.format("%5X", codeOffset));
+            sb.append("%5X".formatted(codeOffset));
         }
         extendWithBlanksTo(sb, Columns.MNEMONIC.getColumn());
         sb.append(kind.name());
@@ -99,8 +104,8 @@ public record DataPseudoOpLine(
 
     @Override
     public @NonNull String toString() {
-        return String.format(
-                "CodeLine[codeOffset=%04X, operandBytes=%s, eolComment='%s', kind=%s]",
-                codeOffset, hexer().formatHex(operandBytes), eolComment, kind.toString());
+        return "CodeLine[codeOffset=%04X, operandBytes=%s, eolComment='%s', kind=%s]"
+                .formatted(
+                        codeOffset, hexer().formatHex(operandBytes), eolComment, kind.toString());
     }
 }

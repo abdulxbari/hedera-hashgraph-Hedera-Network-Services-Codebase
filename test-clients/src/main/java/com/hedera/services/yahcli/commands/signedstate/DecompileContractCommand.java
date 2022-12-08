@@ -17,22 +17,29 @@ package com.hedera.services.yahcli.commands.signedstate;
 
 import static com.hedera.services.yahcli.commands.signedstate.evminfo.Assembly.UPPERCASE_HEX_FORMATTER;
 
-import com.hedera.services.yahcli.commands.signedstate.HexStringConverter.Bytes;
+import com.hedera.services.yahcli.commands.signedstate.HexToBytesConverter.Bytes;
 import com.hedera.services.yahcli.commands.signedstate.evminfo.Assembly;
 import com.hedera.services.yahcli.commands.signedstate.evminfo.Assembly.Line;
 import com.hedera.services.yahcli.commands.signedstate.evminfo.Assembly.Variant;
 import com.hedera.services.yahcli.commands.signedstate.evminfo.CommentLine;
 import com.hedera.services.yahcli.commands.signedstate.evminfo.DirectiveLine;
 import com.hedera.services.yahcli.commands.signedstate.evminfo.DirectiveLine.Kind;
+import com.hedera.services.yahcli.commands.signedstate.evminfo.Editor;
 import com.hedera.services.yahcli.commands.signedstate.evminfo.LabelLine;
+import com.hedera.services.yahcli.commands.signedstate.evminfo.MacroLine;
+import com.hedera.services.yahcli.commands.signedstate.evminfo.VTableEntryRecognizer;
+import com.hedera.services.yahcli.commands.signedstate.evminfo.VTableEntryRecognizer.MethodEntry;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import picocli.CommandLine.Command;
@@ -50,7 +57,7 @@ public class DecompileContractCommand implements Callable<Integer> {
             names = {"-b", "--bytecode"},
             required = true,
             arity = "1",
-            converter = HexStringConverter.class,
+            converter = HexToBytesConverter.class,
             paramLabel = "HEX",
             description = "Contract bytecode as a hex string")
     Bytes theContract;
@@ -83,8 +90,51 @@ public class DecompileContractCommand implements Callable<Integer> {
     @Option(names = "--do-not-decode-before-metadata")
     boolean withoutDecodeBeforeMetadata;
 
+    @Option(names = "--recognize-sequences", description = "Recognize and analyze code sequences")
+    boolean recognizeCodeSequences;
+
+    @Option(
+            names = "--with-selector-lookups",
+            description =
+                    "Fetch selector method names from internet (requires --recognize-sequences")
+    boolean fetchSelectorNames;
+
+    Set<Flag> flags = new HashSet<>();
+
+    enum Flag {
+        Macros,
+        RawDisassembly,
+        Selectors,
+        Trace
+    };
+
+    @Option(
+            names = {"-f", "--flag"},
+            description = {
+                "flags controlling different output options:",
+                "m    list macros",
+                "r    list raw disassembly (before analyzed disassembly",
+                "s    list selectors",
+                "t    dump trace of recognizers"
+            })
+    ShortFlag[] shortFlags;
+
+    enum ShortFlag {
+        m(Flag.Macros),
+        r(Flag.RawDisassembly),
+        s(Flag.Selectors),
+        t(Flag.Trace);
+
+        ShortFlag(@NonNull Flag flag) {
+            this.flag = flag;
+        }
+
+        final Flag flag;
+    }
+
     @Override
     public Integer call() throws Exception {
+        for (var sf : shortFlags) flags.add(sf.flag);
         disassembleContract();
         return 0;
     }
@@ -96,6 +146,8 @@ public class DecompileContractCommand implements Callable<Integer> {
             if (withCodeOffset) options.add(Variant.DISPLAY_CODE_OFFSET);
             if (withOpcode) options.add(Variant.DISPLAY_OPCODE_HEX);
             if (withoutDecodeBeforeMetadata) options.add(Variant.WITHOUT_DECODE_BEFORE_METADATA);
+            if (recognizeCodeSequences) options.add(Variant.RECOGNIZE_CODE_SEQUENCES);
+            if (fetchSelectorNames) options.add(Variant.FETCH_SELECTOR_NAMES);
 
             var metrics = new HashMap</*@NonNull*/ String, /*@NonNull*/ Object>();
             metrics.put(START_TIMESTAMP, System.nanoTime());
@@ -104,6 +156,10 @@ public class DecompileContractCommand implements Callable<Integer> {
             final var asm = new Assembly(metrics, options.toArray(new Variant[0]));
             final var prefixLines = getPrefixLines();
             final var lines = asm.getInstructions(prefixLines, theContract.contents);
+
+            // TODO: Should just be embedded in Assembly class (since there's an option for it)
+            final var analysisResults =
+                    Optional.ofNullable(recognizeCodeSequences ? asm.analyze(lines) : null);
 
             metrics.put(END_TIMESTAMP, System.nanoTime());
 
@@ -116,7 +172,75 @@ public class DecompileContractCommand implements Callable<Integer> {
                 lines.add(endDirective);
             }
 
-            for (var line : lines) System.out.printf("%s%s%n", prefix, line.formatLine());
+            analysisResults.ifPresentOrElse(
+                    results -> {
+                        // TODO: Each section needs a command line argument to enable, also raw +/-
+                        // analyzed listing.  Preferably as "POSIX clustered short options".
+                        if (results.properties()
+                                .containsKey(VTableEntryRecognizer.METHODS_PROPERTY)) {
+                            if (flags.contains(Flag.Trace)) {
+                                @SuppressWarnings("unchecked")
+                                final var traceLines =
+                                        (List<String>)
+                                                results.properties()
+                                                        .get(VTableEntryRecognizer.METHODS_TRACE);
+                                System.out.printf("Methods trace:%n");
+                                for (final var t : traceLines) {
+                                    System.out.printf("   %s%n", t);
+                                }
+                                System.out.printf("%n");
+                            }
+
+                            if (flags.contains(Flag.Selectors)) {
+                                @SuppressWarnings("unchecked")
+                                final var methodsTable =
+                                        (List<VTableEntryRecognizer.MethodEntry>)
+                                                results.properties()
+                                                        .get(
+                                                                VTableEntryRecognizer
+                                                                        .METHODS_PROPERTY);
+                                methodsTable.sort(Comparator.comparing(MethodEntry::methodOffset));
+                                System.out.printf("Selectors from contract vtable:%n");
+                                for (final var me : methodsTable) {
+                                    System.out.printf(
+                                            "%04X: %08X%n", me.methodOffset(), me.selector());
+                                }
+                                System.out.printf("%n");
+                            }
+
+                            if (flags.contains(Flag.Macros)) {
+                                System.out.printf("Macros from VTableEntryRecognizer:%n");
+                                for (final var macro : results.codeLineReplacements()) {
+                                    if (macro instanceof MacroLine macroLine) {
+                                        System.out.printf("   %s%n", macroLine.formatLine());
+                                    }
+                                }
+                                System.out.printf("%n");
+                            }
+                        }
+
+                        if (flags.contains(Flag.RawDisassembly)) {
+                            System.out.printf("Raw disassembly:%n");
+                            for (var line : lines)
+                                System.out.printf("%s%s%n", prefix, line.formatLine());
+                        }
+
+                        {
+                            // TODO: _This_ should _really_ be moved to the Assembly class
+                            var editor = new Editor(lines);
+                            results.codeLineReplacements().forEach(editor::add);
+                            var analyzedLines = editor.merge();
+
+                            System.out.printf("Analyzed disassembly:%n");
+                            for (var line : analyzedLines)
+                                System.out.printf("%s%s%n", prefix, line.formatLine());
+                        }
+                    },
+                    (/*orElse*/ ) -> {
+                        System.out.printf("Raw disassembly:%n");
+                        for (var line : lines)
+                            System.out.printf("%s%s%n", prefix, line.formatLine());
+                    });
         } catch (Exception ex) {
             throw printFormattedException(theContractId, ex);
         }
@@ -132,17 +256,17 @@ public class DecompileContractCommand implements Callable<Integer> {
         var lines = new ArrayList<Line>();
         if (withContractBytecode) {
             final var comment =
-                    String.format(
-                            "contract (%d bytes): %s",
-                            theContract.contents.length,
-                            UPPERCASE_HEX_FORMATTER.formatHex(theContract.contents));
+                    "contract (%d bytes): %s"
+                            .formatted(
+                                    theContract.contents.length,
+                                    UPPERCASE_HEX_FORMATTER.formatHex(theContract.contents));
             lines.add(new CommentLine(comment));
         }
         {
             final var comment = theContractId.map(i -> "contract id: " + i.toString()).orElse("");
             lines.add(new DirectiveLine(Kind.BEGIN, comment));
         }
-        lines.add(new LabelLine("ENTRY"));
+        lines.add(new LabelLine(0, "ENTRY"));
         return lines;
     }
 
@@ -158,7 +282,7 @@ public class DecompileContractCommand implements Callable<Integer> {
         final var nanosElapsed =
                 (long) metrics.get(END_TIMESTAMP) - (long) metrics.get(START_TIMESTAMP);
         final float msElapsed = nanosElapsed / 1.e6f;
-        sb.append(String.format("%.3f ms elapsed", msElapsed));
+        sb.append("%.3f ms elapsed".formatted(msElapsed));
 
         return sb.toString();
     }

@@ -32,7 +32,8 @@ tasks.test {
     // Disable these EET tests from being executed as part of the gradle "test" task. We should maybe remove them
     // from src/test into src/eet, so it can be part of an eet test task instead. See issue #3412
     // (https://github.com/hashgraph/hedera-services/issues/3412).
-    exclude("**/*")
+    // Do this by explicitly allowing only those specific tests which are unit tests.
+    include("com/hedera/services/yahcli/**")
 }
 
 configurations {
@@ -52,7 +53,8 @@ dependencies {
     compileOnly(libs.spotbugs.annotations)
     implementation(project(":hedera-node:hapi-utils"))
     implementation(project(":hedera-node:hapi-fees"))
-    implementation(project(":hedera-node:hedera-mono-service")) // for `yahcli signedstate`
+    implementation(project(":hedera-node:hedera-mono-service")) // for `yahcli signedstate` only
+    implementation(testLibs.classgraph) // for `yahcli signedstate` only
     implementation(libs.bundles.besu) {
         exclude("javax.annotation", "javax.annotation-api")
     }
@@ -81,6 +83,9 @@ dependencies {
     implementation(libs.swirlds.merkle)
     implementation(libs.swirlds.platform.core)
     implementation(testLibs.testcontainers.core)
+
+    testCompileOnly(libs.spotbugs.annotations)
+    testImplementation(testLibs.assertj.core)
     itestImplementation(libs.bundles.swirlds)
     itestImplementation(testLibs.bundles.testcontainers)
     itestImplementation(project(":hedera-node:hedera-app"))

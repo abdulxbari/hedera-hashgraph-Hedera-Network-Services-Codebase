@@ -100,9 +100,8 @@ public class SignedStateHolder {
             }
             csvIds.setLength(csvIds.length() - 1);
 
-            return String.format(
-                    "Contract{ids=(%s), bytecode=%s}",
-                    csvIds.toString(), Arrays.toString(bytecode));
+            return "Contract{ids=(%s), bytecode=%s}"
+                    .formatted(csvIds.toString(), Arrays.toString(bytecode));
         }
     }
 
@@ -187,9 +186,8 @@ public class SignedStateHolder {
         public MissingSignedStateComponent(
                 @NonNull final String component, @NonNull final Path swh) {
             super(
-                    String.format(
-                            "Expected non-null %s from signed state file %s",
-                            component, swh.toString()));
+                    "Expected non-null %s from signed state file %s"
+                            .formatted(component, swh.toString()));
         }
     }
 
