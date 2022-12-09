@@ -70,10 +70,11 @@ import com.hedera.node.app.service.mono.state.virtual.VirtualMapFactory.JasperDb
 import com.hedera.node.app.service.mono.state.virtual.entities.OnDiskAccount;
 import com.hedera.node.app.service.mono.state.virtual.entities.OnDiskTokenRel;
 import com.hedera.node.app.service.mono.stream.RecordsRunningHashLeaf;
+import com.hedera.node.app.service.mono.txns.span.ExpandHandleSpan;
 import com.hedera.node.app.service.mono.utils.EntityNum;
 import com.hedera.node.app.service.mono.utils.EntityNumPair;
 import com.hederahashgraph.api.proto.java.AccountID;
-import com.hederahashgraph.api.proto.java.TransactionBody;
+import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.swirlds.common.crypto.CryptographyHolder;
 import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.crypto.ImmutableHash;
@@ -157,6 +158,8 @@ public class ServicesState extends PartialNaryMerkleInternal
         this.bootstrapProperties = that.bootstrapProperties;
         this.enableVirtualAccounts = that.enableVirtualAccounts;
         this.enableVirtualTokenRels = that.enableVirtualTokenRels;
+        this.accountStorageAdapter = that.accountStorageAdapter;
+        this.expandHandleSpan = that.expandHandleSpan;
     }
 
     /** Log out the sizes the state children. */
@@ -231,7 +234,8 @@ public class ServicesState extends PartialNaryMerkleInternal
             }
             // Note this returns the app in case we need to do something with it  after making
             // final changes to state (e.g. after migrating something from memory to disk)
-            deserializedInit(platform, addressBook, dualState, trigger, deserializedVersion);
+            final var app = deserializedInit(platform, addressBook, dualState, trigger, deserializedVersion);
+            this.setExpander(app.expandHandleSpan());
             final var isUpgrade =
                     SEMANTIC_VERSIONS.deployedSoftwareVersion().isAfter(deserializedVersion);
             if (isUpgrade) {
@@ -265,17 +269,26 @@ public class ServicesState extends PartialNaryMerkleInternal
     }
 
     private transient AccountStorageAdapter accountStorageAdapter;
+    private transient ExpandHandleSpan expandHandleSpan;
+    public void setExpander(ExpandHandleSpan expandHandleSpan) {
+        this.expandHandleSpan = expandHandleSpan;
+    }
     @Override
     public void preHandle(final Event event) {
         event.forEachTransaction((Transaction tx) -> {
+            if (expandHandleSpan == null || accountStorageAdapter == null) {
+                return;
+            }
+
             if (enableVirtualAccounts && accountStorageAdapter.getOnDiskAccounts() != null) {
-                final var vmap = accountStorageAdapter.getOnDiskAccounts();
                 try {
-                    var parsedTx = TransactionBody.parseFrom(tx.getContents());
+                    final var vmap = accountStorageAdapter.getOnDiskAccounts();
+                    final var parsedTx = expandHandleSpan.accessorFor(tx);
+                    final var op = parsedTx.getFunction();
                     // if the transaction is a crypto account creation transaction,
                     // warm the cache with the payer account:
-                    if (parsedTx.getCryptoCreateAccount().getKey() != null) {
-                        var payer = parsedTx.getTransactionID().getAccountID();
+                    if (op == HederaFunctionality.CryptoCreate) {
+                        var payer = parsedTx.getPayer();
                         vmap.warm(EntityNumVirtualKey.from(EntityNum.fromAccountId(payer)));
                     }
                 } catch (InvalidProtocolBufferException e) {
@@ -486,13 +499,15 @@ public class ServicesState extends PartialNaryMerkleInternal
     @SuppressWarnings("unchecked")
     public AccountStorageAdapter accounts() {
         final var accountsStorage = getChild(StateChildIndices.ACCOUNTS);
-        return (accountsStorage instanceof VirtualMap)
+        final var toReturn = (accountsStorage instanceof VirtualMap)
                 ? AccountStorageAdapter.fromOnDisk(
                         VIRTUAL_MAP_DATA_ACCESS,
                         getChild(StateChildIndices.PAYER_RECORDS),
                         (VirtualMap<EntityNumVirtualKey, OnDiskAccount>) accountsStorage)
                 : AccountStorageAdapter.fromInMemory(
                         (MerkleMap<EntityNum, MerkleAccount>) accountsStorage);
+        this.accountStorageAdapter = toReturn;
+        return toReturn;
     }
 
     public VirtualMap<VirtualBlobKey, VirtualBlobValue> storage() {

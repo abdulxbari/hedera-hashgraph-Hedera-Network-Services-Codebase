@@ -63,6 +63,7 @@ import com.hedera.node.app.service.mono.txns.ProcessLogic;
 import com.hedera.node.app.service.mono.txns.TransactionsModule;
 import com.hedera.node.app.service.mono.txns.network.UpgradeActions;
 import com.hedera.node.app.service.mono.txns.prefetch.PrefetchProcessor;
+import com.hedera.node.app.service.mono.txns.span.ExpandHandleSpan;
 import com.hedera.node.app.service.mono.txns.submission.SubmissionModule;
 import com.hedera.node.app.service.mono.utils.NamedDigestFactory;
 import com.hedera.node.app.service.mono.utils.Pause;
@@ -135,6 +136,8 @@ public interface ServicesApp {
     PrefetchProcessor prefetchProcessor();
 
     MigrationRecordsManager migrationRecordsManager();
+
+    ExpandHandleSpan expandHandleSpan();
 
     /* Needed by ServicesMain */
     Pause pause();
