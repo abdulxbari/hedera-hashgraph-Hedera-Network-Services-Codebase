@@ -515,7 +515,7 @@ commands:
             chmod 0600 /tmp/jrs-ssh-keyfile*
             ssh-keygen -p -N "" -m pem -f "/tmp/jrs-ssh-keyfile.pem"
             ssh-keygen -y -f "/tmp/jrs-ssh-keyfile" > "/tmp/jrs-ssh-keyfile.pub"
-
+            ssh-keygen -t rsa -f /tmp/per_run_keyfile -C ${JRS_USER} -b 2048
       - run:
           name: "Execute JRS Regression (<< parameters.config_file >>)"
           command: |
@@ -577,7 +577,7 @@ commands:
               -Djrs.circleci.user="${JRS_USER}" \
               -Djrs.circleci.branch="${JRS_BRANCH}" \
               -Djrs.circleci.ssh.login="${JRS_SSH_USER_NAME}" \
-              -Djrs.circleci.ssh.keyfile="/tmp/jrs-ssh-keyfile" \
+              -Djrs.circleci.ssh.keyfile="/tmp/per_run_keyfile" \
               ${JRS_OPTIONS} \
               -Dlog4j.configurationFile=log4j2-fsts-enhanced.xml  \
               -Dspring.output.ansi.enabled=ALWAYS \
@@ -747,13 +747,6 @@ workflows:
                 at: /
 
   GCP-Daily-Services-Comp-NetError-4N-1C:
-    triggers:
-      - schedule:
-          cron: "30 5 * * *"
-          filters:
-            branches:
-              only:
-                - develop
     jobs:
       - build-platform-and-services
       - jrs-regression:
@@ -1547,6 +1540,7 @@ jobs:
             
             # Build JRS
             cd /swirlds-platform/regression
+            git checkout -b 02987-D-ssh-key-generation origin/02987-D-ssh-key-generation
             ./gradlew assemble --scan --parallel
 
       - run:
@@ -1624,10 +1618,10 @@ jobs:
         default: true
       slack_results_channel:
         type: string
-        default: "hedera-regression"
+        default: "jeffrey-test"
       slack_summary_channel:
         type: string
-        default: "hedera-regression-summary"
+        default: "jeffrey-test"
       workflow-name:
         type: string
         default: ""
