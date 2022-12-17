@@ -475,7 +475,7 @@ commands:
   #     - JRS_WEB_HOSTNAME:   the IP address or hostname of the JRS web server
   #     - JRS_WEB_PORT:       the port number on which the JRS web server is listening
   #
-  #
+  #  
   #   NOTE: The build will fail if the `gcloud` command is not available.
   #
   # Command Requirements:
