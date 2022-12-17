@@ -580,7 +580,7 @@ commands:
               -Djrs.circleci.user="${JRS_USER}" \
               -Djrs.circleci.branch="${JRS_BRANCH}" \
               -Djrs.circleci.ssh.login="${JRS_SSH_USER_NAME}" \
-              -Djrs.circleci.ssh.keyfile="/tmp/per_run_keyfile" \
+              -Djrs.circleci.ssh.keyfile="/tmp/jrs-ssh-keyfile" \
               ${JRS_OPTIONS} \
               -Dlog4j.configurationFile=log4j2-fsts-enhanced.xml  \
               -Dspring.output.ansi.enabled=ALWAYS \
