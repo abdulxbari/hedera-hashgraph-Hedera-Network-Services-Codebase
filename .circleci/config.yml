@@ -515,11 +515,6 @@ commands:
             chmod 0600 /tmp/jrs-ssh-keyfile*
             ssh-keygen -p -N "" -m pem -f "/tmp/jrs-ssh-keyfile.pem"
             ssh-keygen -y -f "/tmp/jrs-ssh-keyfile" > "/tmp/jrs-ssh-keyfile.pub"
-            
-            ssh-keygen -N "" -t rsa -f /tmp/per_run_keyfile
-            cp "/tmp/per_run_keyfile" "/tmp/per_run_keyfile.pem"
-            chmod 0600 /tmp/per_run_keyfile*
-
       - run:
           name: "Execute JRS Regression (<< parameters.config_file >>)"
           command: |
@@ -581,7 +576,7 @@ commands:
               -Djrs.circleci.user="${JRS_USER}" \
               -Djrs.circleci.branch="${JRS_BRANCH}" \
               -Djrs.circleci.ssh.login="${JRS_SSH_USER_NAME}" \
-              -Djrs.circleci.ssh.keyfile="/tmp/per_run_keyfile" \
+              -Djrs.circleci.ssh.keyfile="/tmp/jrs-ssh-keyfile" \
               ${JRS_OPTIONS} \
               -Dlog4j.configurationFile=log4j2-fsts-enhanced.xml  \
               -Dspring.output.ansi.enabled=ALWAYS \
