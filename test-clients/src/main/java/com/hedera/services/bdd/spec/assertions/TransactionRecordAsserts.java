@@ -97,6 +97,11 @@ public class TransactionRecordAsserts extends BaseErroringAssertsProvider<Transa
         return this;
     }
 
+    public TransactionRecordAsserts alias(ByteString alias) {
+        registerTypedProvider("alias", shouldBe(alias));
+        return this;
+    }
+
     @SuppressWarnings("java:S1181")
     public TransactionRecordAsserts assessedCustomFeeCount(final int n) {
         this.<List<AssessedCustomFee>>registerTypedProvider(
@@ -307,6 +312,16 @@ public class TransactionRecordAsserts extends BaseErroringAssertsProvider<Transa
 
     public TransactionRecordAsserts memo(String text) {
         registerTypedProvider("memo", shouldBe(text));
+        return this;
+    }
+
+    public TransactionRecordAsserts hasNoAlias() {
+        registerTypedProvider("alias", shouldBe(ByteString.EMPTY));
+        return this;
+    }
+
+    public TransactionRecordAsserts evmAddress(ByteString evmAddress) {
+        registerTypedProvider("evmAddress", shouldBe(evmAddress));
         return this;
     }
 
