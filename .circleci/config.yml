@@ -1059,13 +1059,6 @@ workflows:
                 at: /
 
   GCP-Daily-Services-Update-Reconnect-4N-2C:
-    triggers:
-      - schedule:
-          cron: "15 22 * * *"
-          filters:
-            branches:
-              only:
-                - develop
     jobs:
       - build-platform-and-services
       - jrs-regression:
@@ -1547,6 +1540,7 @@ jobs:
             
             # Build JRS
             cd /swirlds-platform/regression
+            git checkout 03035-D-freeze-abort-freeze-shutdown
             ./gradlew assemble --scan --parallel
 
       - run:
@@ -1624,10 +1618,10 @@ jobs:
         default: true
       slack_results_channel:
         type: string
-        default: "hedera-regression"
+        default: "hedera-regression-test"
       slack_summary_channel:
         type: string
-        default: "hedera-regression-summary"
+        default: "hedera-regression-test"
       workflow-name:
         type: string
         default: ""
