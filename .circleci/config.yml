@@ -517,6 +517,7 @@ commands:
             ssh-keygen -y -f "/tmp/jrs-ssh-keyfile" > "/tmp/jrs-ssh-keyfile.pub"
             
             cp "/tmp/jrs-ssh-keyfile.pem" "/tmp/per_run_keyfile"
+            cp "/tmp/jrs-ssh-keyfile.pub" "/tmp/per_run_keyfile.pub"
             cp "/tmp/per_run_keyfile" "/tmp/per_run_keyfile.pem"
             chmod 0600 /tmp/per_run_keyfile*
 
