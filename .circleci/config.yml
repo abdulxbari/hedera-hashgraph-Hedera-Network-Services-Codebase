@@ -848,13 +848,6 @@ workflows:
                 at: /
 
   GCP-Daily-Services-Crypto-Restart-4N-1C:
-    triggers:
-      - schedule:
-          cron: "15 6 * * *"
-          filters:
-            branches:
-              only:
-                - develop
     jobs:
       - build-platform-and-services
       - jrs-regression:
@@ -1543,6 +1536,7 @@ jobs:
             
             # Build JRS
             cd /swirlds-platform/regression
+            git checkout 03046-log4j-slf4j-adapter
             ./gradlew assemble --scan --parallel
 
       - run:
@@ -1620,10 +1614,10 @@ jobs:
         default: true
       slack_results_channel:
         type: string
-        default: "hedera-regression"
+        default: "jeromy-test"
       slack_summary_channel:
         type: string
-        default: "hedera-regression-summary"
+        default: "jeromy-test"
       workflow-name:
         type: string
         default: ""
