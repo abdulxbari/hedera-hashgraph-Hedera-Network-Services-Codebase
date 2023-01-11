@@ -557,7 +557,7 @@ class DispatcherTest {
                         (Consumer<Handlers>)
                                 h ->
                                         verify(h.tokenAssociateToAccountHandler())
-                                                .preHandle(any(), any())),
+                                                .preHandle(any(), any(), any())),
                 Arguments.of(
                         TransactionBody.newBuilder()
                                 .setTokenDissociate(
