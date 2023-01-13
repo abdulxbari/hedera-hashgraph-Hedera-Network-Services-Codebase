@@ -566,7 +566,7 @@ class DispatcherTest {
                         (Consumer<Handlers>)
                                 h ->
                                         verify(h.tokenDissociateFromAccountHandler())
-                                                .preHandle(any(), any())),
+                                                .preHandle(any(), any(), any())),
                 Arguments.of(
                         TransactionBody.newBuilder()
                                 .setTokenFeeScheduleUpdate(
