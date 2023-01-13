@@ -539,7 +539,7 @@ class DispatcherTest {
                         (Consumer<Handlers>)
                                 h ->
                                         verify(h.tokenGrantKycToAccountHandler())
-                                                .preHandle(any(), any())),
+                                                .preHandle(any(), any(), any(), any())),
                 Arguments.of(
                         TransactionBody.newBuilder()
                                 .setTokenRevokeKyc(

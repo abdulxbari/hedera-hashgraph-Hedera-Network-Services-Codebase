@@ -15,11 +15,15 @@
  */
 package com.hedera.node.app.service.token.impl.handlers;
 
+import com.hedera.node.app.service.token.impl.ReadableTokenStore;
+import com.hedera.node.app.spi.AccountKeyLookup;
+import com.hedera.node.app.spi.meta.SigTransactionMetadataBuilder;
 import com.hedera.node.app.spi.meta.TransactionMetadata;
 import com.hedera.node.app.spi.workflows.TransactionHandler;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.Objects;
 
 /**
  * This class contains all workflow-related functionality regarding {@link
@@ -28,24 +32,36 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 public class TokenGrantKycToAccountHandler implements TransactionHandler {
 
     /**
-     * This method is called during the pre-handle workflow.
+     * Pre-handles a {@link
+     * com.hederahashgraph.api.proto.java.HederaFunctionality#TokenGrantKycToAccount} transaction,
+     * returning the metadata required to, at minimum, validate the signatures of all required
+     * signing keys.
      *
-     * <p>Typically, this method validates the {@link TransactionBody} semantically, gathers all
-     * required keys, warms the cache, and creates the {@link TransactionMetadata} that is used in
-     * the handle stage.
-     *
-     * <p>Please note: the method signature is just a placeholder which is most likely going to
-     * change.
-     *
-     * @param txBody the {@link TransactionBody} with the transaction data
+     * @param txn the {@link TransactionBody} with the transaction data
      * @param payer the {@link AccountID} of the payer
+     * @param keyLookup the {@link AccountKeyLookup} to use to resolve keys
+     * @param tokenStore the {@link ReadableTokenStore} to use to resolve token metadata
      * @return the {@link TransactionMetadata} with all information that needs to be passed to
      *     {@link #handle(TransactionMetadata)}
      * @throws NullPointerException if one of the arguments is {@code null}
      */
     public TransactionMetadata preHandle(
-            @NonNull final TransactionBody txBody, @NonNull final AccountID payer) {
-        throw new UnsupportedOperationException("Not implemented");
+            @NonNull final TransactionBody txn,
+            @NonNull final AccountID payer,
+            @NonNull final AccountKeyLookup keyLookup,
+            @NonNull final ReadableTokenStore tokenStore) {
+        final var op = Objects.requireNonNull(txn).getTokenGrantKyc();
+        final var meta =
+                new SigTransactionMetadataBuilder(keyLookup).payerKeyFor(payer).txnBody(txn);
+
+        final var tokenMeta = tokenStore.getTokenMeta(op.getToken());
+
+        if (tokenMeta.failed()) {
+            return meta.status(tokenMeta.failureReason()).build();
+        }
+
+        tokenMeta.metadata().kycKey().ifPresent(meta::addToReqNonPayerKeys);
+        return meta.build();
     }
 
     /**
