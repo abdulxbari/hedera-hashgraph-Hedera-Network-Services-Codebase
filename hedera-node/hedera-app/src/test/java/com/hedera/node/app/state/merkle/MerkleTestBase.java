@@ -205,7 +205,7 @@ public class MerkleTestBase extends TestBase {
             registry = ConstructableRegistry.getInstance();
 
             // It may have been configured during some other test, so we reset it
-            registry.reset();
+//            registry.reset();
             registry.registerConstructables("com.swirlds.merklemap");
             registry.registerConstructables("com.swirlds.jasperdb");
             registry.registerConstructables("com.swirlds.virtualmap");
