@@ -15,6 +15,8 @@
  */
 package com.hedera.node.app.service.mono.state.virtual;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.hederahashgraph.api.proto.java.NodeAddressBook;
 import com.swirlds.common.io.streams.SerializableDataInputStream;
 import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.jasperdb.files.DataFileCommon;
@@ -115,6 +117,10 @@ public class VirtualBlobValue implements VirtualValue {
 
     @Override
     public String toString() {
-        return "VirtualBlobValue{" + "data=" + Arrays.toString(data) + '}';
+        try {
+            return "VirtualBlobValue{" + "data=" + NodeAddressBook.parseFrom(data) + '}';
+        } catch (InvalidProtocolBufferException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
