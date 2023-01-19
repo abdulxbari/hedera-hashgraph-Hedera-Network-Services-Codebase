@@ -7,10 +7,10 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 /**
  * A {@link RecordBuilder} used when a token has been created.
  */
-public interface CreateTokenRecordBuilder extends RecordBuilder {
+public interface CreateTokenRecordHistorian extends RecordBuilder {
     @NonNull
-    CreateTokenRecordBuilder tokenAlias(@NonNull byte[] value);
+    CreateTokenRecordHistorian tokenAlias(@NonNull byte[] value);
 
     @NonNull
-    CreateTokenRecordBuilder receiptCreatedTokenID(@NonNull TokenID tokenID);
+    CreateTokenRecordHistorian receiptCreatedTokenID(@NonNull TokenID tokenID);
 }

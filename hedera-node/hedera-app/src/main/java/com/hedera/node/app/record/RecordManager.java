@@ -1,5 +1,6 @@
 package com.hedera.node.app.record;
 
+import com.hedera.node.app.spi.record.RecordSet;
 import com.hedera.node.app.state.HederaState;
 import com.hedera.services.stream.proto.RecordStreamFile;
 import com.hedera.services.stream.proto.RecordStreamItem;
@@ -13,26 +14,24 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class RecordStreamManager {
+public class RecordManager {
     // TODO I need the HAPI Version
     // TODO I need the object running hash. This comes from state, and I need to update state
     // TODO block number? What the heck is this?
     // TODO what about sidecars?
 
     private final Path dir;
-    private final RecordStreamFile.Builder recordStreamFileBuilder;
+//    private final RecordStreamFile.Builder recordStreamFileBuilder;
     private Instant lastConsensusTime = Instant.MIN;
 
     private final LinkedBlockingQueue<RecordStreamFile> filesToWrite = new LinkedBlockingQueue<>(10); // TODO get from config...
 
-    public RecordStreamManager(@NonNull final HederaState hederaState, @NonNull final Path dir, @NonNull final Executor exec) {
+    public RecordManager(@NonNull final HederaState hederaState, @NonNull final Path dir, @NonNull final Executor exec) {
         this.dir = Objects.requireNonNull(dir);
         if (!Files.isDirectory(dir)) {
             throw new IllegalArgumentException("The path '" + dir + "' is not a directory");
@@ -41,10 +40,10 @@ public class RecordStreamManager {
         final var states = hederaState.createReadableStates("RecordStreamManager");
         final var state = states.get("Data");
 
-        recordStreamFileBuilder = RecordStreamFile.newBuilder()
-                .setHapiProtoVersion(null) // TODO
-                .setStartObjectRunningHash(null) // TODO same as the end hash of the last file
-                .setBlockNumber(-1L); // TODO I get this from state?
+//        recordStreamFileBuilder = RecordStreamFile.newBuilder()
+//                .setHapiProtoVersion(null) // TODO
+//                .setStartObjectRunningHash(null) // TODO same as the end hash of the last file
+//                .setBlockNumber(-1L); // TODO I get this from state?
 
 
         // Start a long-lived thread that will only terminate when interrupted (which
@@ -79,6 +78,13 @@ public class RecordStreamManager {
         });
     }
 
+    // the ordered set of records to be processed as a unit? Or do we let the workflow deal with this
+    // concept and let the record manager deal with individual RecordStreamObject's instead? Is there
+    // any advantage to having an entire record set? Is the extra dependency worth it?
+    public void submit(RecordSet records) {
+
+    }
+
     void submit(@NonNull final Transaction tx, @NonNull final TransactionRecord record) {
         final var consensusTime = Instant.ofEpochSecond(
                 record.getConsensusTimestamp().getSeconds(),
@@ -86,9 +92,9 @@ public class RecordStreamManager {
 
         onConsensusTimeAdvanced(consensusTime);
 
-        recordStreamFileBuilder.addRecordStreamItems(RecordStreamItem.newBuilder()
-                        .setTransaction(tx)
-                        .setRecord(record));
+//        recordStreamFileBuilder.addRecordStreamItems(RecordStreamItem.newBuilder()
+//                        .setTransaction(tx)
+//                        .setRecord(record));
     }
 
     public void onConsensusTimeAdvanced(Instant consensusTime) {
@@ -99,17 +105,17 @@ public class RecordStreamManager {
         // TODO If it has been 2 seconds (where 2 is supposed to be configurable!!!!
         // TODO what about exactly 2 seconds delta?
         if (consensusTime.isAfter(lastConsensusTime.plus(2, ChronoUnit.SECONDS))) {
-            recordStreamFileBuilder.setEndObjectRunningHash(null); // TODO
+//            recordStreamFileBuilder.setEndObjectRunningHash(null); // TODO
 
-            final var recordStreamFile = recordStreamFileBuilder.build();
-            recordStreamFileBuilder.clear()
-                    .setHapiProtoVersion(null) // TODO
-                    .setStartObjectRunningHash(null) // TODO same as the end hash of the last file
-                    .setBlockNumber(-1L); // TODO I get this from state?
+//            final var recordStreamFile = recordStreamFileBuilder.build();
+//            recordStreamFileBuilder.clear()
+//                    .setHapiProtoVersion(null) // TODO
+//                    .setStartObjectRunningHash(null) // TODO same as the end hash of the last file
+//                    .setBlockNumber(-1L); // TODO I get this from state?
 
-            if (recordStreamFile.getRecordStreamItemsCount() > 0) {
-                filesToWrite.offer(recordStreamFileBuilder.build()); // TODO Potentially blocking maybe use timeout version and log statements!!!
-            }
+//            if (recordStreamFile.getRecordStreamItemsCount() > 0) {
+//                filesToWrite.offer(recordStreamFileBuilder.build()); // TODO Potentially blocking maybe use timeout version and log statements!!!
+//            }
         }
     }
 }
