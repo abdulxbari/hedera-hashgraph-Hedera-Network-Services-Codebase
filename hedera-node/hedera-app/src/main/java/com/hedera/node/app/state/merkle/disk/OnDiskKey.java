@@ -19,6 +19,7 @@ import com.hedera.node.app.spi.state.Serdes;
 import com.hedera.node.app.state.merkle.StateMetadata;
 import com.hedera.node.app.state.merkle.data.ByteBufferDataInput;
 import com.hedera.node.app.state.merkle.data.ByteBufferDataOutput;
+import com.swirlds.common.constructable.ConstructableIgnored;
 import com.swirlds.common.io.streams.SerializableDataInputStream;
 import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.virtualmap.VirtualKey;
@@ -43,6 +44,7 @@ import java.util.Objects;
  *
  * @param <K> The type of key
  */
+@ConstructableIgnored
 public final class OnDiskKey<K extends Comparable<K>> implements VirtualKey<OnDiskKey<K>> {
     /** The metadata */
     private final StateMetadata<K, ?> md;

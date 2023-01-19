@@ -21,6 +21,7 @@ import com.hedera.node.app.state.merkle.disk.OnDiskReadableKVState;
 import com.hedera.node.app.state.merkle.disk.OnDiskWritableKVState;
 import com.hedera.node.app.state.merkle.memory.InMemoryReadableKVState;
 import com.hedera.node.app.state.merkle.memory.InMemoryWritableKVState;
+import com.swirlds.common.constructable.ConstructableIgnored;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.impl.PartialNaryMerkleInternal;
@@ -54,6 +55,7 @@ import java.util.function.Consumer;
  * each child must be part of the state proof. It would be better to have a binary tree. We should
  * consider nesting service nodes in a MerkleMap, or some other such approach to get a binary tree.
  */
+@ConstructableIgnored
 public class MerkleHederaState extends PartialNaryMerkleInternal
         implements MerkleInternal, SwirldState2, HederaState {
 
@@ -110,6 +112,7 @@ public class MerkleHederaState extends PartialNaryMerkleInternal
      * @param onPreHandle The callback to invoke when an event is ready for pre-handle
      * @param onHandleConsensusRound The callback invoked when the platform has
      */
+
     public MerkleHederaState(
             @NonNull final Consumer<MerkleHederaState> onMigrate,
             @NonNull final Consumer<Event> onPreHandle,

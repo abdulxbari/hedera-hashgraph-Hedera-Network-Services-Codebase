@@ -15,6 +15,7 @@
  */
 package com.hedera.node.app.state.merkle.memory;
 
+import com.swirlds.common.constructable.ConstructableIgnored;
 import com.swirlds.merkle.map.MerkleMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
@@ -24,4 +25,5 @@ import edu.umd.cs.findbugs.annotations.NonNull;
  * @param key The key to use. Cannot be null.
  * @param <K> The type of the key
  */
+@ConstructableIgnored
 public record InMemoryKey<K extends Comparable<K>>(@NonNull K key) {}

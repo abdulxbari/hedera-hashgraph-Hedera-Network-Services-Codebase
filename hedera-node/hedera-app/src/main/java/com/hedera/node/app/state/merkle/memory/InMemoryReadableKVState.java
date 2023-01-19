@@ -18,6 +18,7 @@ package com.hedera.node.app.state.merkle.memory;
 import com.hedera.node.app.spi.state.ReadableKVState;
 import com.hedera.node.app.spi.state.ReadableKVStateBase;
 import com.hedera.node.app.state.merkle.StateMetadata;
+import com.swirlds.common.constructable.ConstructableIgnored;
 import com.swirlds.merkle.map.MerkleMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Iterator;
@@ -30,6 +31,7 @@ import java.util.Objects;
  * @param <K> The type of key for the state
  * @param <V> The type of value for the state
  */
+@ConstructableIgnored
 public final class InMemoryReadableKVState<K extends Comparable<K>, V>
         extends ReadableKVStateBase<K, V> {
     /** The underlying merkle tree data structure with the data */

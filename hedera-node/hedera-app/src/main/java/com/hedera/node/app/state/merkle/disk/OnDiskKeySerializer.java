@@ -19,6 +19,7 @@ import com.hedera.node.app.spi.state.Serdes;
 import com.hedera.node.app.state.merkle.StateMetadata;
 import com.hedera.node.app.state.merkle.data.ByteBufferDataInput;
 import com.hedera.node.app.state.merkle.data.MeteredOutputStream;
+import com.swirlds.common.constructable.ConstructableIgnored;
 import com.swirlds.common.io.SelfSerializable;
 import com.swirlds.common.io.streams.SerializableDataInputStream;
 import com.swirlds.common.io.streams.SerializableDataOutputStream;
@@ -44,6 +45,7 @@ import java.util.Objects;
  *
  * @param <K>
  */
+@ConstructableIgnored
 public final class OnDiskKeySerializer<K extends Comparable<K>>
         implements KeySerializer<OnDiskKey<K>>, SelfSerializableSupplier<OnDiskKey<K>> {
     private final long classId;

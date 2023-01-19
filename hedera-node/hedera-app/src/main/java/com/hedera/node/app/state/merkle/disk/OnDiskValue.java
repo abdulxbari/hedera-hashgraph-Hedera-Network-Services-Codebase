@@ -19,6 +19,7 @@ import com.hedera.node.app.spi.state.Serdes;
 import com.hedera.node.app.state.merkle.StateMetadata;
 import com.hedera.node.app.state.merkle.data.ByteBufferDataInput;
 import com.hedera.node.app.state.merkle.data.ByteBufferDataOutput;
+import com.swirlds.common.constructable.ConstructableIgnored;
 import com.swirlds.common.io.streams.SerializableDataInputStream;
 import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.virtualmap.VirtualValue;
@@ -39,6 +40,7 @@ import java.util.Objects;
  *
  * @param <V> The type of the value (business object) held in this merkel data structure
  */
+@ConstructableIgnored
 public class OnDiskValue<V> implements VirtualValue {
     private final Serdes<V> serdes;
     private final StateMetadata<?, V> md;

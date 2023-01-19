@@ -16,6 +16,7 @@
 package com.hedera.node.app.state.merkle.memory;
 
 import com.hedera.node.app.state.merkle.StateMetadata;
+import com.swirlds.common.constructable.ConstructableIgnored;
 import com.swirlds.common.io.SelfSerializable;
 import com.swirlds.common.io.streams.SerializableDataInputStream;
 import com.swirlds.common.io.streams.SerializableDataOutputStream;
@@ -31,6 +32,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 /** The value stored in a {@link MerkleMap} for in memory states */
+@ConstructableIgnored
 public final class InMemoryValue<K extends Comparable<K>, V> extends PartialMerkleLeaf
         implements MerkleNode, Keyed<InMemoryKey<K>>, SelfSerializable, MerkleLeaf {
 
