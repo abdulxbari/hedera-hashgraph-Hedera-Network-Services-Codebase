@@ -124,8 +124,8 @@ public class HapiSpec implements Runnable {
         return onlySpecToRunInSuite;
     }
 
-    private final boolean onlySpecToRunInSuite;
-    private final List<String> propertiesToPreserve;
+    private boolean onlySpecToRunInSuite;
+    private List<String> propertiesToPreserve;
     List<Payment> costs = new ArrayList<>();
     List<Payment> costSnapshot = Collections.emptyList();
     String name;
@@ -162,6 +162,10 @@ public class HapiSpec implements Runnable {
      * assertion that terminated {@code exec()}.
      */
     @Nullable private Failure failure = null;
+
+    public HapiSpec(){
+
+    }
 
     public static ThreadPoolExecutor getCommonThreadPool() {
         return THREAD_POOL;
@@ -351,7 +355,7 @@ public class HapiSpec implements Runnable {
         return false;
     }
 
-    private boolean init() {
+    boolean init() {
         if (!tryReinitializingFees()) {
             status = ERROR;
             return false;
@@ -381,7 +385,7 @@ public class HapiSpec implements Runnable {
     }
 
     @SuppressWarnings("java:S2629")
-    private void exec(List<HapiSpecOperation> ops) {
+    void exec(List<HapiSpecOperation> ops) {
         if (status == ERROR) {
             log.warn("'{}' failed to initialize, being skipped!", name);
             return;

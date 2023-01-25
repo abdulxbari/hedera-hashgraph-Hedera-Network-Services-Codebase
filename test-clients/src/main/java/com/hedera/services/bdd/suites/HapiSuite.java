@@ -21,7 +21,7 @@ import static com.hedera.services.bdd.suites.HapiSuite.FinalOutcome.SUITE_PASSED
 import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.HapiSpecOperation;
 import com.hedera.services.bdd.spec.HapiSpecSetup;
-import com.hedera.services.bdd.spec.HapiStakingFactory;
+import com.hedera.services.bdd.spec.HapiStakingSpec;
 import com.hedera.services.bdd.spec.infrastructure.HapiApiClients;
 import com.hedera.services.bdd.spec.keys.KeyShape;
 import com.hederahashgraph.api.proto.java.ContractID;
@@ -45,7 +45,7 @@ public abstract class HapiSuite {
     public static final String DEFAULT_SHARD_REALM = "0.0.";
     public static final String TRUE_VALUE = "true";
     public static final String FALSE_VALUE = "false";
-    private static final String STARTING_SUITE = "-------------- STARTING {} SUITE --------------";
+    protected static final String STARTING_SUITE = "-------------- STARTING {} SUITE --------------";
 
     public enum FinalOutcome {
         SUITE_PASSED,
@@ -53,7 +53,7 @@ public abstract class HapiSuite {
     }
 
     @SuppressWarnings("java:S2245")
-    private static final Random RANDOM = new Random();
+    protected static final Random RANDOM = new Random();
 
     protected abstract Logger getResultsLogger();
 
@@ -66,7 +66,7 @@ public abstract class HapiSuite {
             Key.newBuilder()
                     .setContractID(ContractID.newBuilder().setContractNum(0).build())
                     .build();
-    private static final int BYTES_PER_KB = 1024;
+    protected static final int BYTES_PER_KB = 1024;
     public static final int MAX_CALL_DATA_SIZE = 6 * BYTES_PER_KB;
     public static final BigInteger WEIBARS_TO_TINYBARS = BigInteger.valueOf(10_000_000_000L);
     // Useful for testing overflow scenarios when an ERC-20/721 ABI specifies
@@ -139,11 +139,10 @@ public abstract class HapiSuite {
     public static final HapiSpecSetup DEFAULT_PROPS = HapiSpecSetup.getDefaultInstance();
     public static final String ETH_SUFFIX = "_Eth";
 
-    private boolean deferResultsSummary = false;
-    private boolean onlyLogHeader = false;
-    private boolean tearDownClientsAfter = true;
+    protected boolean deferResultsSummary = false;
+    protected boolean onlyLogHeader = false;
+    protected boolean tearDownClientsAfter = true;
     private List<HapiSpec> finalSpecs = Collections.emptyList();
-    private List<HapiStakingFactory> finalStakingSpecs = Collections.emptyList();
 
     public String name() {
         String simpleName = this.getClass().getSimpleName();
@@ -194,7 +193,7 @@ public abstract class HapiSuite {
         return runSuite(HapiSuite::runSequentialSpecs);
     }
 
-    protected FinalOutcome finalOutcomeFor(final List<HapiSpec> completedSpecs) {
+    protected FinalOutcome finalOutcomeFor(final List<? extends HapiSpec> completedSpecs) {
         return completedSpecs.stream().allMatch(HapiSpec::ok) ? SUITE_PASSED : SUITE_FAILED;
     }
 
@@ -246,7 +245,7 @@ public abstract class HapiSuite {
     }
 
     @SuppressWarnings("java:S2629")
-    private void summarizeResults(Logger log) {
+    protected void summarizeResults(Logger log) {
         if (getDeferResultsSummary()) {
             return;
         }
@@ -257,11 +256,11 @@ public abstract class HapiSuite {
         }
     }
 
-    private static void runSequentialSpecs(final List<HapiSpec> specs) {
+    protected static void runSequentialSpecs(final List<HapiSpec> specs) {
         specs.forEach(Runnable::run);
     }
 
-    public static void runConcurrentSpecs(final List<HapiSpec> specs) {
+    public static void runConcurrentSpecs(final List<? extends HapiSpec> specs) {
         final var futures =
                 specs.stream()
                         .map(r -> CompletableFuture.runAsync(r, HapiSpec.getCommonThreadPool()))
