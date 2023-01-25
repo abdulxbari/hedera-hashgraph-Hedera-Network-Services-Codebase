@@ -785,6 +785,29 @@ public class UtilVerbs {
                 updateLargeFile(payer, fileName, byteString, false, OptionalLong.empty()));
     }
 
+    public static HapiSpecOperation runAndCollectResultsForStakingSpecsWithinPeriods(
+            int numOfPeriods, List<HapiSpecOperation> ... specs) {
+        final Map<String, Map<Integer, List<HapiSpecOperation>>> specMap = new HashMap<>();
+        for(int i = 0; i < specs.length; i++) {
+            final var spec = specs[i];
+            final var specName = "Spec " + i + " - " + spec.get(0).toString();
+            final var periodMap = new HashMap<Integer, List<HapiSpecOperation>>();
+            for(int j = 0; j < numOfPeriods; j++) {
+                periodMap.put(j, spec);
+            }
+            specMap.put(specName, periodMap);
+        }
+        return withOpContext((spec, opLog) -> {
+            for(int k = 0; k < numOfPeriods; k++) {
+                int finalK = k;
+                specMap.forEach((specName, periodMap) -> {
+                    final var ops = periodMap.get(finalK);
+                    allRunFor(spec, ops);
+                });
+            }
+        });
+    }
+
     public static HapiSpecOperation updateLargeFile(
             String payer, String fileName, ByteString byteString) {
         return updateLargeFile(payer, fileName, byteString, false, OptionalLong.empty());

@@ -21,6 +21,7 @@ import static com.hedera.services.bdd.suites.HapiSuite.FinalOutcome.SUITE_PASSED
 import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.HapiSpecOperation;
 import com.hedera.services.bdd.spec.HapiSpecSetup;
+import com.hedera.services.bdd.spec.HapiStakingFactory;
 import com.hedera.services.bdd.spec.infrastructure.HapiApiClients;
 import com.hedera.services.bdd.spec.keys.KeyShape;
 import com.hederahashgraph.api.proto.java.ContractID;
@@ -142,6 +143,7 @@ public abstract class HapiSuite {
     private boolean onlyLogHeader = false;
     private boolean tearDownClientsAfter = true;
     private List<HapiSpec> finalSpecs = Collections.emptyList();
+    private List<HapiStakingFactory> finalStakingSpecs = Collections.emptyList();
 
     public String name() {
         String simpleName = this.getClass().getSimpleName();
