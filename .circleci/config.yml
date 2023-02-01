@@ -1536,7 +1536,7 @@ jobs:
             
             # Build JRS
             cd /swirlds-platform/regression
-            git checkout 03128-fsts-cli
+            git checkout 03129-delete-circleci
             ./gradlew assemble --scan --parallel
 
       - run:
