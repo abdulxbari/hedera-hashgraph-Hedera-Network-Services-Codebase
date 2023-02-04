@@ -27,7 +27,6 @@ import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.literalInitcodeFor;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCall;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCreate;
-import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractDelete;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractUpdate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoTransfer;
@@ -45,20 +44,16 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertionsHold;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.balanceSnapshot;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.childRecordsCheck;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.createLargeFile;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.logIt;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.newKeyNamed;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overriding;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sleepFor;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sourcing;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.verifyRecordFile;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntil;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.suites.autorenew.AutoRenewConfigChoices.defaultMinAutoRenewPeriod;
 import static com.hedera.services.bdd.suites.autorenew.AutoRenewConfigChoices.enableContractAutoRenewWith;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.CONTRACT_REVERT_EXECUTED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_CONTRACT_ID;
-import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.NO_NEW_VALID_SIGNATURES;
-import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
 import static com.hederahashgraph.api.proto.java.TokenType.NON_FUNGIBLE_UNIQUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -70,8 +65,6 @@ import com.hedera.services.bdd.suites.HapiSuite;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.Timestamp;
 import com.hederahashgraph.api.proto.java.Transaction;
-import com.hederahashgraph.api.proto.java.TransactionRecord;
-
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
@@ -385,12 +378,12 @@ public class ContractAutoExpirySpecs extends HapiSuite {
         return defaultHapiSpec("receiverSigReqBypassedForTreasuryAtEndOfGracePeriod")
                 .given(
                         newKeyNamed(supplyKey),
-                        cryptoCreate(TOKEN_TREASURY)
-                                .receiverSigRequired(true),
+                        cryptoCreate(TOKEN_TREASURY).receiverSigRequired(true),
                         tokenCreate(aFungibleRoyaltyToken)
                                 .initialSupply(aFungibleAmount)
                                 .treasury(TOKEN_TREASURY)
-                                .withCustom(CustomFeeSpecs.royaltyFeeNoFallback(1, 10, TOKEN_TREASURY)),
+                                .withCustom(
+                                        CustomFeeSpecs.royaltyFeeNoFallback(1, 10, TOKEN_TREASURY)),
                         tokenCreate(aFungibleNonRoyaltyToken)
                                 .initialSupply(aFungibleAmount)
                                 .treasury(TOKEN_TREASURY),
@@ -399,15 +392,18 @@ public class ContractAutoExpirySpecs extends HapiSuite {
                                 .tokenType(NON_FUNGIBLE_UNIQUE)
                                 .supplyKey(supplyKey)
                                 .treasury(TOKEN_TREASURY)
-                                .withCustom(CustomFeeSpecs.royaltyFeeNoFallback(1, 2, TOKEN_TREASURY)),
+                                .withCustom(
+                                        CustomFeeSpecs.royaltyFeeNoFallback(1, 2, TOKEN_TREASURY)),
                         tokenCreate(nonFungibleNonRoyaltyToken)
-                                .initialSupply(0).tokenType(NON_FUNGIBLE_UNIQUE).supplyKey(
-                                        supplyKey).treasury(TOKEN_TREASURY),
+                                .initialSupply(0)
+                                .tokenType(NON_FUNGIBLE_UNIQUE)
+                                .supplyKey(supplyKey)
+                                .treasury(TOKEN_TREASURY),
                         mintToken(
                                 nonFungibleRoyaltyToken,
-                                List.of(
-                                        ByteString.copyFromUtf8("Royalty NFT"))),
-                        mintToken(nonFungibleNonRoyaltyToken,
+                                List.of(ByteString.copyFromUtf8("Royalty NFT"))),
+                        mintToken(
+                                nonFungibleNonRoyaltyToken,
                                 List.of(ByteString.copyFromUtf8("Non-Royalty NFT"))),
                         createLargeFile(GENESIS, initcode, literalInitcodeFor("InstantStorageHog")),
                         enableContractAutoRenewWith(minimalLifetime, 0),
@@ -419,7 +415,8 @@ public class ContractAutoExpirySpecs extends HapiSuite {
                                 .autoRenewSecs(minimalLifetime),
                         tokenAssociate(
                                 contractToRemove,
-                                List.of(aFungibleRoyaltyToken, aFungibleNonRoyaltyToken,
+                                List.of(
+                                        aFungibleRoyaltyToken, aFungibleNonRoyaltyToken,
                                         nonFungibleRoyaltyToken, nonFungibleNonRoyaltyToken)),
                         cryptoTransfer(
                                 moving(aFungibleAmount, aFungibleRoyaltyToken)
@@ -442,30 +439,30 @@ public class ContractAutoExpirySpecs extends HapiSuite {
                                 .hasTokenBalance(nonFungibleRoyaltyToken, 0)
                                 .hasTokenBalance(nonFungibleNonRoyaltyToken, 0),
                         // sleep past the expiration:
-                        // (minimalLifetimeMillis * 1 second) + 5 seconds, where 5 seconds is just to give some extra time
+                        // (minimalLifetimeMillis * 1 second) + 5 seconds, where 5 seconds is just
+                        // to give some extra time
                         sleepFor((minimalLifetime * 1_000L) + 50_000L))
-                .when(
-                            cryptoTransfer(tinyBarsFromTo(GENESIS, NODE, 1L)).via(contractDeleteTxn)
-                )
+                .when(cryptoTransfer(tinyBarsFromTo(GENESIS, NODE, 1L)).via(contractDeleteTxn))
                 .then(
                         getContractInfo(contractToRemove)
                                 .hasCostAnswerPrecheck(INVALID_CONTRACT_ID),
                         withOpContext(
                                 (spec, opLog) -> {
-                            final var txnRecord = getTxnRecord(contractDeleteTxn);
-                            var txn = Transaction.parseFrom(
-                                    spec.registry().getBytes(contractDeleteTxn));
-                            verifyRecordFile(txnRecord.getResponseRecord().getConsensusTimestamp(),
-                                    List.of(txn), txnRecord.getResponseRecord());
-                            // TODO: other checks for the record!!!
-                        }),
+                                    final var txnRecord = getTxnRecord(contractDeleteTxn);
+                                    var txn =
+                                            Transaction.parseFrom(
+                                                    spec.registry().getBytes(contractDeleteTxn));
+                                    verifyRecordFile(
+                                            txnRecord.getResponseRecord().getConsensusTimestamp(),
+                                            List.of(txn),
+                                            txnRecord.getResponseRecord());
+                                    // TODO: other checks for the record!!!
+                                }),
                         getAccountBalance(TOKEN_TREASURY)
                                 .hasTokenBalance(aFungibleRoyaltyToken, aFungibleAmount)
                                 .hasTokenBalance(aFungibleNonRoyaltyToken, aFungibleAmount)
                                 .hasTokenBalance(nonFungibleRoyaltyToken, 1)
-                                .hasTokenBalance(nonFungibleNonRoyaltyToken, 1)
-
-                );
+                                .hasTokenBalance(nonFungibleNonRoyaltyToken, 1));
     }
 
     private HapiSpec receiverSigReqBypassedForTreasuryAtEndOfGracePeriod() {
@@ -480,8 +477,7 @@ public class ContractAutoExpirySpecs extends HapiSuite {
         return defaultHapiSpec("receiverSigReqBypassedForTreasuryAtEndOfGracePeriod")
                 .given(
                         newKeyNamed(supplyKey),
-                        cryptoCreate(TOKEN_TREASURY)
-                                .receiverSigRequired(true),
+                        cryptoCreate(TOKEN_TREASURY).receiverSigRequired(true),
                         tokenCreate(aFungibleToken)
                                 .initialSupply(aFungibleAmount)
                                 .treasury(TOKEN_TREASURY),
@@ -503,29 +499,26 @@ public class ContractAutoExpirySpecs extends HapiSuite {
                                 .bytecode(initcode)
                                 .balance(0)
                                 .autoRenewSecs(minimalLifetime),
-                        tokenAssociate(
-                                contractToRemove,
-                                List.of(aFungibleToken, nonFungibleToken)),
+                        tokenAssociate(contractToRemove, List.of(aFungibleToken, nonFungibleToken)),
                         cryptoTransfer(
                                 moving(aFungibleAmount, aFungibleToken)
                                         .between(TOKEN_TREASURY, contractToRemove),
                                 movingUnique(nonFungibleToken, 1L, 2L)
                                         .between(TOKEN_TREASURY, contractToRemove)),
                         sleepFor(5_000L),
-                                getAccountBalance(contractToRemove)
-                                        .hasTokenBalance(aFungibleToken, aFungibleAmount)
-                                        .hasTokenBalance(nonFungibleToken, 2),
-                                getAccountBalance(TOKEN_TREASURY)
-                                        .hasTokenBalance(aFungibleToken, 0)
-                                        .hasTokenBalance(nonFungibleToken, 0),
+                        getAccountBalance(contractToRemove)
+                                .hasTokenBalance(aFungibleToken, aFungibleAmount)
+                                .hasTokenBalance(nonFungibleToken, 2),
+                        getAccountBalance(TOKEN_TREASURY)
+                                .hasTokenBalance(aFungibleToken, 0)
+                                .hasTokenBalance(nonFungibleToken, 0),
                         // sleep past the expiration:
-                        // (minimalLifetimeMillis * 1 second) + 5 seconds, where 5 seconds is just to give some extra time
-                        sleepFor((minimalLifetime * 1_000L) + 5_000L)
-                )
+                        // (minimalLifetimeMillis * 1 second) + 5 seconds, where 5 seconds is just
+                        // to give some extra time
+                        sleepFor((minimalLifetime * 1_000L) + 5_000L))
                 .when(
                         // run a transaction so the contract can be deleted
-                        cryptoTransfer(tinyBarsFromTo(GENESIS, NODE, 1L))
-                )
+                        cryptoTransfer(tinyBarsFromTo(GENESIS, NODE, 1L)))
                 .then(
                         // check that the contract is gone
                         getContractInfo(contractToRemove)
@@ -536,8 +529,7 @@ public class ContractAutoExpirySpecs extends HapiSuite {
                                 .hasTokenBalance(nonFungibleToken, 2),
                         // And the NFTs are now owned by the treasury
                         getTokenNftInfo(nonFungibleToken, 1L).hasAccountID(TOKEN_TREASURY),
-                        getTokenNftInfo(nonFungibleToken, 2L).hasAccountID(TOKEN_TREASURY)
-                );
+                        getTokenNftInfo(nonFungibleToken, 2L).hasAccountID(TOKEN_TREASURY));
     }
 
     private HapiSpec storageExpiryWorksAtTheExpectedInterval() {
