@@ -24,11 +24,11 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.node.app.service.token.impl.ReadableAccountStore;
 import com.hedera.node.app.service.token.impl.ReadableTokenStore;
-import com.hedera.node.app.spi.AccountKeyLookup;
 import com.hedera.node.app.spi.KeyOrLookupFailureReason;
-import com.hedera.node.app.spi.meta.PreHandleContext;
+import com.hedera.node.app.spi.accounts.AccountAccess;
 import com.hedera.node.app.spi.meta.TransactionMetadata;
 import com.hedera.node.app.spi.workflows.PreCheckException;
+import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hedera.node.app.spi.workflows.TransactionHandler;
 import com.hederahashgraph.api.proto.java.AccountAmount;
 import com.hederahashgraph.api.proto.java.AccountID;
@@ -57,8 +57,8 @@ public class CryptoTransferHandler implements TransactionHandler {
      * @throws PreCheckException if validation fails
      */
     public void validate(@NonNull final TransactionBody txn) throws PreCheckException {
-        // TODO: Migrate validation from CryptoTransferTransistionLogic.validateSemantics()
-        throw new UnsupportedOperationException("Not implemented");
+        // FUTURE: Migrate validation from CryptoTransferTransistionLogic.validateSemantics()
+        //        throw new UnsupportedOperationException("Not implemented");
     }
 
     /**
@@ -68,7 +68,7 @@ public class CryptoTransferHandler implements TransactionHandler {
      *
      * @param context the {@link PreHandleContext} which collects all information that will be
      *     passed to {@link #handle(TransactionMetadata)}
-     * @param accountStore the {@link AccountKeyLookup} to use to resolve keys
+     * @param accountStore the {@link AccountAccess} to use to resolve keys
      * @param tokenStore the {@link ReadableTokenStore} to use to resolve token metadata
      * @throws NullPointerException if one of the arguments is {@code null}
      */
@@ -102,8 +102,9 @@ public class CryptoTransferHandler implements TransactionHandler {
      * @throws NullPointerException if one of the arguments is {@code null}
      */
     public void handle(@NonNull final TransactionMetadata metadata) {
-        requireNonNull(metadata);
-        throw new UnsupportedOperationException("Not implemented");
+        // TODO : Need to implement this method when we are ready to validate payments for query
+        //        requireNonNull(metadata);
+        //        throw new UnsupportedOperationException("Not implemented");
     }
 
     private void handleTokenTransfers(
@@ -173,7 +174,7 @@ public class CryptoTransferHandler implements TransactionHandler {
     }
 
     private void handleHbarTransfers(
-            final CryptoTransferTransactionBody op, final PreHandleContext meta, final AccountKeyLookup keyLookup) {
+            final CryptoTransferTransactionBody op, final PreHandleContext meta, final AccountAccess keyLookup) {
         for (AccountAmount accountAmount : op.getTransfers().getAccountAmountsList()) {
             final var keyOrFailure = keyLookup.getKey(accountAmount.getAccountID());
 
@@ -201,8 +202,8 @@ public class CryptoTransferHandler implements TransactionHandler {
     private boolean receivesFungibleValue(
             final AccountID target, final CryptoTransferTransactionBody op, final ReadableAccountStore accountStore) {
         for (var adjust : op.getTransfers().getAccountAmountsList()) {
-            final var unaliasedAccount = accountStore.getAccount(adjust.getAccountID());
-            final var unaliasedTarget = accountStore.getAccount(target);
+            final var unaliasedAccount = accountStore.getAccountById(adjust.getAccountID());
+            final var unaliasedTarget = accountStore.getAccountById(target);
             if (unaliasedAccount.isPresent()
                     && unaliasedTarget.isPresent()
                     && adjust.getAmount() > 0
@@ -212,8 +213,8 @@ public class CryptoTransferHandler implements TransactionHandler {
         }
         for (var transfers : op.getTokenTransfersList()) {
             for (var adjust : transfers.getTransfersList()) {
-                final var unaliasedAccount = accountStore.getAccount(adjust.getAccountID());
-                final var unaliasedTarget = accountStore.getAccount(target);
+                final var unaliasedAccount = accountStore.getAccountById(adjust.getAccountID());
+                final var unaliasedTarget = accountStore.getAccountById(target);
                 if (unaliasedAccount.isPresent()
                         && unaliasedTarget.isPresent()
                         && adjust.getAmount() > 0

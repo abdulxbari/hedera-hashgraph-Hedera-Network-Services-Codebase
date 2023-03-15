@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hedera.node.app.service.token.impl.test.util;
 
 import static com.hedera.node.app.service.token.impl.test.handlers.AdapterUtils.mockStates;
@@ -45,8 +46,7 @@ public class SigReqAdapterUtils {
     /**
      * Returns the {@link ReadableTokenStore} containing the "well-known" tokens that exist in a
      * {@code SigRequirementsTest} scenario. This allows us to re-use these scenarios in unit tests
-     * of {@link com.hedera.node.app.spi.PreTransactionHandler} implementations that require a
-     * {@link ReadableTokenStore}.
+     * that require a {@link ReadableTokenStore}.
      *
      * @return the well-known token store
      */
@@ -70,15 +70,13 @@ public class SigReqAdapterUtils {
     }
 
     @SuppressWarnings("java:S1604")
-    private static com.hedera.node.app.service.mono.store.tokens.TokenStore
-            sigReqsMockTokenStore() {
-        final var dummyScenario =
-                new TxnHandlingScenario() {
-                    @Override
-                    public PlatformTxnAccessor platformTxn() {
-                        throw new NotImplementedException();
-                    }
-                };
+    private static com.hedera.node.app.service.mono.store.tokens.TokenStore sigReqsMockTokenStore() {
+        final var dummyScenario = new TxnHandlingScenario() {
+            @Override
+            public PlatformTxnAccessor platformTxn() {
+                throw new NotImplementedException();
+            }
+        };
         return dummyScenario.tokenStore();
     }
 

@@ -13,14 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hedera.node.app.service.contract.impl.handlers;
 
 import static com.hedera.node.app.service.mono.Utils.asHederaKey;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_AUTORENEW_ACCOUNT;
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.node.app.spi.meta.PreHandleContext;
 import com.hedera.node.app.spi.meta.TransactionMetadata;
+import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hedera.node.app.spi.workflows.TransactionHandler;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ContractUpdateTransactionBody;
@@ -63,8 +64,7 @@ public class ContractUpdateHandler implements TransactionHandler {
             final var key = asHederaKey(op.getAdminKey());
             key.ifPresent(context::addToReqNonPayerKeys);
         }
-        if (op.hasAutoRenewAccountId()
-                && !op.getAutoRenewAccountId().equals(AccountID.getDefaultInstance())) {
+        if (op.hasAutoRenewAccountId() && !op.getAutoRenewAccountId().equals(AccountID.getDefaultInstance())) {
             context.addNonPayerKey(op.getAutoRenewAccountId(), INVALID_AUTORENEW_ACCOUNT);
         }
     }

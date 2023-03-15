@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Hedera Hashgraph, LLC
+ * Copyright (C) 2023 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hedera.node.app.service.contract.impl.test.handlers;
 
 import static com.hedera.test.factories.scenarios.ContractCreateScenarios.*;
@@ -23,8 +24,8 @@ import static com.hedera.test.utils.KeyUtils.sanityRestored;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.hedera.node.app.service.contract.impl.handlers.ContractCreateHandler;
-import com.hedera.node.app.spi.AccountKeyLookup;
-import com.hedera.node.app.spi.meta.PreHandleContext;
+import com.hedera.node.app.spi.accounts.AccountAccess;
+import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hedera.test.factories.scenarios.TxnHandlingScenario;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import java.time.Instant;
@@ -32,7 +33,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ContractCreateHandlerParityTest {
-    private AccountKeyLookup keyLookup;
+    private AccountAccess keyLookup;
     private final ContractCreateHandler subject = new ContractCreateHandler();
 
     @BeforeEach
@@ -48,8 +49,7 @@ class ContractCreateHandlerParityTest {
         subject.preHandle(context);
 
         assertThat(sanityRestored(context.getPayerKey())).isEqualTo(DEFAULT_PAYER_KT.asKey());
-        assertThat(sanityRestored(context.getRequiredNonPayerKeys()))
-                .containsExactly(MISC_ACCOUNT_KT.asKey());
+        assertThat(sanityRestored(context.getRequiredNonPayerKeys())).containsExactly(MISC_ACCOUNT_KT.asKey());
     }
 
     @Test
@@ -79,8 +79,7 @@ class ContractCreateHandlerParityTest {
         subject.preHandle(context);
 
         assertThat(sanityRestored(context.getPayerKey())).isEqualTo(DEFAULT_PAYER_KT.asKey());
-        assertThat(sanityRestored(context.getRequiredNonPayerKeys()))
-                .containsExactly(DEFAULT_ADMIN_KT.asKey());
+        assertThat(sanityRestored(context.getRequiredNonPayerKeys())).containsExactly(DEFAULT_ADMIN_KT.asKey());
     }
 
     private TransactionBody txnFrom(final TxnHandlingScenario scenario) {

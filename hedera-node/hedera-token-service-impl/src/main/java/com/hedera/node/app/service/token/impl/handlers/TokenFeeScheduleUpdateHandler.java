@@ -13,14 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hedera.node.app.service.token.impl.handlers;
 
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_CUSTOM_FEE_COLLECTOR;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.node.app.service.token.impl.ReadableTokenStore;
-import com.hedera.node.app.spi.meta.PreHandleContext;
 import com.hedera.node.app.spi.meta.TransactionMetadata;
+import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hedera.node.app.spi.workflows.TransactionHandler;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -51,8 +52,7 @@ public class TokenFeeScheduleUpdateHandler implements TransactionHandler {
      * @param tokenStore the {@link ReadableTokenStore} to use to resolve token metadata
      * @throws NullPointerException if one of the arguments is {@code null}
      */
-    public void preHandle(
-            @NonNull final PreHandleContext context, @NonNull final ReadableTokenStore tokenStore) {
+    public void preHandle(@NonNull final PreHandleContext context, @NonNull final ReadableTokenStore tokenStore) {
         requireNonNull(context);
         final var op = context.getTxn().getTokenFeeScheduleUpdate();
         final var tokenId = op.getTokenId();
@@ -66,8 +66,7 @@ public class TokenFeeScheduleUpdateHandler implements TransactionHandler {
                 context.addToReqNonPayerKeys(feeScheduleKey.get());
                 for (final var customFee : op.getCustomFeesList()) {
                     final var collector = customFee.getFeeCollectorAccountId();
-                    context.addNonPayerKeyIfReceiverSigRequired(
-                            collector, INVALID_CUSTOM_FEE_COLLECTOR);
+                    context.addNonPayerKeyIfReceiverSigRequired(collector, INVALID_CUSTOM_FEE_COLLECTOR);
                 }
             }
             // we do not set a failure status if a fee schedule key is not present for the token,

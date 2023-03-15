@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hedera.node.app.workflows.ingest;
 
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.PLATFORM_TRANSACTION_NOT_CREATED;
@@ -21,9 +22,9 @@ import static java.util.Objects.requireNonNull;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Parser;
 import com.hedera.node.app.service.mono.context.properties.NodeLocalProperties;
-import com.hedera.node.app.service.mono.context.properties.Profile;
 import com.hedera.node.app.service.mono.records.RecordCache;
 import com.hedera.node.app.service.mono.stats.MiscSpeedometers;
+import com.hedera.node.app.spi.config.Profile;
 import com.hedera.node.app.spi.workflows.PreCheckException;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import com.swirlds.common.system.Platform;
@@ -70,8 +71,8 @@ public class SubmissionManager {
      *
      * @param txBody the {@link TransactionBody} that should be submitted to the platform
      * @param byteArray the {@link ByteBuffer} of the data that should be submitted
-     * @param parser the {@link Parser} that is used to eventually parse the {@link
-     *     TransactionBody#getUncheckedSubmit()}
+     * @param parser the {@link Parser} that is used to eventually parse the
+     * {@link TransactionBody#getUncheckedSubmit()}
      * @throws NullPointerException if one of the arguments is {@code null}
      * @throws PreCheckException if the transaction could not be submitted
      */
@@ -94,10 +95,9 @@ public class SubmissionManager {
                 throw new PreCheckException(PLATFORM_TRANSACTION_NOT_CREATED);
             }
             try {
-                payload =
-                        parser.parseFrom(txBody.getUncheckedSubmit().getTransactionBytes())
-                                .toByteArray();
-            } catch (InvalidProtocolBufferException e) {
+                payload = parser.parseFrom(txBody.getUncheckedSubmit().getTransactionBytes())
+                        .toByteArray();
+            } catch (final InvalidProtocolBufferException e) {
                 LOG.warn("Transaction bytes from UncheckedSubmit not a valid gRPC transaction!", e);
                 throw new PreCheckException(PLATFORM_TRANSACTION_NOT_CREATED);
             }

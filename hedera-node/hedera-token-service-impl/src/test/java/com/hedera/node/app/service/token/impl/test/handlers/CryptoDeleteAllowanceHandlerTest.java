@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hedera.node.app.service.token.impl.test.handlers;
 
 import static com.hedera.node.app.service.mono.Utils.asHederaKey;
@@ -30,9 +31,10 @@ import static org.mockito.BDDMockito.given;
 
 import com.hedera.node.app.service.mono.legacy.core.jproto.JKey;
 import com.hedera.node.app.service.mono.state.merkle.MerkleAccount;
+import com.hedera.node.app.service.mono.state.virtual.EntityNumVirtualKey;
 import com.hedera.node.app.service.token.impl.handlers.CryptoDeleteAllowanceHandler;
 import com.hedera.node.app.spi.key.HederaKey;
-import com.hedera.node.app.spi.meta.PreHandleContext;
+import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.CryptoDeleteAllowanceTransactionBody;
 import com.hederahashgraph.api.proto.java.NftRemoveAllowance;
@@ -47,13 +49,15 @@ class CryptoDeleteAllowanceHandlerTest extends CryptoHandlerTestBase {
     private final TokenID nft = asToken("0.0.56789");
     private final AccountID owner = asAccount("0.0.123456");
     private final HederaKey ownerKey = asHederaKey(A_COMPLEX_KEY).get();
-    @Mock private MerkleAccount ownerAccount;
+
+    @Mock
+    private MerkleAccount ownerAccount;
 
     private CryptoDeleteAllowanceHandler subject = new CryptoDeleteAllowanceHandler();
 
     @Test
     void cryptoDeleteAllowanceVanilla() {
-        given(accounts.get(owner.getAccountNum())).willReturn(ownerAccount);
+        given(accounts.get(EntityNumVirtualKey.fromLong(owner.getAccountNum()))).willReturn(ownerAccount);
         given(ownerAccount.getAccountKey()).willReturn((JKey) ownerKey);
 
         final var txn = cryptoDeleteAllowanceTransaction(payer);
@@ -66,7 +70,7 @@ class CryptoDeleteAllowanceHandlerTest extends CryptoHandlerTestBase {
 
     @Test
     void cryptoDeleteAllowanceDoesntAddIfOwnerSameAsPayer() {
-        given(accounts.get(owner.getAccountNum())).willReturn(ownerAccount);
+        given(accounts.get(EntityNumVirtualKey.fromLong(owner.getAccountNum()))).willReturn(ownerAccount);
         given(ownerAccount.getAccountKey()).willReturn((JKey) ownerKey);
 
         final var txn = cryptoDeleteAllowanceTransaction(owner);
@@ -80,7 +84,7 @@ class CryptoDeleteAllowanceHandlerTest extends CryptoHandlerTestBase {
     @Test
     void cryptoDeleteAllowanceFailsIfPayerOrOwnerNotExist() {
         var txn = cryptoDeleteAllowanceTransaction(owner);
-        given(accounts.get(owner.getAccountNum())).willReturn(null);
+        given(accounts.get(EntityNumVirtualKey.fromLong(owner.getAccountNum()))).willReturn(null);
 
         final var context1 = new PreHandleContext(store, txn, owner);
         subject.preHandle(context1);
@@ -103,18 +107,14 @@ class CryptoDeleteAllowanceHandlerTest extends CryptoHandlerTestBase {
 
     private TransactionBody cryptoDeleteAllowanceTransaction(final AccountID id) {
         final var transactionID =
-                TransactionID.newBuilder()
-                        .setAccountID(id)
-                        .setTransactionValidStart(consensusTimestamp);
-        final var allowanceTxnBody =
-                CryptoDeleteAllowanceTransactionBody.newBuilder()
-                        .addNftAllowances(
-                                NftRemoveAllowance.newBuilder()
-                                        .setOwner(owner)
-                                        .setTokenId(nft)
-                                        .addAllSerialNumbers(List.of(1L, 2L, 3L))
-                                        .build())
-                        .build();
+                TransactionID.newBuilder().setAccountID(id).setTransactionValidStart(consensusTimestamp);
+        final var allowanceTxnBody = CryptoDeleteAllowanceTransactionBody.newBuilder()
+                .addNftAllowances(NftRemoveAllowance.newBuilder()
+                        .setOwner(owner)
+                        .setTokenId(nft)
+                        .addAllSerialNumbers(List.of(1L, 2L, 3L))
+                        .build())
+                .build();
         return TransactionBody.newBuilder()
                 .setTransactionID(transactionID)
                 .setCryptoDeleteAllowance(allowanceTxnBody)

@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hedera.node.app.service.contract.impl.handlers;
 
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_TRANSFER_ACCOUNT_ID;
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.node.app.spi.meta.PreHandleContext;
 import com.hedera.node.app.spi.meta.TransactionMetadata;
+import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hedera.node.app.spi.workflows.TransactionHandler;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -56,8 +57,7 @@ public class ContractDeleteHandler implements TransactionHandler {
         context.addNonPayerKey(op.getContractID());
 
         if (op.hasTransferAccountID()) {
-            context.addNonPayerKeyIfReceiverSigRequired(
-                    op.getTransferAccountID(), INVALID_TRANSFER_ACCOUNT_ID);
+            context.addNonPayerKeyIfReceiverSigRequired(op.getTransferAccountID(), INVALID_TRANSFER_ACCOUNT_ID);
         } else if (op.hasTransferContractID()) {
             context.addNonPayerKeyIfReceiverSigRequired(op.getTransferContractID());
         }

@@ -13,15 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hedera.node.app.service.schedule.impl.handlers;
 
 import static com.hedera.node.app.service.mono.Utils.asHederaKey;
 import static com.hedera.node.app.service.mono.utils.MiscUtils.asOrdinary;
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.node.app.spi.PreHandleDispatcher;
-import com.hedera.node.app.spi.meta.PreHandleContext;
 import com.hedera.node.app.spi.meta.TransactionMetadata;
+import com.hedera.node.app.spi.workflows.PreHandleContext;
+import com.hedera.node.app.spi.workflows.PreHandleDispatcher;
 import com.hedera.node.app.spi.workflows.TransactionHandler;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.inject.Inject;
@@ -49,9 +50,7 @@ public class ScheduleCreateHandler extends AbstractScheduleHandler implements Tr
      *     txn
      * @throws NullPointerException if one of the arguments is {@code null}
      */
-    public void preHandle(
-            @NonNull final PreHandleContext context,
-            @NonNull final PreHandleDispatcher dispatcher) {
+    public void preHandle(@NonNull final PreHandleContext context, @NonNull final PreHandleDispatcher dispatcher) {
         requireNonNull(context);
         final var txn = context.getTxn();
         final var op = txn.getScheduleCreate();
@@ -61,25 +60,21 @@ public class ScheduleCreateHandler extends AbstractScheduleHandler implements Tr
             key.ifPresent(context::addToReqNonPayerKeys);
         }
 
-        final var scheduledTxn =
-                asOrdinary(op.getScheduledTransactionBody(), txn.getTransactionID());
+        final var scheduledTxn = asOrdinary(op.getScheduledTransactionBody(), txn.getTransactionID());
 
         /* We need to always add the custom payer to the sig requirements even if it equals the to level transaction
         payer. It is still part of the "other" parties, and we need to know to store it's key with the
         schedule in all cases. This fixes a case where the ScheduleCreate payer and the custom payer are
         the same payer, which would cause the custom payers signature to not get stored and then a ScheduleSign
         would not execute the transaction without and extra signature from the custom payer.*/
-        final var payerForNested =
-                op.hasPayerAccountID()
-                        ? op.getPayerAccountID()
-                        : txn.getTransactionID().getAccountID();
+        final var payerForNested = op.hasPayerAccountID()
+                ? op.getPayerAccountID()
+                : txn.getTransactionID().getAccountID();
 
         // FUTURE: Once we allow schedule transactions to be scheduled inside, we need a check here
         // to see
         // if provided payer is same as payer in the inner transaction.
-
-        final var innerMeta = preHandleScheduledTxn(scheduledTxn, payerForNested, dispatcher);
-        context.handlerMetadata(innerMeta);
+        preHandleScheduledTxn(context, scheduledTxn, payerForNested, dispatcher);
     }
 
     /**

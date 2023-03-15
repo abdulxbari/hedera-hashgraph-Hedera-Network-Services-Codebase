@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Hedera Hashgraph, LLC
+ * Copyright (C) 2022-2023 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hedera.node.app.throttle;
 
 import com.hedera.node.app.service.mono.throttling.FunctionalityThrottling;
 import com.hedera.node.app.service.mono.throttling.annotations.HapiThrottle;
+import com.hedera.node.app.service.mono.utils.accessors.SignedTxnAccessor;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.hederahashgraph.api.proto.java.Query;
+import com.hederahashgraph.api.proto.java.SignedTransaction;
+import com.hederahashgraph.api.proto.java.Transaction;
+import com.hederahashgraph.api.proto.java.TransactionBody;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -37,13 +42,18 @@ public class MonoThrottleAccumulator implements ThrottleAccumulator {
     }
 
     @Override
-    public boolean shouldThrottle(@NonNull HederaFunctionality functionality) {
-        throw new UnsupportedOperationException();
+    public boolean shouldThrottle(final TransactionBody txn) {
+        final var adapter = SignedTxnAccessor.uncheckedFrom(Transaction.newBuilder()
+                .setSignedTransactionBytes(SignedTransaction.newBuilder()
+                        .setBodyBytes(txn.toByteString())
+                        .build()
+                        .toByteString())
+                .build());
+        return hapiThrottling.shouldThrottleTxn(adapter);
     }
 
     @Override
-    public boolean shouldThrottleQuery(
-            final @NonNull HederaFunctionality functionality, final @NonNull Query query) {
+    public boolean shouldThrottleQuery(final @NonNull HederaFunctionality functionality, final @NonNull Query query) {
         return hapiThrottling.shouldThrottleQuery(functionality, query);
     }
 }

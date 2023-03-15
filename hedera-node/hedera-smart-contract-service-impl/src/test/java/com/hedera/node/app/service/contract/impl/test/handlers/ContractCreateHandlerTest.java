@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hedera.node.app.service.contract.impl.test.handlers;
 
 import static com.hedera.test.utils.IdUtils.asAccount;
@@ -22,7 +23,7 @@ import static org.mockito.BDDMockito.given;
 
 import com.hedera.node.app.service.contract.impl.handlers.ContractCreateHandler;
 import com.hedera.node.app.spi.KeyOrLookupFailureReason;
-import com.hedera.node.app.spi.meta.PreHandleContext;
+import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hederahashgraph.api.proto.java.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,8 +48,7 @@ class ContractCreateHandlerTest extends ContractHandlerTestBase {
     @DisplayName("Fails for invalid payer account")
     void invalidPayer() {
         final var txn = contractCreateTransaction(adminKey, null);
-        given(keyLookup.getKey(payer))
-                .willReturn(KeyOrLookupFailureReason.withFailureReason(INVALID_ACCOUNT_ID));
+        given(keyLookup.getKey(payer)).willReturn(KeyOrLookupFailureReason.withFailureReason(INVALID_ACCOUNT_ID));
         final var context = new PreHandleContext(keyLookup, txn);
         subject.preHandle(context);
 
@@ -105,22 +105,17 @@ class ContractCreateHandlerTest extends ContractHandlerTestBase {
         // meta.requiredNonPayerKeys());
     }
 
-    private TransactionBody contractCreateTransaction(
-            final Key adminKey, final AccountID autoRenewId) {
+    private TransactionBody contractCreateTransaction(final Key adminKey, final AccountID autoRenewId) {
         final var transactionID =
-                TransactionID.newBuilder()
-                        .setAccountID(payer)
-                        .setTransactionValidStart(consensusTimestamp);
-        final var createTxnBody =
-                ContractCreateTransactionBody.newBuilder().setMemo("Create Contract");
+                TransactionID.newBuilder().setAccountID(payer).setTransactionValidStart(consensusTimestamp);
+        final var createTxnBody = ContractCreateTransactionBody.newBuilder().setMemo("Create Contract");
         if (adminKey != null) {
             createTxnBody.setAdminKey(adminKey);
         }
 
         if (autoRenewId != null) {
             if (!autoRenewId.equals(asAccount("0.0.0"))) {
-                given(keyLookup.getKey(autoRenewId))
-                        .willReturn(KeyOrLookupFailureReason.withKey(autoRenewHederaKey));
+                given(keyLookup.getKey(autoRenewId)).willReturn(KeyOrLookupFailureReason.withKey(autoRenewHederaKey));
             }
             createTxnBody.setAutoRenewAccountId(autoRenewId);
         }

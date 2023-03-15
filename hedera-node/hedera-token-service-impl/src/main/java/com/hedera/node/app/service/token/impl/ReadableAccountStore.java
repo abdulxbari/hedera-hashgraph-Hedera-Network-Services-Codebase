@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hedera.node.app.service.token.impl;
 
 import static com.hedera.node.app.service.evm.accounts.HederaEvmContractAliases.EVM_ADDRESS_LEN;
@@ -29,10 +30,12 @@ import com.hedera.node.app.service.mono.legacy.core.jproto.JContractIDKey;
 import com.hedera.node.app.service.mono.legacy.core.jproto.JKey;
 import com.hedera.node.app.service.mono.state.merkle.MerkleAccount;
 import com.hedera.node.app.service.mono.state.migration.HederaAccount;
-import com.hedera.node.app.service.token.entity.Account;
+import com.hedera.node.app.service.mono.state.virtual.EntityNumValue;
+import com.hedera.node.app.service.mono.state.virtual.EntityNumVirtualKey;
 import com.hedera.node.app.service.token.impl.entity.AccountBuilderImpl;
-import com.hedera.node.app.spi.AccountKeyLookup;
 import com.hedera.node.app.spi.KeyOrLookupFailureReason;
+import com.hedera.node.app.spi.accounts.Account;
+import com.hedera.node.app.spi.accounts.AccountAccess;
 import com.hedera.node.app.spi.state.ReadableKVState;
 import com.hedera.node.app.spi.state.ReadableStates;
 import com.hederahashgraph.api.proto.java.AccountID;
@@ -49,11 +52,11 @@ import java.util.Optional;
  *
  * <p>This class is not exported from the module. It is an internal implementation detail.
  */
-public class ReadableAccountStore implements AccountKeyLookup {
+public class ReadableAccountStore implements AccountAccess {
     /** The underlying data storage class that holds the account data. */
-    private final ReadableKVState<Long, MerkleAccount> accountState;
+    private final ReadableKVState<EntityNumVirtualKey, MerkleAccount> accountState;
     /** The underlying data storage class that holds the aliases data built from the state. */
-    private final ReadableKVState<String, Long> aliases;
+    private final ReadableKVState<String, EntityNumValue> aliases;
 
     /**
      * Create a new {@link ReadableAccountStore} instance.
@@ -78,8 +81,7 @@ public class ReadableAccountStore implements AccountKeyLookup {
 
     /** {@inheritDoc} */
     @Override
-    public KeyOrLookupFailureReason getKeyIfReceiverSigRequired(
-            @NonNull final AccountID idOrAlias) {
+    public KeyOrLookupFailureReason getKeyIfReceiverSigRequired(@NonNull final AccountID idOrAlias) {
         Objects.requireNonNull(idOrAlias);
         final var account = getAccountLeaf(idOrAlias);
         if (account.isEmpty()) {
@@ -109,8 +111,7 @@ public class ReadableAccountStore implements AccountKeyLookup {
 
     /** {@inheritDoc} */
     @Override
-    public KeyOrLookupFailureReason getKeyIfReceiverSigRequired(
-            @NonNull final ContractID idOrAlias) {
+    public KeyOrLookupFailureReason getKeyIfReceiverSigRequired(@NonNull final ContractID idOrAlias) {
         Objects.requireNonNull(idOrAlias);
         final var contract = getContractLeaf(idOrAlias);
         final var validity = basicContractValidations(contract);
@@ -133,7 +134,8 @@ public class ReadableAccountStore implements AccountKeyLookup {
      * @return an {@link Optional} with the {@code Account}, if it was found, an empty {@code
      *     Optional} otherwise
      */
-    public Optional<Account> getAccount(@NonNull final AccountID idOrAlias) {
+    @Override
+    public Optional<Account> getAccountById(@NonNull final AccountID idOrAlias) {
         return getAccountLeaf(idOrAlias).map(accountLeaf -> mapAccount(idOrAlias, accountLeaf));
     }
 
@@ -162,7 +164,7 @@ public class ReadableAccountStore implements AccountKeyLookup {
         if (accountNum.equals(MISSING_NUM)) {
             return Optional.empty();
         }
-        return Optional.ofNullable(accountState.get(accountNum));
+        return Optional.ofNullable(accountState.get(EntityNumVirtualKey.fromLong(accountNum)));
     }
 
     /**
@@ -183,7 +185,7 @@ public class ReadableAccountStore implements AccountKeyLookup {
             }
 
             final var ret = aliases.get(alias.toStringUtf8());
-            return ret == null ? MISSING_NUM : ret;
+            return ret == null ? MISSING_NUM : ret.num();
         }
         return idOrAlias.getAccountNum();
     }
@@ -200,7 +202,7 @@ public class ReadableAccountStore implements AccountKeyLookup {
         if (contractNum.equals(MISSING_NUM)) {
             return Optional.empty();
         }
-        return Optional.ofNullable(accountState.get(contractNum));
+        return Optional.ofNullable(accountState.get(EntityNumVirtualKey.fromLong(contractNum)));
     }
 
     /**
@@ -225,20 +227,20 @@ public class ReadableAccountStore implements AccountKeyLookup {
                 // it and look it up
                 var evmKeyAliasAddress = keyAliasToEVMAddress(alias);
                 if (evmKeyAliasAddress != null) {
-                    entityNum = aliases.get(ByteString.copyFrom(evmKeyAliasAddress).toStringUtf8());
+                    entityNum =
+                            aliases.get(ByteString.copyFrom(evmKeyAliasAddress).toStringUtf8());
                 }
             }
             if (entityNum == null) {
                 return MISSING_NUM;
             }
-            return entityNum;
+            return entityNum.num();
         } else {
             return idOrAlias.getContractNum();
         }
     }
 
-    private KeyOrLookupFailureReason validateKey(
-            @Nullable final JKey key, final boolean isContractKey) {
+    private KeyOrLookupFailureReason validateKey(@Nullable final JKey key, final boolean isContractKey) {
         if (key == null || key.isEmpty()) {
             if (isContractKey) {
                 return withFailureReason(MODIFYING_IMMUTABLE_CONTRACT);
@@ -252,28 +254,27 @@ public class ReadableAccountStore implements AccountKeyLookup {
     }
 
     private Account mapAccount(final AccountID idOrAlias, final HederaAccount account) {
-        final var builder =
-                new AccountBuilderImpl()
-                        .key(account.getAccountKey())
-                        .expiry(account.getExpiry())
-                        .balance(account.getBalance())
-                        .memo(account.getMemo())
-                        .deleted(account.isDeleted())
-                        .receiverSigRequired(account.isReceiverSigRequired())
-                        .numberOfOwnedNfts(account.getNftsOwned())
-                        .maxAutoAssociations(account.getMaxAutomaticAssociations())
-                        .usedAutoAssociations(account.getUsedAutoAssociations())
-                        .numAssociations(account.getNumAssociations())
-                        .numPositiveBalances(account.getNumPositiveBalances())
-                        .ethereumNonce(account.getEthereumNonce())
-                        .stakedToMe(account.getStakedToMe())
-                        .stakePeriodStart(account.getStakePeriodStart())
-                        .stakedNum(account.totalStake())
-                        .declineReward(account.isDeclinedReward())
-                        .stakeAtStartOfLastRewardedPeriod(account.getStakePeriodStart())
-                        .autoRenewSecs(account.getAutoRenewSecs())
-                        .accountNumber(idOrAlias.getAccountNum())
-                        .isSmartContract(account.isSmartContract());
+        final var builder = new AccountBuilderImpl()
+                .key(account.getAccountKey())
+                .expiry(account.getExpiry())
+                .balance(account.getBalance())
+                .memo(account.getMemo())
+                .deleted(account.isDeleted())
+                .receiverSigRequired(account.isReceiverSigRequired())
+                .numberOfOwnedNfts(account.getNftsOwned())
+                .maxAutoAssociations(account.getMaxAutomaticAssociations())
+                .usedAutoAssociations(account.getUsedAutoAssociations())
+                .numAssociations(account.getNumAssociations())
+                .numPositiveBalances(account.getNumPositiveBalances())
+                .ethereumNonce(account.getEthereumNonce())
+                .stakedToMe(account.getStakedToMe())
+                .stakePeriodStart(account.getStakePeriodStart())
+                .stakedNum(account.totalStake())
+                .declineReward(account.isDeclinedReward())
+                .stakeAtStartOfLastRewardedPeriod(account.getStakePeriodStart())
+                .autoRenewSecs(account.getAutoRenewSecs())
+                .accountNumber(idOrAlias.getAccountNum())
+                .isSmartContract(account.isSmartContract());
         if (account.getAutoRenewAccount() != null) {
             builder.autoRenewAccountNumber(account.getAutoRenewAccount().num());
         }

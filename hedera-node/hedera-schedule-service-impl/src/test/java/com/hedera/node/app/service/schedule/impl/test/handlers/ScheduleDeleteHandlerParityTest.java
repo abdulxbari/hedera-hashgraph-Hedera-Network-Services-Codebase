@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hedera.node.app.service.schedule.impl.test.handlers;
 
 import static com.hedera.test.factories.keys.NodeFactory.ed25519;
@@ -26,17 +27,17 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 import com.hedera.node.app.service.mono.state.migration.HederaAccount;
+import com.hedera.node.app.service.mono.state.virtual.EntityNumVirtualKey;
 import com.hedera.node.app.service.mono.state.virtual.schedule.ScheduleVirtualValue;
-import com.hedera.node.app.service.mono.utils.EntityNum;
 import com.hedera.node.app.service.schedule.impl.ReadableScheduleStore;
 import com.hedera.node.app.service.schedule.impl.handlers.ScheduleDeleteHandler;
-import com.hedera.node.app.spi.AccountKeyLookup;
+import com.hedera.node.app.spi.accounts.AccountAccess;
 import com.hedera.node.app.spi.fixtures.state.MapReadableKVState;
 import com.hedera.node.app.spi.fixtures.state.MapReadableStates;
-import com.hedera.node.app.spi.meta.PreHandleContext;
 import com.hedera.node.app.spi.state.ReadableKVState;
 import com.hedera.node.app.spi.state.ReadableKVStateBase;
 import com.hedera.node.app.spi.state.ReadableStates;
+import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hedera.test.factories.keys.KeyTree;
 import com.hedera.test.factories.scenarios.TxnHandlingScenario;
 import com.hedera.test.utils.IdUtils;
@@ -53,7 +54,7 @@ import org.junit.jupiter.api.Test;
 class ScheduleDeleteHandlerParityTest {
     static final KeyTree ADMIN_KEY = KeyTree.withRoot(ed25519());
 
-    private AccountKeyLookup keyLookup;
+    private AccountAccess keyLookup;
     private final ScheduleDeleteHandler subject = new ScheduleDeleteHandler();
     private ReadableScheduleStore scheduleStore;
 
@@ -65,10 +66,8 @@ class ScheduleDeleteHandlerParityTest {
     @Test
     void getsScheduleDeleteWithMissingSchedule() throws Throwable {
         final var theTxn = txnFrom(SCHEDULE_DELETE_WITH_MISSING_SCHEDULE);
-        scheduleStore =
-                AdapterUtils.mockSchedule(
-                        999L,
-                        ADMIN_KEY); // use any schedule id that does not match UNKNOWN_SCHEDULE_ID
+        scheduleStore = AdapterUtils.mockSchedule(
+                999L, ADMIN_KEY); // use any schedule id that does not match UNKNOWN_SCHEDULE_ID
         final var context = new PreHandleContext(keyLookup, theTxn);
         subject.preHandle(context, scheduleStore);
 
@@ -80,9 +79,8 @@ class ScheduleDeleteHandlerParityTest {
     @Test
     void getsScheduleDeleteWithMissingAdminKey() throws Throwable {
         final var theTxn = txnFrom(SCHEDULE_DELETE_WITH_MISSING_SCHEDULE_ADMIN_KEY);
-        scheduleStore =
-                AdapterUtils.mockSchedule(
-                        IdUtils.asSchedule(KNOWN_SCHEDULE_IMMUTABLE_ID).getScheduleNum(), null);
+        scheduleStore = AdapterUtils.mockSchedule(
+                IdUtils.asSchedule(KNOWN_SCHEDULE_IMMUTABLE_ID).getScheduleNum(), null);
         final var context = new PreHandleContext(keyLookup, theTxn);
         subject.preHandle(context, scheduleStore);
 
@@ -94,10 +92,8 @@ class ScheduleDeleteHandlerParityTest {
     @Test
     void getsScheduleDeleteKnownSchedule() throws Throwable {
         final var theTxn = txnFrom(SCHEDULE_DELETE_WITH_KNOWN_SCHEDULE);
-        scheduleStore =
-                AdapterUtils.mockSchedule(
-                        IdUtils.asSchedule(KNOWN_SCHEDULE_WITH_ADMIN_ID).getScheduleNum(),
-                        ADMIN_KEY);
+        scheduleStore = AdapterUtils.mockSchedule(
+                IdUtils.asSchedule(KNOWN_SCHEDULE_WITH_ADMIN_ID).getScheduleNum(), ADMIN_KEY);
         final var context = new PreHandleContext(keyLookup, theTxn);
         subject.preHandle(context, scheduleStore);
 
@@ -129,16 +125,15 @@ class AdapterUtils {
     }
 
     /**
-     * Returns the {@link AccountKeyLookup} containing the "well-known" accounts that exist in a
+     * Returns the {@link AccountAccess} containing the "well-known" accounts that exist in a
      * {@code SigRequirementsTest} scenario. This allows us to re-use these scenarios in unit tests
      * of {@link com.hedera.node.app.spi.Tr} implementations that require an {@link
-     * AccountKeyLookup}.
+     * AccountAccess}.
      *
      * @return the well-known account store
      */
-    public static AccountKeyLookup wellKnownKeyLookupAt() {
-        return new TestFixturesKeyLookup(
-                mockStates(java.util.Map.of(ACCOUNTS_KEY, wellKnownAccountsState())));
+    public static AccountAccess wellKnownKeyLookupAt() {
+        return new TestFixturesKeyLookup(mockStates(java.util.Map.of(ACCOUNTS_KEY, wellKnownAccountsState())));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -148,19 +143,16 @@ class AdapterUtils {
         return mockStates;
     }
 
-    public static ReadableScheduleStore mockSchedule(Long schedId, KeyTree key)
-            throws DecoderException {
-        final ScheduleID scheduleID = ScheduleID.newBuilder().setScheduleNum(schedId).build();
-        given(schedule.adminKey())
-                .willReturn(key == null ? Optional.empty() : Optional.of(key.asJKey()));
+    public static ReadableScheduleStore mockSchedule(Long schedId, KeyTree key) throws DecoderException {
+        final ScheduleID scheduleID =
+                ScheduleID.newBuilder().setScheduleNum(schedId).build();
+        given(schedule.adminKey()).willReturn(key == null ? Optional.empty() : Optional.of(key.asJKey()));
         given(schedulesById.get(scheduleID.getScheduleNum())).willReturn(schedule);
-        return new ReadableScheduleStore(
-                new MapReadableStates(Map.of("SCHEDULES_BY_ID", schedulesById)));
+        return new ReadableScheduleStore(new MapReadableStates(Map.of("SCHEDULES_BY_ID", schedulesById)));
     }
 
-    private static ReadableKVState<Long, ? extends HederaAccount> wellKnownAccountsState() {
-        final var wrappedState =
-                new MapReadableKVState<>(ACCOUNTS_KEY, TxnHandlingScenario.wellKnownAccounts());
-        return new StateKeyAdapter<>(wrappedState, EntityNum::fromLong);
+    private static ReadableKVState<EntityNumVirtualKey, ? extends HederaAccount> wellKnownAccountsState() {
+        final var wrappedState = new MapReadableKVState<>(ACCOUNTS_KEY, TxnHandlingScenario.wellKnownAccounts());
+        return new StateKeyAdapter<>(wrappedState, EntityNumVirtualKey::asEntityNum);
     }
 }
