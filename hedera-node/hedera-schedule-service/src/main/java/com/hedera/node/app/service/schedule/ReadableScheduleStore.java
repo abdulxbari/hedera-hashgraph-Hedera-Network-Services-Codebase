@@ -21,7 +21,11 @@ import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.base.ScheduleID;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
+import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 
 /**
  * Provides read-only methods for interacting with the underlying data storage mechanisms for
@@ -38,15 +42,20 @@ public interface ReadableScheduleStore {
      * @return the schedule with the given id
      */
     @NonNull
-    Optional<ScheduleMetadata> get(@NonNull ScheduleID id);
+    Optional<ScheduleMetadata> get(@Nullable ScheduleID id);
 
     /**
      * Metadata about a schedule.
+    private final List<byte[]> signatories = new ArrayList<>();
+    private final Set<ByteString> notary = ConcurrentHashMap.newKeySet();
      *
      * @param adminKey admin key on the schedule
      * @param scheduledTxn scheduled transaction
      * @param designatedPayer payer for the schedule execution.If there is no explicit payer,
      *     returns {@link Optional#empty()}.
      */
-    record ScheduleMetadata(Key adminKey, TransactionBody scheduledTxn, Optional<AccountID> designatedPayer) {}
+    public record ScheduleMetadata(
+            Key adminKey, TransactionBody scheduledTxn, Optional<AccountID> designatedPayer,
+            AccountID schedulingAccount, boolean scheduleExecuted, boolean scheduleDeleted,
+            Instant calculatedExpirationTime, Set<Key> signatories) {}
 }

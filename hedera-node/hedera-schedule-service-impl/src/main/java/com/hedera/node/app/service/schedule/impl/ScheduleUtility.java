@@ -16,17 +16,38 @@
 
 package com.hedera.node.app.service.schedule.impl;
 
+import com.hedera.hapi.node.base.AccountID;
+import com.hedera.hapi.node.base.Key;
+import com.hedera.hapi.node.base.ResponseCodeEnum;
+import com.hedera.hapi.node.base.ScheduleID;
 import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.scheduled.SchedulableTransactionBody;
+import com.hedera.hapi.node.scheduled.ScheduleCreateTransactionBody;
 import com.hedera.hapi.node.transaction.TransactionBody;
+import com.hedera.node.app.service.schedule.ReadableScheduleStore.ScheduleMetadata;
 import com.hedera.node.app.spi.UnknownHederaFunctionality;
+import com.hedera.node.app.spi.signatures.SignatureVerification;
+import com.hedera.node.app.spi.workflows.HandleContext;
+import com.hedera.node.app.spi.workflows.HandleException;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Predicate;
 
-public class Utils {
-    private Utils() {}
+/**
+ * Basic utility class for Schedule Handlers.
+ */
+public final class ScheduleUtility {
+    private ScheduleUtility() {}
 
-    public static TransactionBody asOrdinary(
-            final SchedulableTransactionBody scheduledTxn, final TransactionID scheduledTxnTransactionId) {
-        final var ordinary = TransactionBody.newBuilder();
+    @NonNull
+    public static TransactionBody asOrdinary(@NonNull final SchedulableTransactionBody scheduledTxn,
+            @NonNull final TransactionID scheduledTxnTransactionId) throws UnknownHederaFunctionality {
+        final TransactionBody.Builder ordinary = TransactionBody.newBuilder();
         ordinary.transactionFee(scheduledTxn.transactionFee())
                 .memo(scheduledTxn.memo())
                 .transactionID(scheduledTxnTransactionId.copyBuilder().scheduled(true));
@@ -76,9 +97,72 @@ public class Utils {
             case TOKEN_FEE_SCHEDULE_UPDATE -> ordinary.tokenFeeScheduleUpdate(
                     scheduledTxn.tokenFeeScheduleUpdateOrThrow());
             case UTIL_PRNG -> ordinary.utilPrng(scheduledTxn.utilPrngOrThrow());
-            default -> throw new RuntimeException(new UnknownHederaFunctionality());
+        }
+        return ordinary.build();
+    }
+
+    @NonNull
+    public static ScheduleID toPbj(com.hederahashgraph.api.proto.java.ScheduleID valueToConvert) {
+        return new ScheduleID(valueToConvert.getShardNum(), valueToConvert.getRealmNum(),
+                valueToConvert.getScheduleNum());
+    }
+
+    @NonNull
+    public static ScheduleMetadata createMetadata(@NonNull final ScheduleCreateTransactionBody createTransaction,
+            @NonNull final TransactionID parentTransactionId, @NonNull final Instant currentConsensusTime)
+            throws HandleException {
+        Objects.requireNonNull(parentTransactionId);
+        final SchedulableTransactionBody scheduledTransaction = createTransaction.scheduledTransactionBody();
+        try {
+            if (scheduledTransaction != null) {
+                return new ScheduleMetadata(createTransaction.adminKey(),
+                        ScheduleUtility.asOrdinary(scheduledTransaction, parentTransactionId),
+                        Optional.ofNullable(createTransaction.payerAccountID()),
+                        getSchedulingAccount(createTransaction), false, false,
+                        calculateExpiration(createTransaction, currentConsensusTime),
+                        Collections.emptySet());
+            } else {
+                throw new HandleException(ResponseCodeEnum.INVALID_TRANSACTION_BODY);
+            }
+        } catch (final UnknownHederaFunctionality e) {
+            throw new HandleException(ResponseCodeEnum.INVALID_TRANSACTION_BODY);
+        }
+    }
+
+    private static AccountID getSchedulingAccount(final ScheduleCreateTransactionBody createTransaction) {
+        return null;
+    }
+
+    private static Instant calculateExpiration(final ScheduleCreateTransactionBody createTransaction,
+            @NonNull final Instant currentConsensusTime) {
+        return null;
+    }
+
+    /**
+     * Predicate that checks if a given key has been validated or verified.
+     * The current implementation is naive.  We may need to include the set of pre-verified keys and
+     * some information about partially verified keys in order to properly validate whether a given
+     * key is fully active, partially active, or not active.
+     */
+    public static final class isValidSignature implements Predicate<Key> {
+        private final HandleContext transactionContext;
+        private final Set<Key> signatories;
+
+        public isValidSignature(@NonNull final HandleContext transactionContext,
+                @Nullable final Set<Key> signatories) {
+            this.transactionContext = Objects.requireNonNull(transactionContext);
+            this.signatories = signatories;
         }
 
-        return ordinary.build();
+        @Override
+        public boolean test(final Key key) {
+            /*
+            final SignatureVerification verificationResult =
+                    transactionContext.extendedVerificationFor(key, signatories);
+             */
+            // Not correct, need to supply added primitive keys as above
+            final SignatureVerification verificationResult = transactionContext.verificationFor(key);
+            return (verificationResult != null && verificationResult.passed());
+        }
     }
 }

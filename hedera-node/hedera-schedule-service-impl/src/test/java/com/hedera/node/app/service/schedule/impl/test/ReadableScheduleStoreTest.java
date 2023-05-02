@@ -16,98 +16,96 @@
 
 package com.hedera.node.app.service.schedule.impl.test;
 
-import static com.hedera.node.app.service.mono.Utils.asHederaKey;
-import static com.hedera.test.utils.KeyUtils.A_COMPLEX_KEY;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.BDDMockito.given;
-
 import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.base.ScheduleID;
 import com.hedera.hapi.node.transaction.TransactionBody;
+import com.hedera.node.app.service.mono.Utils;
 import com.hedera.node.app.service.mono.legacy.core.jproto.JKey;
 import com.hedera.node.app.service.mono.pbj.PbjConverter;
 import com.hedera.node.app.service.mono.state.submerkle.EntityId;
 import com.hedera.node.app.service.mono.state.virtual.schedule.ScheduleVirtualValue;
+import com.hedera.node.app.service.mono.utils.EntityNum;
 import com.hedera.node.app.service.schedule.ReadableScheduleStore;
 import com.hedera.node.app.service.schedule.impl.ReadableScheduleStoreImpl;
 import com.hedera.node.app.spi.key.HederaKey;
 import com.hedera.node.app.spi.state.ReadableKVState;
 import com.hedera.node.app.spi.state.ReadableStates;
+import com.hedera.test.factories.scenarios.TxnHandlingScenario;
+import com.hedera.test.utils.KeyUtils;
 import java.util.Optional;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.BDDMockito;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 @ExtendWith(MockitoExtension.class)
 class ReadableScheduleStoreTest {
-    @Mock
+    @Mock(strictness = Mock.Strictness.LENIENT)
     ReadableStates states;
 
-    @Mock
+    @Mock(strictness = Mock.Strictness.LENIENT)
     ReadableKVState state;
 
-    @Mock
+    @Mock(strictness = Mock.Strictness.LENIENT)
     ScheduleVirtualValue schedule;
 
     private ReadableScheduleStore subject;
-    private Key adminKey = A_COMPLEX_KEY;
-    private HederaKey adminHederaKey = asHederaKey(adminKey).get();
+    private Key adminKey = KeyUtils.A_COMPLEX_KEY;
+    private HederaKey adminHederaKey = Utils.asHederaKey(adminKey).get();
 
     @BeforeEach
     void setUp() {
-        given(states.get("SCHEDULES_BY_ID")).willReturn(state);
+        BDDMockito.given(states.get("SCHEDULES_BY_ID")).willReturn(state);
         subject = new ReadableScheduleStoreImpl(states);
+        BDDMockito.given(state.get(1L)).willReturn(schedule);
+        BDDMockito.given(schedule.ordinaryViewOfScheduledTxn())
+                .willReturn(PbjConverter.fromPbj(TransactionBody.newBuilder().build()));
+        BDDMockito.given(schedule.hasAdminKey()).willReturn(true);
+        BDDMockito.given(schedule.adminKey()).willReturn(Optional.of((JKey) adminHederaKey));
+        BDDMockito.given(schedule.hasExplicitPayer()).willReturn(true);
+        BDDMockito.given(schedule.payer()).willReturn(EntityId.fromNum(2L));
+        BDDMockito.given(schedule.schedulingAccount()).willReturn(EntityId.fromGrpcAccountId(
+                TxnHandlingScenario.CUSTOM_PAYER_ACCOUNT));
     }
 
     @Test
+    @SuppressWarnings("DataFlowIssue")
     void constructorThrowsIfStatesIsNull() {
-        assertThrows(NullPointerException.class, () -> new ReadableScheduleStoreImpl(null));
+        Assertions.assertThrows(NullPointerException.class, () -> new ReadableScheduleStoreImpl(null));
     }
 
     @Test
     void returnsEmptyIfMissingSchedule() {
-        given(state.get(1L)).willReturn(null);
+        BDDMockito.given(state.get(1L)).willReturn(null);
 
-        assertEquals(
+        Assertions.assertEquals(
                 Optional.empty(),
                 subject.get(ScheduleID.newBuilder().scheduleNum(1L).build()));
     }
 
     @Test
     void getsScheduleMetaFromFetchedSchedule() {
-        given(state.get(1L)).willReturn(schedule);
-        given(schedule.ordinaryViewOfScheduledTxn())
-                .willReturn(PbjConverter.fromPbj(TransactionBody.newBuilder().build()));
-        given(schedule.hasAdminKey()).willReturn(true);
-        given(schedule.adminKey()).willReturn(Optional.of((JKey) adminHederaKey));
-        given(schedule.hasExplicitPayer()).willReturn(true);
-        given(schedule.payer()).willReturn(EntityId.fromNum(2L));
-
         final var meta = subject.get(ScheduleID.newBuilder().scheduleNum(1L).build());
 
-        assertEquals(adminKey, meta.get().adminKey());
-        assertEquals(TransactionBody.newBuilder().build(), meta.get().scheduledTxn());
-        assertEquals(
+        Assertions.assertEquals(adminKey, meta.get().adminKey());
+        Assertions.assertEquals(TransactionBody.newBuilder().build(), meta.get().scheduledTxn());
+        Assertions.assertEquals(
                 Optional.of(EntityId.fromNum(2L).toPbjAccountId()), meta.get().designatedPayer());
     }
 
     @Test
     void getsScheduleMetaFromFetchedScheduleNoExplicitPayer() {
-        given(state.get(1L)).willReturn(schedule);
-        given(schedule.ordinaryViewOfScheduledTxn())
-                .willReturn(PbjConverter.fromPbj(TransactionBody.newBuilder().build()));
-        given(schedule.adminKey()).willReturn(Optional.of((JKey) adminHederaKey));
-        given(schedule.hasAdminKey()).willReturn(true);
-        given(schedule.hasExplicitPayer()).willReturn(false);
+        BDDMockito.given(schedule.hasExplicitPayer()).willReturn(false);
+        BDDMockito.given(schedule.payer()).willReturn(null);
 
         final var meta = subject.get(ScheduleID.newBuilder().scheduleNum(1L).build());
 
-        assertEquals(adminKey, meta.get().adminKey());
-        assertEquals(TransactionBody.newBuilder().build(), meta.get().scheduledTxn());
-        assertEquals(Optional.empty(), meta.get().designatedPayer());
+        Assertions.assertEquals(adminKey, meta.get().adminKey());
+        Assertions.assertEquals(TransactionBody.newBuilder().build(), meta.get().scheduledTxn());
+        Assertions.assertEquals(Optional.empty(), meta.get().designatedPayer());
     }
 }
