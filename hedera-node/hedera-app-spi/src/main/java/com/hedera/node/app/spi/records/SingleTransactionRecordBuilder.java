@@ -1,86 +1,29 @@
-/*
- * Copyright (C) 2023 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+package com.hedera.node.app.spi.records;
 
-package com.hedera.node.app.records;
-
-import static java.util.Objects.requireNonNull;
-
-import com.hedera.hapi.node.base.AccountAmount;
-import com.hedera.hapi.node.base.AccountID;
-import com.hedera.hapi.node.base.ContractID;
-import com.hedera.hapi.node.base.FileID;
-import com.hedera.hapi.node.base.ResponseCodeEnum;
-import com.hedera.hapi.node.base.ScheduleID;
-import com.hedera.hapi.node.base.Timestamp;
-import com.hedera.hapi.node.base.TokenAssociation;
-import com.hedera.hapi.node.base.TokenID;
-import com.hedera.hapi.node.base.TokenTransferList;
-import com.hedera.hapi.node.base.TopicID;
-import com.hedera.hapi.node.base.Transaction;
-import com.hedera.hapi.node.base.TransactionID;
-import com.hedera.hapi.node.base.TransferList;
+import com.hedera.hapi.node.base.*;
 import com.hedera.hapi.node.contract.ContractFunctionResult;
 import com.hedera.hapi.node.transaction.AssessedCustomFee;
 import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.node.transaction.TransactionReceipt;
 import com.hedera.hapi.node.transaction.TransactionRecord;
-import com.hedera.hapi.node.transaction.TransactionRecord.EntropyOneOfType;
-import com.hedera.hapi.streams.ContractActions;
-import com.hedera.hapi.streams.ContractBytecode;
-import com.hedera.hapi.streams.ContractStateChanges;
-import com.hedera.hapi.streams.RecordStreamItem;
-import com.hedera.hapi.streams.TransactionSidecarRecord;
-import com.hedera.node.app.service.consensus.impl.records.ConsensusCreateTopicRecordBuilder;
-import com.hedera.node.app.service.consensus.impl.records.ConsensusSubmitMessageRecordBuilder;
-import com.hedera.node.app.service.file.impl.records.CreateFileRecordBuilder;
-import com.hedera.node.app.service.token.impl.records.CryptoCreateRecordBuilder;
-import com.hedera.node.app.service.token.impl.records.TokenCreateRecordBuilder;
-import com.hedera.node.app.service.token.impl.records.TokenMintRecordBuilder;
-import com.hedera.node.app.service.util.impl.records.PrngRecordBuilder;
-import com.hedera.node.app.spi.HapiUtils;
-import com.hedera.node.app.spi.records.SingleTransactionRecord;
+import com.hedera.hapi.streams.*;
 import com.hedera.pbj.runtime.OneOf;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.crypto.Hash;
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
-import java.time.Instant;
+
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A custom builder for SingleTransactionRecord. This is an ugly superset of all fields for
- * all transaction types. It is masked down to a sensible subset by the interfaces for
- * specific transaction types.
+ * A custom builder for SingleTransactionRecord.
  */
-@SuppressWarnings("unused")
-public class SingleTransactionRecordBuilder
-        implements ConsensusCreateTopicRecordBuilder,
-                ConsensusSubmitMessageRecordBuilder,
-                CreateFileRecordBuilder,
-                CryptoCreateRecordBuilder,
-                PrngRecordBuilder,
-                TokenMintRecordBuilder,
-                TokenCreateRecordBuilder {
+public class SingleTransactionRecordBuilder {
     // base transaction data
     private Transaction transaction;
     private Bytes transactionBytes;
     // fields needed for TransactionRecord
-    private final Instant consensusNow;
+    private Timestamp consensusTimestamp;
     private long transactionFee;
     private ContractFunctionResult contractCallResult;
     private ContractFunctionResult contractCreateResult;
@@ -96,7 +39,7 @@ public class SingleTransactionRecordBuilder
     private OneOf<TransactionRecord.EntropyOneOfType> entropy;
     private Bytes evmAddress;
     // fields needed for TransactionReceipt
-    private ResponseCodeEnum status = ResponseCodeEnum.OK;
+    private ResponseCodeEnum status;
     private AccountID accountID;
     private FileID fileID;
     private ContractID contractID;
@@ -111,46 +54,45 @@ public class SingleTransactionRecordBuilder
     private TransactionID scheduledTransactionID;
     private List<Long> serialNumbers;
     // Sidecar data, booleans are the migration flag
-    public final List<AbstractMap.SimpleEntry<ContractStateChanges, Boolean>> contractStateChanges = new ArrayList<>();
-    public final List<AbstractMap.SimpleEntry<ContractActions, Boolean>> contractActions = new ArrayList<>();
-    public final List<AbstractMap.SimpleEntry<ContractBytecode, Boolean>> contractBytecodes = new ArrayList<>();
-
-    public SingleTransactionRecordBuilder(@NonNull final Instant consensusNow) {
-        this.consensusNow = requireNonNull(consensusNow, "consensusNow must not be null");
-    }
+    public final List<AbstractMap.SimpleEntry<ContractStateChanges,Boolean>> contractStateChanges = new ArrayList<>();
+    public final List<AbstractMap.SimpleEntry<ContractActions,Boolean>> contractActions = new ArrayList<>();
+    public final List<AbstractMap.SimpleEntry<ContractBytecode,Boolean>> contractBytecodes = new ArrayList<>();
 
     @SuppressWarnings("DataFlowIssue")
     public SingleTransactionRecord build() {
         // compute transaction hash: TODO could pass in if we have it calculated else where
-        final Timestamp consensusTimestamp = HapiUtils.asTimestamp(consensusNow);
-        final byte[] transactionBytes = new byte[(int) this.transactionBytes.length()];
-        this.transactionBytes.getBytes(0, transactionBytes);
+        final byte[] transactionBytes = new byte[(int)this.transactionBytes.length()];
+        this.transactionBytes.getBytes(0,transactionBytes);
         final Bytes transactionHash = Bytes.wrap(new Hash(transactionBytes).getValue());
         // create body one of
         OneOf<TransactionRecord.BodyOneOfType> body = new OneOf<>(TransactionRecord.BodyOneOfType.UNSET, null);
-        if (contractCallResult != null)
-            body = new OneOf<>(TransactionRecord.BodyOneOfType.CONTRACT_CALL_RESULT, contractCallResult);
-        if (contractCreateResult != null)
-            body = new OneOf<>(TransactionRecord.BodyOneOfType.CONTRACT_CREATE_RESULT, contractCreateResult);
+        if (contractCallResult != null) body = new OneOf<>(TransactionRecord.BodyOneOfType.CONTRACT_CALL_RESULT, contractCallResult);
+        if (contractCreateResult != null) body = new OneOf<>(TransactionRecord.BodyOneOfType.CONTRACT_CREATE_RESULT, contractCreateResult);
         // create list of sidecar records
         List<TransactionSidecarRecord> transactionSidecarRecords = new ArrayList<>();
         contractStateChanges.stream()
                 .map(pair -> new TransactionSidecarRecord(
                         consensusTimestamp,
                         pair.getValue(),
-                        new OneOf<>(TransactionSidecarRecord.SidecarRecordsOneOfType.STATE_CHANGES, pair.getKey())))
-                .forEach(transactionSidecarRecords::add);
+                        new OneOf<>(
+                                TransactionSidecarRecord.SidecarRecordsOneOfType.STATE_CHANGES,
+                                pair.getKey())))
+                        .forEach(transactionSidecarRecords::add);
         contractActions.stream()
                 .map(pair -> new TransactionSidecarRecord(
                         consensusTimestamp,
                         pair.getValue(),
-                        new OneOf<>(TransactionSidecarRecord.SidecarRecordsOneOfType.ACTIONS, pair.getKey())))
+                        new OneOf<>(
+                                TransactionSidecarRecord.SidecarRecordsOneOfType.ACTIONS,
+                                pair.getKey())))
                 .forEach(transactionSidecarRecords::add);
         contractBytecodes.stream()
                 .map(pair -> new TransactionSidecarRecord(
                         consensusTimestamp,
                         pair.getValue(),
-                        new OneOf<>(TransactionSidecarRecord.SidecarRecordsOneOfType.BYTECODE, pair.getKey())))
+                        new OneOf<>(
+                                TransactionSidecarRecord.SidecarRecordsOneOfType.BYTECODE,
+                                pair.getKey())))
                 .forEach(transactionSidecarRecords::add);
         // build
         return new SingleTransactionRecord(
@@ -170,7 +112,8 @@ public class SingleTransactionRecordBuilder
                                 newTotalSupply,
                                 scheduleID,
                                 scheduledTransactionID,
-                                serialNumbers),
+                                serialNumbers
+                        ),
                         transactionHash,
                         consensusTimestamp,
                         transaction.body().transactionID(),
@@ -188,7 +131,8 @@ public class SingleTransactionRecordBuilder
                         paidStakingRewards,
                         entropy,
                         evmAddress),
-                transactionSidecarRecords);
+                transactionSidecarRecords
+        );
     }
     // ------------------------------------------------------------------------------------------------------------------------
     // base transaction data
@@ -201,9 +145,9 @@ public class SingleTransactionRecordBuilder
     // ------------------------------------------------------------------------------------------------------------------------
     // fields needed for TransactionRecord
 
-    @NonNull
-    public Instant consensusNow() {
-        return consensusNow;
+    public SingleTransactionRecordBuilder consensusTimestamp(Timestamp consensusTimestamp) {
+        this.consensusTimestamp = consensusTimestamp;
+        return this;
     }
 
     public SingleTransactionRecordBuilder transactionFee(long transactionFee) {
@@ -241,8 +185,7 @@ public class SingleTransactionRecordBuilder
         return this;
     }
 
-    public SingleTransactionRecordBuilder automaticTokenAssociations(
-            List<TokenAssociation> automaticTokenAssociations) {
+    public SingleTransactionRecordBuilder automaticTokenAssociations(List<TokenAssociation> automaticTokenAssociations) {
         this.automaticTokenAssociations = automaticTokenAssociations;
         return this;
     }
@@ -267,26 +210,9 @@ public class SingleTransactionRecordBuilder
         return this;
     }
 
-    @NonNull
-    public SingleTransactionRecordBuilder entropyNumber(final int num) {
-        this.entropy = new OneOf<>(EntropyOneOfType.PRNG_NUMBER, num);
+    public SingleTransactionRecordBuilder entropy(OneOf<TransactionRecord.EntropyOneOfType> entropy) {
+        this.entropy = entropy;
         return this;
-    }
-
-    @NonNull
-    public SingleTransactionRecordBuilder entropyBytes(@NonNull final Bytes prngBytes) {
-        requireNonNull(prngBytes, "The argument 'entropyBytes' must not be null");
-        this.entropy = new OneOf<>(EntropyOneOfType.PRNG_BYTES, prngBytes);
-        return this;
-    }
-
-    /**
-     * @deprecated this method is only used temporarily during the migration
-     */
-    @Deprecated(forRemoval = true)
-    @Nullable
-    public OneOf<TransactionRecord.EntropyOneOfType> entropy() {
-        return entropy;
     }
 
     public SingleTransactionRecordBuilder evmAddress(Bytes evmAddress) {
@@ -302,33 +228,9 @@ public class SingleTransactionRecordBuilder
         return this;
     }
 
-    @Nullable
-    public ResponseCodeEnum status() {
-        return status;
-    }
-
-    @NonNull
-    public SingleTransactionRecordBuilder accountID(@NonNull final AccountID accountID) {
+    public SingleTransactionRecordBuilder accountID(AccountID accountID) {
         this.accountID = accountID;
         return this;
-    }
-
-    /**
-     * @deprecated this method is only used temporarily during the migration
-     */
-    @Deprecated(forRemoval = true)
-    @Nullable
-    public AccountID accountID() {
-        return accountID;
-    }
-
-    /**
-     * @deprecated this method is only used temporarily during the migration
-     */
-    @Deprecated(forRemoval = true)
-    @Nullable
-    public TokenID tokenID() {
-        return tokenID;
     }
 
     public SingleTransactionRecordBuilder fileID(FileID fileID) {
@@ -346,51 +248,21 @@ public class SingleTransactionRecordBuilder
         return this;
     }
 
-    @NonNull
-    public SingleTransactionRecordBuilder topicID(@NonNull final TopicID topicID) {
+    public SingleTransactionRecordBuilder topicID(TopicID topicID) {
         this.topicID = topicID;
         return this;
     }
 
-    /**
-     * @deprecated this method is only used temporarily during the migration
-     */
-    @Deprecated(forRemoval = true)
-    @Nullable
-    public TopicID topicID() {
-        return topicID;
-    }
-
-    @NonNull
     public SingleTransactionRecordBuilder topicSequenceNumber(long topicSequenceNumber) {
         this.topicSequenceNumber = topicSequenceNumber;
         return this;
     }
 
-    /**
-     * @deprecated this method is only used temporarily during the migration
-     */
-    @Deprecated(forRemoval = true)
-    public long topicSequenceNumber() {
-        return topicSequenceNumber;
-    }
-
-    @NonNull
-    public SingleTransactionRecordBuilder topicRunningHash(@NonNull final Bytes topicRunningHash) {
+    public SingleTransactionRecordBuilder topicRunningHash(Bytes topicRunningHash) {
         this.topicRunningHash = topicRunningHash;
         return this;
     }
 
-    /**
-     * @deprecated this method is only used temporarily during the migration
-     */
-    @Deprecated(forRemoval = true)
-    @Nullable
-    public Bytes topicRunningHash() {
-        return topicRunningHash;
-    }
-
-    @NonNull
     public SingleTransactionRecordBuilder topicRunningHashVersion(long topicRunningHashVersion) {
         this.topicRunningHashVersion = topicRunningHashVersion;
         return this;
@@ -421,19 +293,9 @@ public class SingleTransactionRecordBuilder
         return this;
     }
 
-    /**
-     * @deprecated this method is only used temporarily during the migration
-     */
-    @Deprecated(forRemoval = true)
-    @Nullable
-    public List<Long> serialNumbers() {
-        return serialNumbers;
-    }
-
     // ------------------------------------------------------------------------------------------------------------------------
     // Sidecar data, booleans are the migration flag
-    public SingleTransactionRecordBuilder addContractStateChanges(
-            ContractStateChanges contractStateChanges, boolean isMigration) {
+    public SingleTransactionRecordBuilder addContractStateChanges(ContractStateChanges contractStateChanges, boolean isMigration) {
         this.contractStateChanges.add(new AbstractMap.SimpleEntry<>(contractStateChanges, isMigration));
         return this;
     }

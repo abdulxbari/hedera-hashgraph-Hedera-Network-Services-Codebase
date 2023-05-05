@@ -21,8 +21,8 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.base.ResponseCodeEnum;
+import com.hedera.node.app.records.BlockRecordManager;
 import com.hedera.node.app.records.RecordListBuilder;
-import com.hedera.node.app.records.RecordManager;
 import com.hedera.node.app.records.SingleTransactionRecordBuilder;
 import com.hedera.node.app.service.token.ReadableAccountStore;
 import com.hedera.node.app.services.ServiceScopeLookup;
@@ -70,7 +70,7 @@ public class HandleWorkflow {
     private final NodeInfo nodeInfo;
     private final PreHandleWorkflow preHandleWorkflow;
     private final TransactionDispatcher dispatcher;
-    private final RecordManager recordManager;
+    private final BlockRecordManager blockRecordManager;
     private final SignatureExpander signatureExpander;
     private final SignatureVerifier signatureVerifier;
     private final TransactionChecker checker;
@@ -82,7 +82,7 @@ public class HandleWorkflow {
             @NonNull final NodeInfo nodeInfo,
             @NonNull final PreHandleWorkflow preHandleWorkflow,
             @NonNull final TransactionDispatcher dispatcher,
-            @NonNull final RecordManager recordManager,
+            @NonNull final BlockRecordManager blockRecordManager,
             @NonNull final SignatureExpander signatureExpander,
             @NonNull final SignatureVerifier signatureVerifier,
             @NonNull final TransactionChecker checker,
@@ -91,7 +91,7 @@ public class HandleWorkflow {
         this.nodeInfo = requireNonNull(nodeInfo, "nodeInfo must not be null");
         this.preHandleWorkflow = requireNonNull(preHandleWorkflow, "preHandleWorkflow must not be null");
         this.dispatcher = requireNonNull(dispatcher, "dispatcher must not be null");
-        this.recordManager = requireNonNull(recordManager, "recordManager must not be null");
+        this.blockRecordManager = requireNonNull(blockRecordManager, "recordManager must not be null");
         this.signatureExpander = requireNonNull(signatureExpander, "signatureExpander must not be null");
         this.signatureVerifier = requireNonNull(signatureVerifier, "signatureVerifier must not be null");
         this.checker = requireNonNull(checker, "checker must not be null");
@@ -108,6 +108,11 @@ public class HandleWorkflow {
     public void handleRound(@NonNull final HederaState state, @NonNull final Round round) {
         // handle each transaction in the round
         round.forEachEventTransaction((event, txn) -> handlePlatformTransaction(state, event, txn));
+        // inform BlockRecordManager that the round is complete, so it can update running-hashes in state
+        // that have been being computed in background threads. The running hash has to be included in
+        // state, but we want to synchronize with background threads as infrequently as possible. So once per
+        // round is the minimum we can do.
+        blockRecordManager.endRound(state);
     }
 
     private void handlePlatformTransaction(
@@ -123,7 +128,7 @@ public class HandleWorkflow {
         final Instant consensusNow = platformTxn.getConsensusTimestamp();
 
         // Setup record builder list
-        recordManager.startUserTransaction(consensusNow);
+        blockRecordManager.startUserTransaction(consensusNow, state);
         final var recordBuilder = new SingleTransactionRecordBuilder(consensusNow);
         final var recordListBuilder = new RecordListBuilder(recordBuilder);
 
@@ -185,10 +190,11 @@ public class HandleWorkflow {
 
         // TODO: handle long scheduled transactions
 
-        // TODO: handle system tasks
+        // TODO: handle system tasks. System tasks should be outside the blockRecordManager start/end user transaction
+        // TODO: and have their own start/end. So system transactions are handled like separate user transactions.
 
         // store all records at once
-        recordManager.endUserTransaction(recordListBuilder.build());
+        blockRecordManager.endUserTransaction(recordListBuilder.build(), state);
     }
 
     private void recordFailedTransaction(

@@ -43,7 +43,8 @@ public interface InfoInjectionModule {
 
     @Provides
     @Singleton
-    static NodeInfo provideNodeInfo(@NonNull final com.hedera.node.app.service.mono.context.NodeInfo delegate) {
-        return new MonoNodeInfo(delegate);
+    static NodeInfo provideNodeInfo(@NonNull final com.hedera.node.app.service.mono.context.NodeInfo delegate,
+                                    @NonNull final com.swirlds.common.system.InitTrigger initTrigger) {
+        return new MonoNodeInfo(delegate, initTrigger);
     }
 }

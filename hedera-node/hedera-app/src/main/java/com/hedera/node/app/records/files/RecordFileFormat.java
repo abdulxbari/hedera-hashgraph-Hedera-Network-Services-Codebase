@@ -1,0 +1,124 @@
+package com.hedera.node.app.records.files;
+
+import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.streams.HashObject;
+import com.hedera.hapi.streams.SidecarMetadata;
+import com.hedera.node.app.spi.records.SingleTransactionRecord;
+import com.hedera.pbj.runtime.ProtoWriterTools;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
+import com.swirlds.common.crypto.DigestType;
+import com.swirlds.common.crypto.HashingOutputStream;
+import edu.umd.cs.findbugs.annotations.NonNull;
+
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.zip.GZIPOutputStream;
+
+import static com.hedera.hapi.streams.schema.RecordStreamFileSchema.*;
+import static com.hedera.pbj.runtime.ProtoWriterTools.writeLong;
+import static com.hedera.pbj.runtime.ProtoWriterTools.writeMessage;
+
+/**
+ * Methods for working with a record file of a given format. All methods are expected to be stateless as if they were static.
+ */
+public interface RecordFileFormat  {
+    /** TODO remove once <a href="https://github.com/hashgraph/pbj/issues/44">PBJ Issue 44</a> is fixed */
+    int WIRE_TYPE_DELIMITED = 2;
+    /** TODO remove once <a href="https://github.com/hashgraph/pbj/issues/44">PBJ Issue 44</a> is fixed */
+    int TAG_TYPE_BITS = 3;
+
+    /**
+     * Serialized a record stream item to the intermediary format T that can be used for computing running hashes or writing
+     * to the file. Using the two methods {@link this.computeNewRunningHash()} and {@link this.writeRecordStreamItem()}.
+     * <p>
+     *     This method is expected to be stateless so it can be called on other threads.
+     * </p>
+     *
+     * @param singleTransactionRecord The records of a single transaction to serialize
+     * @param blockNumber The current block number this transaction will be written into
+     * @param hapiVersion The hapi protobuf version
+     * @return the serialized intermediary format item
+     */
+    SerializedSingleTransactionRecord serialize(@NonNull final SingleTransactionRecord singleTransactionRecord,
+                                final long blockNumber,
+                                @NonNull final SemanticVersion hapiVersion);
+
+
+    /**
+     * Given the starting running hash and a stream of serialized record stream items, compute the new running hash by adding the items to
+     * the hash one at a time.
+     * <p>
+     *     This method is expected to be stateless so it can be called on other threads.
+     * </p>
+     *
+     * @param startRunningHash the starting current running hash of all record stream items up to this point in time.
+     * @param serializedItems the list of intermediary format serialized record stream items to add to the running hash
+     * @return the new running hash, or startRunningHash if there were no items to add
+     */
+    Bytes computeNewRunningHash(@NonNull final Bytes startRunningHash,
+                               @NonNull final List<SerializedSingleTransactionRecord> serializedItems);
+
+    /**
+     * Write header to file, the header must include at least the first 4 byte integer version
+     *
+     * @param outputStream the output stream to write to
+     * @param hapiProtoVersion the HAPI version of protobuf
+     * @param startObjectRunningHash the starting running hash at the end of previous record file
+     */
+    void writeHeader(@NonNull final WritableStreamingData outputStream,
+                     @NonNull final SemanticVersion hapiProtoVersion,
+                     @NonNull final HashObject startObjectRunningHash);
+
+    /**
+     * Write a serialized record stream item of type T.
+     *
+     * @param outputStream the output stream to write to
+     * @param item the item to extract/convert
+     */
+    default void writeRecordStreamItem(@NonNull final WritableStreamingData outputStream,
+                                       @NonNull final SerializedSingleTransactionRecord item) {
+        final Bytes itemBytes = item.protobufSerializedRecordStreamItem();
+        // [3] - record_stream_items
+        // TODO can change once https://github.com/hashgraph/pbj/issues/44 is fixed to: ProtoWriterTools.writeTag(outputStream, RECORD_STREAM_ITEMS, ProtoConstants.WIRE_TYPE_DELIMITED);
+        outputStream.writeVarInt((RECORD_STREAM_ITEMS.number() << TAG_TYPE_BITS) | WIRE_TYPE_DELIMITED, false);
+        outputStream.writeVarInt((int) itemBytes.length(), false);
+        outputStream.writeBytes(itemBytes);
+    }
+
+    /**
+     * Write the footer to the file
+     *
+     * @param endRunningHash the ending running hash after the last record stream item
+     * @param blockNumber the block number of this file
+     * @param sidecarMetadata The sidecar metadata to write
+     */
+    default void writeFooter(@NonNull final WritableStreamingData outputStream,
+                             @NonNull final HashObject endRunningHash,
+                             final long blockNumber,
+                             @NonNull final List<SidecarMetadata> sidecarMetadata) {
+        try {
+            // [4] - end_object_running_hash
+            writeMessage(outputStream, END_OBJECT_RUNNING_HASH, endRunningHash,
+                    HashObject.PROTOBUF::write,
+                    HashObject.PROTOBUF::measureRecord);
+            // [5] - block_number
+            writeLong(outputStream, BLOCK_NUMBER, blockNumber);
+            // [6] - sidecars
+            ProtoWriterTools.writeMessageList(outputStream,
+                    SIDECARS,
+                    sidecarMetadata,
+                    SidecarMetadata.PROTOBUF::write,
+                    SidecarMetadata.PROTOBUF::measureRecord);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+}

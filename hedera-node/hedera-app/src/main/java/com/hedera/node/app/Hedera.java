@@ -26,6 +26,7 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.node.app.config.ConfigProviderImpl;
 import com.hedera.node.app.grpc.GrpcServiceBuilder;
+import com.hedera.node.app.records.BlockRecordService;
 import com.hedera.node.app.service.consensus.ConsensusService;
 import com.hedera.node.app.service.consensus.impl.ConsensusServiceImpl;
 import com.hedera.node.app.service.contract.ContractService;
@@ -235,7 +236,8 @@ public final class Hedera implements SwirldMain {
                 ScheduleService.NAME, new ScheduleServiceImpl(),
                 TokenService.NAME, new TokenServiceImpl(),
                 UtilService.NAME, new UtilServiceImpl(),
-                RecordCacheService.NAME, new RecordCacheService());
+                RecordCacheService.NAME, new RecordCacheService(),
+                BlockRecordService.NAME, new BlockRecordService());
 
         final var map = new HashMap<String, ServiceRegistration>();
         for (final var entry : services.entrySet()) {

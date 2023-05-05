@@ -17,6 +17,8 @@
 package com.hedera.node.app.spi.info;
 
 import com.hedera.hapi.node.base.AccountID;
+import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.common.system.address.AddressBook;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
@@ -58,4 +60,25 @@ public interface NodeInfo {
             return false;
         }
     }
+
+    /**
+     * Convenience method to get the memo of this node's account which is in the address book.
+     *
+     * @return this node's account memo
+     */
+    String accountMemo();
+
+    /**
+     * True if the node was initialized in event stream recovery state.
+     *
+     * @return if the node was initialized in event stream recovery state.
+     */
+    boolean wasStartedInEventStreamRecovery();
+
+    /**
+     * The version of HAPI API that this node is running.
+     *
+     * @return HAPI API version
+     */
+    SemanticVersion hapiVersion();
 }
