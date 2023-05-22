@@ -47,6 +47,8 @@ import com.hedera.node.app.service.mono.state.submerkle.FcTokenAllowanceId;
 import com.hedera.node.app.service.mono.state.virtual.ContractKey;
 import com.hedera.node.app.service.mono.state.virtual.annotations.StateSetter;
 import com.hedera.node.app.service.mono.state.virtual.utils.CheckedConsumer;
+import com.hedera.node.app.service.mono.state.virtual.utils.CheckedIntConsumer;
+import com.hedera.node.app.service.mono.state.virtual.utils.CheckedLongConsumer;
 import com.hedera.node.app.service.mono.state.virtual.utils.CheckedSupplier;
 import com.hedera.node.app.service.mono.utils.EntityNum;
 import com.hedera.node.app.service.mono.utils.EntityNumPair;
@@ -169,6 +171,7 @@ public class OnDiskAccount implements VirtualValue, HederaAccount {
 
     @Override
     public VirtualValue asReadOnly() {
+        if (immutable) return this;
         final var copy = new OnDiskAccount(this);
         copy.immutable = true;
         return copy;
@@ -216,8 +219,8 @@ public class OnDiskAccount implements VirtualValue, HederaAccount {
 
     public int serializeTo(
             final CheckedConsumer<Byte> writeByteFn,
-            final CheckedConsumer<Integer> writeIntFn,
-            final CheckedConsumer<Long> writeLongFn,
+            final CheckedIntConsumer writeIntFn,
+            final CheckedLongConsumer writeLongFn,
             final CheckedConsumer<byte[]> writeBytesFn)
             throws IOException {
         int bytesWritten = 0;
@@ -327,7 +330,7 @@ public class OnDiskAccount implements VirtualValue, HederaAccount {
     }
 
     public Map<EntityNum, Long> getHbarAllowances() {
-        return hbarAllowances;
+        return Collections.unmodifiableMap(hbarAllowances);
     }
 
     @StateSetter
@@ -337,7 +340,7 @@ public class OnDiskAccount implements VirtualValue, HederaAccount {
     }
 
     public Map<FcTokenAllowanceId, Long> getFungibleAllowances() {
-        return fungibleAllowances;
+        return Collections.unmodifiableMap(fungibleAllowances);
     }
 
     @StateSetter
@@ -347,7 +350,7 @@ public class OnDiskAccount implements VirtualValue, HederaAccount {
     }
 
     public Set<FcTokenAllowanceId> getNftOperatorApprovals() {
-        return nftOperatorApprovals;
+        return Collections.unmodifiableSet(nftOperatorApprovals);
     }
 
     @StateSetter

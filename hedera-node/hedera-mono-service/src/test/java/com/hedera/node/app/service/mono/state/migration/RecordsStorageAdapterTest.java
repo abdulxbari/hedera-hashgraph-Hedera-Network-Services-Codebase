@@ -33,6 +33,8 @@ import com.hedera.test.utils.SeededPropertySource;
 import com.swirlds.fcqueue.FCQueue;
 import com.swirlds.merkle.map.MerkleMap;
 import edu.umd.cs.findbugs.annotations.Nullable;
+
+import java.util.Queue;
 import java.util.function.BiConsumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,7 +59,7 @@ class RecordsStorageAdapterTest {
     private MerklePayerRecords accountRecords;
 
     @Mock
-    private BiConsumer<EntityNum, FCQueue<ExpirableTxnRecord>> observer;
+    private BiConsumer<EntityNum, Queue<ExpirableTxnRecord>> observer;
 
     private RecordsStorageAdapter subject;
 
@@ -195,6 +197,6 @@ class RecordsStorageAdapterTest {
     }
 
     private void withDedicatedSubject() {
-        subject = RecordsStorageAdapter.fromDedicated(MerkleMapLike.from(payerRecords));
+        subject = RecordsStorageAdapter.fromDedicated(null);
     }
 }

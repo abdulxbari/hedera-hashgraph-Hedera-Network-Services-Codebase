@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.inject.Inject;
@@ -66,7 +67,6 @@ public class ExpiryManager {
     private final Map<TransactionID, TxnIdRecentHistory> txnHistories;
     private final Supplier<RecordsStorageAdapter> payerRecords;
 
-    private final MonotonicFullQueueExpiries<Long> payerRecordExpiries = new MonotonicFullQueueExpiries<>();
     private final PriorityQueueExpiries<Pair<Long, Consumer<EntityId>>> shortLivedEntityExpiries =
             new PriorityQueueExpiries<>(PQ_CMP);
 
@@ -115,15 +115,11 @@ public class ExpiryManager {
      */
     public void reviewExistingPayerRecords() {
         txnHistories.clear();
-        payerRecordExpiries.reset();
 
-        final var payerExpiries = new ArrayList<Map.Entry<Long, Long>>();
         payerRecords
                 .get()
                 .doForEach((payerNum, accountRecords) ->
-                        stageExpiringRecords(payerNum.longValue(), accountRecords, payerExpiries));
-        payerExpiries.sort(comparing(Map.Entry<Long, Long>::getValue).thenComparing(Map.Entry::getKey));
-        payerExpiries.forEach(entry -> payerRecordExpiries.track(entry.getKey(), entry.getValue()));
+                        stageExpiringRecords(accountRecords));
 
         txnHistories.values().forEach(TxnIdRecentHistory::observeStaged);
     }
@@ -141,23 +137,13 @@ public class ExpiryManager {
         shortLivedEntityExpiries.reset();
     }
 
-    void trackRecordInState(final AccountID owner, final long expiry) {
-        payerRecordExpiries.track(owner.getAccountNum(), expiry);
+    void trackRecordInState(final AccountID payer, final ExpirableTxnRecord expirableTxnRecord) {
+        payerRecords.get().addPayerRecord(payer, expirableTxnRecord);
     }
 
     private void purgeExpiredRecordsAt(final long now) {
         final var curPayerRecords = payerRecords.get();
-        while (payerRecordExpiries.hasExpiringAt(now)) {
-            final var key = EntityNum.fromLong(payerRecordExpiries.expireNextAt(now));
-            final var mutableRecords = curPayerRecords.getMutablePayerRecords(key);
-            purgeExpiredFrom(mutableRecords, now);
-        }
-    }
-
-    private void purgeExpiredFrom(final FCQueue<ExpirableTxnRecord> records, final long now) {
-        ExpirableTxnRecord nextRecord;
-        while ((nextRecord = records.peek()) != null && nextRecord.getExpiry() <= now) {
-            nextRecord = records.poll();
+        curPayerRecords.purgeExpiredRecordsAt(now, nextRecord -> {
             final var txnId = nextRecord.getTxnId().toGrpc();
             final var history = txnHistories.get(txnId);
             if (history != null) {
@@ -166,8 +152,29 @@ public class ExpiryManager {
                     txnHistories.remove(txnId);
                 }
             }
-        }
+        });
     }
+
+//    private void purgeExpiredRecordsAt0(final long now) {
+//        final var curPayerRecords = payerRecords.get();
+//        while (payerRecordExpiries.hasExpiringAt(now)) {
+//            final var key = EntityNum.fromLong(payerRecordExpiries.expireNextAt(now));
+//            final var mutableRecords = curPayerRecords.getMutablePayerRecords(key);
+//            ExpirableTxnRecord nextRecord;
+//            if ((nextRecord = mutableRecords.peek()) != null && nextRecord.getExpiry() <= now) {
+//                nextRecord = mutableRecords.poll();
+//                final var txnId = nextRecord.getTxnId().toGrpc();
+//                final var history = txnHistories.get(txnId);
+//                if (history != null) {
+//                    history.forgetExpiredAt(now);
+//                    if (history.isForgotten()) {
+//                        txnHistories.remove(txnId);
+//                    }
+//                }
+//                curPayerRecords.removeRecord(nextRecord);
+//            }
+//        }
+//    }
 
     private void purgeExpiredShortLivedEntities(final long now) {
         while (shortLivedEntityExpiries.hasExpiringAt(now)) {
@@ -178,16 +185,9 @@ public class ExpiryManager {
         }
     }
 
-    private void stageExpiringRecords(
-            final Long num, final FCQueue<ExpirableTxnRecord> records, final List<Map.Entry<Long, Long>> expiries) {
-        long lastAdded = -1;
+    private void stageExpiringRecords(final Queue<ExpirableTxnRecord> records) {
         for (final var expirableTxnRecord : records) {
             stage(expirableTxnRecord);
-            final var expiry = expirableTxnRecord.getExpiry();
-            if (expiry != lastAdded) {
-                expiries.add(new AbstractMap.SimpleImmutableEntry<>(num, expiry));
-                lastAdded = expiry;
-            }
         }
     }
 

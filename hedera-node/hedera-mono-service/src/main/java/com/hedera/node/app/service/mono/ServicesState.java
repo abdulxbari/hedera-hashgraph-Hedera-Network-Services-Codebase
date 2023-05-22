@@ -90,6 +90,7 @@ import com.swirlds.common.system.events.Event;
 import com.swirlds.common.system.state.notifications.NewRecoveredStateListener;
 import com.swirlds.common.threading.manager.AdHocThreadManager;
 import com.swirlds.fchashmap.FCHashMap;
+import com.swirlds.fcqueue.FCQueue;
 import com.swirlds.jasperdb.VirtualDataSourceJasperDB;
 import com.swirlds.merkle.map.MerkleMap;
 import com.swirlds.platform.gui.SwirldsGui;
@@ -492,7 +493,6 @@ public class ServicesState extends PartialNaryMerkleInternal
         final var accountsStorage = getChild(StateChildIndices.ACCOUNTS);
         return (accountsStorage instanceof VirtualMap)
                 ? AccountStorageAdapter.fromOnDisk(
-                        MerkleMapLike.from(getChild(StateChildIndices.PAYER_RECORDS)),
                         VirtualMapLike.from((VirtualMap<EntityNumVirtualKey, OnDiskAccount>) accountsStorage))
                 : AccountStorageAdapter.fromInMemory(
                         MerkleMapLike.from((MerkleMap<EntityNum, MerkleAccount>) accountsStorage));
@@ -550,7 +550,7 @@ public class ServicesState extends PartialNaryMerkleInternal
 
     public RecordsStorageAdapter payerRecords() {
         return getNumberOfChildren() == StateChildIndices.NUM_032X_CHILDREN
-                ? RecordsStorageAdapter.fromDedicated(MerkleMapLike.from(getChild(StateChildIndices.PAYER_RECORDS)))
+                ? RecordsStorageAdapter.fromDedicated(getChild(StateChildIndices.PAYER_RECORDS))
                 : RecordsStorageAdapter.fromLegacy(MerkleMapLike.from(getChild(StateChildIndices.ACCOUNTS)));
     }
 
@@ -596,7 +596,7 @@ public class ServicesState extends PartialNaryMerkleInternal
                 StateChildIndices.STAKING_INFO,
                 stakingInfoBuilder.buildStakingInfoMap(addressBook, bootstrapProperties));
         if (enableVirtualAccounts) {
-            setChild(StateChildIndices.PAYER_RECORDS, new MerkleMap<>());
+            setChild(StateChildIndices.PAYER_RECORDS, new FCQueue<>());
         }
     }
 

@@ -37,6 +37,7 @@ import com.hedera.node.app.hapi.utils.ByteStringUtils;
 import com.hedera.node.app.service.mono.legacy.core.jproto.TxnReceipt;
 import com.hedera.node.app.service.mono.state.merkle.internals.BitPackUtils;
 import com.hedera.node.app.service.mono.state.serdes.IoUtils;
+import com.hedera.node.app.service.mono.utils.EntityNum;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.TokenTransferList;
 import com.hederahashgraph.api.proto.java.TransactionRecord;
@@ -93,6 +94,7 @@ public class ExpirableTxnRecord implements FastCopyable, SerializableHashable {
     private static final byte PRNG_BYTES_OUTPUT = (byte) 0x02;
     private long expiry;
     private long submittingMember = UNKNOWN_SUBMITTING_MEMBER;
+    private EntityNum payer;
     private long fee;
     private long packedParentConsensusTime = MISSING_PARENT_CONSENSUS_TIMESTAMP;
     private short numChildRecords = NO_CHILD_TRANSACTIONS;
@@ -513,6 +515,14 @@ public class ExpirableTxnRecord implements FastCopyable, SerializableHashable {
 
     public void setSubmittingMember(final long submittingMember) {
         this.submittingMember = submittingMember;
+    }
+
+    public EntityNum getPayer() {
+        return payer;
+    }
+
+    public void setPayer(EntityNum payer) {
+        this.payer = payer;
     }
 
     public List<FcAssessedCustomFee> getCustomFeesCharged() {

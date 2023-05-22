@@ -24,7 +24,7 @@ public final class EntityIoUtils {
     }
 
     public static void writeBytes(
-            final byte[] data, final CheckedConsumer<Integer> writeIntFn, final CheckedConsumer<byte[]> writeBytesFn)
+            final byte[] data, final CheckedIntConsumer writeIntFn, final CheckedConsumer<byte[]> writeBytesFn)
             throws IOException {
         writeIntFn.accept(data.length);
         writeBytesFn.accept(data);

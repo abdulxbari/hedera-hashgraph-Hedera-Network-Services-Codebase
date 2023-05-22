@@ -679,7 +679,6 @@ public class MerkleHederaState extends PartialNaryMerkleInternal implements Merk
             @SuppressWarnings("unchecked")
             public AccountStorageAdapter accounts() {
                 return AccountStorageAdapter.fromOnDisk(
-                        mapLikePayerRecords(),
                         VirtualMapLikeAdapter.unwrapping(
                                 (StateMetadata<EntityNumVirtualKey, OnDiskAccount>)
                                         services.get(TokenService.NAME).get("ACCOUNTS"),
@@ -795,7 +794,7 @@ public class MerkleHederaState extends PartialNaryMerkleInternal implements Merk
 
             @Override
             public RecordsStorageAdapter payerRecords() {
-                return RecordsStorageAdapter.fromDedicated(mapLikePayerRecords());
+                return RecordsStorageAdapter.fromDedicated(null);
             }
 
             @Override

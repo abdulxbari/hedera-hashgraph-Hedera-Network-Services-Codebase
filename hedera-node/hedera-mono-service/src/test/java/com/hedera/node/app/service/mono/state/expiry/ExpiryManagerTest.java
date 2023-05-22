@@ -130,14 +130,14 @@ class ExpiryManagerTest {
         liveTxnHistories
                 .computeIfAbsent(newTxnId, ignore -> new TxnIdRecentHistory())
                 .observe(firstRecord, OK);
-        subject.trackRecordInState(aGrpcId, firstThen);
+//        subject.trackRecordInState(aGrpcId, firstThen);
 
         final var secondRecord = expiring(recordWith(aGrpcId, start), secondThen);
         addLiveRecord(aKey, secondRecord);
         liveTxnHistories
                 .computeIfAbsent(newTxnId, ignore -> new TxnIdRecentHistory())
                 .observe(secondRecord, OK);
-        subject.trackRecordInState(aGrpcId, secondThen);
+//        subject.trackRecordInState(aGrpcId, secondThen);
 
         subject.purge(now);
 
@@ -160,7 +160,7 @@ class ExpiryManagerTest {
         liveTxnHistories
                 .computeIfAbsent(newTxnId, ignore -> new TxnIdRecentHistory())
                 .observe(firstRecord, OK);
-        subject.trackRecordInState(aGrpcId, firstThen);
+//        subject.trackRecordInState(aGrpcId, firstThen);
 
         subject.purge(now);
 

@@ -27,6 +27,8 @@ import com.hedera.node.app.service.mono.state.virtual.entities.OnDiskAccount;
 import com.hedera.node.app.service.mono.utils.EntityNum;
 import com.swirlds.common.crypto.Hash;
 import edu.umd.cs.findbugs.annotations.Nullable;
+
+import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import org.apache.logging.log4j.LogManager;
@@ -37,33 +39,28 @@ public class AccountStorageAdapter {
     private static final int THREAD_COUNT = 32;
     private final boolean accountsOnDisk;
     private final @Nullable MerkleMapLike<EntityNum, MerkleAccount> inMemoryAccounts;
-    private final @Nullable MerkleMapLike<EntityNum, MerklePayerRecords> payerRecords;
     private final @Nullable VirtualMapLike<EntityNumVirtualKey, OnDiskAccount> onDiskAccounts;
 
     public static AccountStorageAdapter fromInMemory(final MerkleMapLike<EntityNum, MerkleAccount> accounts) {
-        return new AccountStorageAdapter(accounts, null, null);
+        return new AccountStorageAdapter(accounts, null);
     }
 
     public static AccountStorageAdapter fromOnDisk(
-            final MerkleMapLike<EntityNum, MerklePayerRecords> payerRecords,
             final VirtualMapLike<EntityNumVirtualKey, OnDiskAccount> accounts) {
-        return new AccountStorageAdapter(null, payerRecords, accounts);
+        return new AccountStorageAdapter(null, accounts);
     }
 
     private AccountStorageAdapter(
             @Nullable final MerkleMapLike<EntityNum, MerkleAccount> inMemoryAccounts,
-            @Nullable final MerkleMapLike<EntityNum, MerklePayerRecords> payerRecords,
             @Nullable final VirtualMapLike<EntityNumVirtualKey, OnDiskAccount> onDiskAccounts) {
         if (inMemoryAccounts != null) {
             this.accountsOnDisk = false;
             this.inMemoryAccounts = inMemoryAccounts;
             this.onDiskAccounts = null;
-            this.payerRecords = null;
         } else {
             this.accountsOnDisk = true;
             this.inMemoryAccounts = null;
             this.onDiskAccounts = onDiskAccounts;
-            this.payerRecords = payerRecords;
         }
     }
 
@@ -110,7 +107,9 @@ public class AccountStorageAdapter {
 
     public Set<EntityNum> keySet() {
         if (accountsOnDisk) {
-            return payerRecords.keySet();
+            Set<EntityNum> keys = new HashSet<>();
+            forEach((num, account) -> keys.add(num));
+            return keys;
         } else {
             return inMemoryAccounts.keySet();
         }

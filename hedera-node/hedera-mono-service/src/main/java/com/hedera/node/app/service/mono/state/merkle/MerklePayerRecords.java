@@ -32,6 +32,7 @@ import com.swirlds.common.merkle.impl.PartialMerkleLeaf;
 import com.swirlds.common.merkle.utility.Keyed;
 import com.swirlds.fcqueue.FCQueue;
 import java.io.IOException;
+import java.util.Queue;
 
 public class MerklePayerRecords extends PartialMerkleLeaf implements Keyed<EntityNum>, MerkleLeaf {
     public static final int CURRENT_VERSION = 1;
@@ -62,7 +63,7 @@ public class MerklePayerRecords extends PartialMerkleLeaf implements Keyed<Entit
 
     @Override
     public Hash getHash() {
-        final var recordsHash = readOnlyQueue().getHash();
+        final var recordsHash = (payerRecords == null) ? IMMUTABLE_EMPTY_FCQ.getHash() : payerRecords.getHash();
         final var recordsHashLen = recordsHash.getValue().length;
         final byte[] bytes = new byte[recordsHashLen + 4];
         System.arraycopy(Ints.toByteArray(num), 0, bytes, 0, 4);
@@ -114,12 +115,12 @@ public class MerklePayerRecords extends PartialMerkleLeaf implements Keyed<Entit
         payerRecords.offer(payerRecord);
     }
 
-    public FCQueue<ExpirableTxnRecord> mutableQueue() {
+    public Queue<ExpirableTxnRecord> mutableQueue() {
         ensureUsable();
         return payerRecords;
     }
 
-    public FCQueue<ExpirableTxnRecord> readOnlyQueue() {
+    public Queue<ExpirableTxnRecord> readOnlyQueue() {
         return (payerRecords == null) ? IMMUTABLE_EMPTY_FCQ : payerRecords;
     }
 

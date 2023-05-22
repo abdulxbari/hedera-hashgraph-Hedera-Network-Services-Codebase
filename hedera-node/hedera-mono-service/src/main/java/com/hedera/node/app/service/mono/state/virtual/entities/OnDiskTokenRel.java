@@ -22,6 +22,7 @@ import com.hedera.node.app.service.mono.state.merkle.MerkleTokenRelStatus;
 import com.hedera.node.app.service.mono.state.migration.HederaTokenRel;
 import com.hedera.node.app.service.mono.state.virtual.annotations.StateSetter;
 import com.hedera.node.app.service.mono.state.virtual.utils.CheckedConsumer;
+import com.hedera.node.app.service.mono.state.virtual.utils.CheckedLongConsumer;
 import com.hedera.node.app.service.mono.state.virtual.utils.CheckedSupplier;
 import com.hedera.node.app.service.mono.utils.EntityNumPair;
 import com.swirlds.common.io.streams.SerializableDataInputStream;
@@ -227,7 +228,7 @@ public class OnDiskTokenRel implements VirtualValue, HederaTokenRel {
         this.next = next;
     }
 
-    private void serializeTo(final CheckedConsumer<Byte> writeByteFn, final CheckedConsumer<Long> writeLongFn)
+    private void serializeTo(final CheckedConsumer<Byte> writeByteFn, final CheckedLongConsumer writeLongFn)
             throws IOException {
         writeByteFn.accept(flags);
         writeLongFn.accept(prev);

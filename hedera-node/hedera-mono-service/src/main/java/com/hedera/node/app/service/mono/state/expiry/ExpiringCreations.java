@@ -83,9 +83,7 @@ public class ExpiringCreations implements EntityCreator {
         expiringRecord.setExpiry(expiry);
         expiringRecord.setSubmittingMember(submittingMember);
 
-        final var key = EntityNum.fromAccountId(payer);
-        addToState(key, expiringRecord);
-        expiries.trackRecordInState(payer, expiringRecord.getExpiry());
+        expiries.trackRecordInState(payer, expiringRecord);
 
         return expiringRecord;
     }
@@ -219,9 +217,5 @@ public class ExpiringCreations implements EntityCreator {
             nftTokenAdjustments.add(NftAdjustments.fromGrpc(tokenTransfer.getNftTransfersList()));
         }
         builder.setTokens(tokens).setTokenAdjustments(tokenAdjustments).setNftTokenAdjustments(nftTokenAdjustments);
-    }
-
-    private void addToState(final EntityNum key, final ExpirableTxnRecord expirableTxnRecord) {
-        payerRecords.get().addPayerRecord(key, expirableTxnRecord);
     }
 }

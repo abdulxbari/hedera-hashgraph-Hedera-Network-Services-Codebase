@@ -215,6 +215,6 @@ class AccountStorageAdapterTest {
     }
 
     private void withOnDiskSubject() {
-        subject = AccountStorageAdapter.fromOnDisk(MerkleMapLike.from(payerRecords), onDiskAccounts);
+        subject = AccountStorageAdapter.fromOnDisk(onDiskAccounts);
     }
 }

@@ -19,6 +19,7 @@ package com.hedera.node.app.service.mono.state.migration;
 import static com.hedera.node.app.service.mono.state.migration.QueryableRecords.NO_QUERYABLE_RECORDS;
 import static com.hedera.node.app.service.mono.utils.MiscUtils.forEach;
 
+import com.hederahashgraph.api.proto.java.AccountID;
 import com.hedera.node.app.service.mono.state.adapters.MerkleMapLike;
 import com.hedera.node.app.service.mono.state.merkle.MerkleAccount;
 import com.hedera.node.app.service.mono.state.merkle.MerklePayerRecords;
@@ -27,7 +28,15 @@ import com.hedera.node.app.service.mono.utils.EntityNum;
 import com.swirlds.fcqueue.FCQueue;
 import com.swirlds.merkle.map.MerkleMap;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * Encapsulates storage of <i>payer records</i>, which summarize the results of a transaction and
@@ -48,30 +57,26 @@ import java.util.function.BiConsumer;
  * </ul>
  */
 public class RecordsStorageAdapter {
+    private static final Logger logger = LogManager.getLogger(RecordsStorageAdapter.class);
     private final boolean accountsOnDisk;
     private final @Nullable MerkleMapLike<EntityNum, MerkleAccount> legacyAccounts;
-    private final @Nullable MerkleMapLike<EntityNum, MerklePayerRecords> payerRecords;
+    private final @Nullable FCQueue<ExpirableTxnRecord> allRecords;
+    private static final ConcurrentHashMap<EntityNum, Deque<ExpirableTxnRecord>> payerRecords = new ConcurrentHashMap<>();
 
     public static RecordsStorageAdapter fromLegacy(final MerkleMapLike<EntityNum, MerkleAccount> accounts) {
         return new RecordsStorageAdapter(accounts, null);
     }
 
-    public static RecordsStorageAdapter fromDedicated(final MerkleMapLike<EntityNum, MerklePayerRecords> payerRecords) {
-        return new RecordsStorageAdapter(null, payerRecords);
+    public static RecordsStorageAdapter fromDedicated(final FCQueue<ExpirableTxnRecord> allRecords) {
+        return new RecordsStorageAdapter(null, allRecords);
     }
 
     private RecordsStorageAdapter(
             @Nullable final MerkleMapLike<EntityNum, MerkleAccount> accounts,
-            @Nullable final MerkleMapLike<EntityNum, MerklePayerRecords> payerRecords) {
-        if (accounts != null) {
-            this.accountsOnDisk = false;
-            this.legacyAccounts = accounts;
-            this.payerRecords = null;
-        } else {
-            this.accountsOnDisk = true;
-            this.legacyAccounts = null;
-            this.payerRecords = payerRecords;
-        }
+            @Nullable final FCQueue<ExpirableTxnRecord> allRecords) {
+        this.accountsOnDisk = accounts == null;
+        this.legacyAccounts = accounts;
+        this.allRecords = allRecords;
     }
 
     /**
@@ -83,7 +88,8 @@ public class RecordsStorageAdapter {
         // If accounts are in memory, the needed FCQ was created as a
         // side-effect of creating the account itself
         if (accountsOnDisk) {
-            payerRecords.put(payerNum, new MerklePayerRecords());
+            payerRecords.put(payerNum, new ArrayDeque<>());
+//            logger.info("prepForPayer {} num: {}", this, payerNum.intValue());
         }
     }
 
@@ -92,33 +98,58 @@ public class RecordsStorageAdapter {
         // side-effect of removing the account itself
         if (accountsOnDisk) {
             payerRecords.remove(payerNum);
+//            logger.info("forgetPayer {}", payerNum.intValue());
         }
+    }
+
+    public void addPayerRecord(final AccountID payer, final ExpirableTxnRecord payerRecord) {
+        addPayerRecord(EntityNum.fromAccountId(payer), payerRecord);
     }
 
     public void addPayerRecord(final EntityNum payerNum, final ExpirableTxnRecord payerRecord) {
         if (accountsOnDisk) {
-            final var mutableRecords = payerRecords.getForModify(payerNum);
+//            logger.info("addPayerRecord {} num: {} rec: {}", this, payerNum.intValue(), payerRecord.getExpiry());
+            final var mutableRecords = payerRecords.computeIfAbsent(payerNum, key -> new ArrayDeque<>());
             mutableRecords.offer(payerRecord);
+            payerRecord.setPayer(payerNum);
+            allRecords.add(payerRecord);
         } else {
             final var mutableAccount = legacyAccounts.getForModify(payerNum);
             mutableAccount.records().offer(payerRecord);
         }
     }
 
-    public FCQueue<ExpirableTxnRecord> getMutablePayerRecords(final EntityNum payerNum) {
+    public Queue<ExpirableTxnRecord> getMutablePayerRecords(final EntityNum payerNum) {
         if (accountsOnDisk) {
-            final var mutableRecords = payerRecords.getForModify(payerNum);
-            return mutableRecords.mutableQueue();
+            final var mutableRecords = payerRecords.get(payerNum);
+            return mutableRecords;
         } else {
             final var mutableAccount = legacyAccounts.getForModify(payerNum);
             return mutableAccount.records();
         }
     }
 
+    public void purgeExpiredRecordsAt(long now, Consumer<ExpirableTxnRecord> consumer) {
+        for (int count = 0; ; ++count) {
+            ExpirableTxnRecord nextRecord = allRecords.peek();
+            if (nextRecord == null || nextRecord.getExpiry() > now) {
+//                logger.info("purgeExpiredRecordsAt {} count {} remaining {}", now, count, allRecords.size());
+                return;
+            }
+            nextRecord = allRecords.poll();
+            EntityNum payerNum = nextRecord.getPayer();
+            var mutableRecords = payerRecords.get(payerNum);
+            if (!nextRecord.equals(mutableRecords.poll())) {
+                logger.error("Inconsistent RecordsStorageAdapter state acc: {}", payerNum);
+            }
+            consumer.accept(nextRecord);
+        }
+    }
+
     public QueryableRecords getReadOnlyPayerRecords(final EntityNum payerNum) {
         if (accountsOnDisk) {
             final var payerRecordsView = payerRecords.get(payerNum);
-            return (payerRecordsView == null) ? NO_QUERYABLE_RECORDS : payerRecordsView.asQueryableRecords();
+            return (payerRecordsView == null) ? NO_QUERYABLE_RECORDS : new QueryableRecords(payerRecordsView.size(), payerRecordsView.iterator());
         } else {
             final var payerAccountView = legacyAccounts.get(payerNum);
             return (payerAccountView == null)
@@ -127,11 +158,10 @@ public class RecordsStorageAdapter {
         }
     }
 
-    public void doForEach(final BiConsumer<EntityNum, FCQueue<ExpirableTxnRecord>> observer) {
+    public void doForEach(final BiConsumer<EntityNum, Queue<ExpirableTxnRecord>> observer) {
         if (accountsOnDisk) {
-            forEach(
-                    payerRecords,
-                    (payerNum, accountRecords) -> observer.accept(payerNum, accountRecords.readOnlyQueue()));
+            payerRecords.forEach(
+                    (payerNum, accountRecords) -> observer.accept(payerNum, accountRecords));
         } else {
             forEach(legacyAccounts, (payerNum, account) -> observer.accept(payerNum, account.records()));
         }

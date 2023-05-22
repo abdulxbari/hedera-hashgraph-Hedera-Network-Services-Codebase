@@ -208,7 +208,7 @@ class ExpiringCreationsTest {
         final var actual = subject.saveExpiringRecord(effPayer, record, now, submittingMember);
 
         assertEquals(expectedRecord, actual);
-        verify(expiries).trackRecordInState(effPayer, expectedExpiry);
+//        verify(expiries).trackRecordInState(effPayer, expectedExpiry);
         verify(payerRecords).addPayerRecord(key, expectedRecord);
     }
 

@@ -288,6 +288,10 @@ public class TransactionalLedger<K, P extends Enum<P> & BeanProperty<A>, A>
     @Override
     public void set(final K id, final P property, final Object value) {
         assertIsSettable(id);
+        setVerified(id, property, value);
+    }
+
+    private void setVerified(final K id, final P property, final Object value) {
         changeManager.update(
                 changes.computeIfAbsent(id, ignore -> {
                     changedKeys.add(id);
@@ -322,6 +326,10 @@ public class TransactionalLedger<K, P extends Enum<P> & BeanProperty<A>, A>
     @Override
     public void create(final K id) {
         assertIsCreatable(id);
+        createVerified(id);
+    }
+
+    private void createVerified(final K id) {
         changes.put(id, new EnumMap<>(propertyType));
         createdKeys.add(id);
     }
@@ -374,12 +382,12 @@ public class TransactionalLedger<K, P extends Enum<P> & BeanProperty<A>, A>
         // necessary;
         // note this differs from the semantics of set() above, which throws if the target entity is
         // missing
-        if (!exists(id)) {
-            create(id);
+        if (!existsOrIsPendingCreation(id)) {
+            createVerified(id);
         }
         // Now accumulate the entire change-set represented by the received entity
         for (final var prop : allProps) {
-            set(id, prop, prop.getter().apply(entity));
+            setVerified(id, prop, prop.getter().apply(entity));
         }
     }
 
