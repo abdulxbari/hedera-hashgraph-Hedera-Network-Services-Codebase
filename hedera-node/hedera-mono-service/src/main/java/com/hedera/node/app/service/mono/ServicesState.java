@@ -160,6 +160,7 @@ public class ServicesState extends PartialNaryMerkleInternal
         this.bootstrapProperties = that.bootstrapProperties;
         this.enableVirtualAccounts = that.enableVirtualAccounts;
         this.enableVirtualTokenRels = that.enableVirtualTokenRels;
+        this.enabledVirtualNft = that.enabledVirtualNft;
         this.platform = that.platform;
     }
 
