@@ -104,6 +104,8 @@ public class ISSTestingToolState extends PartialMerkleLeaf implements SwirldStat
         this.runningSum = that.runningSum;
         this.plannedIssList = new LinkedList<>(that.plannedIssList);
         this.genesisTimestamp = that.genesisTimestamp;
+        logger.info(
+                STARTUP.getMarker(), "Copy state genesisTimestamp: {}", genesisTimestamp);
         this.selfId = that.selfId;
         that.immutable = true;
     }
@@ -168,6 +170,8 @@ public class ISSTestingToolState extends PartialMerkleLeaf implements SwirldStat
     private void captureTimestamp(final ConsensusEvent event) {
         if (genesisTimestamp == null) {
             genesisTimestamp = event.getConsensusTimestamp();
+            logger.info(
+                    STARTUP.getMarker(), "Genesis timestamp: {}", genesisTimestamp);
         }
     }
 
@@ -262,6 +266,8 @@ public class ISSTestingToolState extends PartialMerkleLeaf implements SwirldStat
     public void deserialize(final SerializableDataInputStream in, final int version) throws IOException {
         runningSum = in.readLong();
         genesisTimestamp = in.readInstant();
+        logger.info(
+                STARTUP.getMarker(), "Deserialized state. runningSum: {}, genesisTimestamp: {}", runningSum, genesisTimestamp);
         plannedIssList = in.readSerializableList(1024, false, PlannedIss::new);
     }
 
