@@ -262,7 +262,6 @@ public class ISSTestingToolState extends PartialMerkleLeaf implements SwirldStat
     public void deserialize(final SerializableDataInputStream in, final int version) throws IOException {
         runningSum = in.readLong();
         genesisTimestamp = in.readInstant();
-        logger.info(
         plannedIssList = in.readSerializableList(1024, false, PlannedIss::new);
     }
 
