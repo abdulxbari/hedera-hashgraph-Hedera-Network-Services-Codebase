@@ -282,6 +282,11 @@ public abstract class AbstractGossip implements ConnectionTracker, Gossip {
     public void stop() {
         throwIfNotInPhase(LifecyclePhase.STARTED);
         lifecyclePhase = LifecyclePhase.STOPPED;
+        try {
+            Thread.sleep(30000);
+        } catch (InterruptedException ignored) {
+            // nothing
+        }
         syncManager.haltRequestedObserver("stopping gossip");
     }
 
