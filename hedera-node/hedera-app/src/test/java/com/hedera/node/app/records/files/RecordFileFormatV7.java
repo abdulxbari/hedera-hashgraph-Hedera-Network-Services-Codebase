@@ -27,6 +27,8 @@ import static com.hedera.pbj.runtime.ProtoWriterTools.writeMessage;
 /**
  * This is a prototype for a RecordFileWriter for a cleaned up version of V6 format, going to true protobuf and
  * no SelfSerializable formatting.
+ * <p>
+ * It is only here so that the APIs further up can be designed in a way that is compatible with the new format.
  */
 public final class RecordFileFormatV7 implements RecordFileFormat {
     /** The version of this format */

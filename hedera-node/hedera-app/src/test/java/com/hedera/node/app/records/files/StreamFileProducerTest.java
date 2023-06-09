@@ -1,5 +1,7 @@
 package com.hedera.node.app.records.files;
 
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.node.app.records.RecordStreamConfig;
 import com.hedera.node.app.spi.info.NodeInfo;
@@ -12,24 +14,30 @@ import com.swirlds.platform.crypto.KeysAndCerts;
 import com.swirlds.platform.crypto.PlatformSigner;
 import com.swirlds.platform.crypto.PublicStores;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.*;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.interfaces.EdECPrivateKey;
 import java.security.interfaces.EdECPublicKey;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static com.hedera.node.app.records.RecordTestData.*;
@@ -44,15 +52,16 @@ public class StreamFileProducerTest {
     private @Mock ConfigProvider configProvider;
     private @Mock VersionedConfiguration versionedConfiguration;
     private @Mock NodeInfo nodeInfo;
-    private Signer signer;
-    private EdECPrivateKey userPrivateKey;
-    private EdECPublicKey userPublicKey;
+    private static Signer signer;
+    private static EdECPrivateKey userPrivateKey;
+    private static EdECPublicKey userPublicKey;
 
-    private @TempDir Path tempDir;
+    private FileSystem fs;
+    private Path tempDir;
 //    private Path tempDir = Path.of("/Users/jasperpotts/Desktop/temp");
 
-    @BeforeEach
-    void setUp() throws Exception {
+    @BeforeAll
+    static void setUp() throws Exception {
         // generate test user keys
         final KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("Ed25519");
         final KeyPair keyPair = keyPairGenerator.generateKeyPair();
@@ -62,6 +71,17 @@ public class StreamFileProducerTest {
         final KeysAndCerts keysAndCerts =
                 KeysAndCerts.generate("a-name", userPrivateKey.getEncoded(), EMPTY_ARRAY, EMPTY_ARRAY, new PublicStores());
         signer = new PlatformSigner(keysAndCerts);
+    }
+
+    @BeforeEach
+    void setUpEach() throws Exception {
+        // create in memory temp dir
+        fs = Jimfs.newFileSystem(Configuration.unix());
+        tempDir = fs.getPath("/temp");
+        Files.createDirectory(tempDir);
+
+        Files.writeString(tempDir.resolve("0.0.0"), "0.0.0");
+
         // setup config
         final RecordStreamConfig recordStreamConfig = new RecordStreamConfig(
                 true,
@@ -77,7 +97,6 @@ public class StreamFileProducerTest {
                 true
         );
         // setup mocks
-        System.out.println("versionedConfiguration = " + versionedConfiguration);
         when(versionedConfiguration.getConfigData(RecordStreamConfig.class)).thenReturn(recordStreamConfig);
         when(configProvider.getConfiguration()).thenReturn(versionedConfiguration);
         when(nodeInfo.accountMemo()).thenReturn("test-node");
@@ -92,8 +111,8 @@ public class StreamFileProducerTest {
         ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(4,4,20, TimeUnit.SECONDS,new LinkedBlockingQueue<>());
 
         StreamFileProducerSupplier singleThreaded = StreamFileProducerSingleThreaded::new;
-        StreamFileProducerSupplier concurrent = (configProvider, nodeInfo, signer) -> new StreamFileProducerConcurrent(
-                configProvider, nodeInfo, signer, threadPoolExecutor);
+        StreamFileProducerSupplier concurrent = (configProvider, nodeInfo, signer, fs) -> new StreamFileProducerConcurrent(
+                configProvider, nodeInfo, signer, fs, threadPoolExecutor);
         return Stream.of(
                 Arguments.of(singleThreaded)
                 ,
@@ -105,7 +124,7 @@ public class StreamFileProducerTest {
     @ParameterizedTest
     @MethodSource("streamFileProducers")
     public void streamFileProducer(final StreamFileProducerSupplier streamFileProducerSupplier) throws Exception {
-        StreamFileProducerBase streamFileProducer = streamFileProducerSupplier.get(configProvider, nodeInfo, signer);
+        StreamFileProducerBase streamFileProducer = streamFileProducerSupplier.get(configProvider, nodeInfo, signer, fs);
         streamFileProducer.setRunningHash(STARTING_RUNNING_HASH_OBJ.hash());
         long block = BLOCK_NUM - 1;
         // write a blocks & record files
@@ -127,10 +146,8 @@ public class StreamFileProducerTest {
                         STARTING_RUNNING_HASH_OBJ.hash(),
                         TEST_BLOCKS.stream().flatMap(List::stream).toList()).toHex(),
                 streamFileProducer.getCurrentRunningHash().toHex());
-        System.out.println("YAY");
         // wait for all threads to finish
         streamFileProducer.waitForComplete();
-        System.out.println("COMPLETE");
         // start running hashes
         Bytes runningHash = STARTING_RUNNING_HASH_OBJ.hash();
         // now check the generated record files
@@ -195,6 +212,7 @@ public class StreamFileProducerTest {
     private interface StreamFileProducerSupplier {
         StreamFileProducerBase get(@NonNull final ConfigProvider configProvider,
                                    @NonNull final NodeInfo nodeInfo,
-                                   @NonNull final Signer signer);
+                                   @NonNull final Signer signer,
+                                   @Nullable final FileSystem fileSystem);
     }
 }

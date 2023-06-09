@@ -10,6 +10,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -61,7 +62,7 @@ public class SidecarFileWriter implements AutoCloseable {
             throw new RuntimeException(e);
         }
         // create streams
-        FileOutputStream fout = new FileOutputStream(file.toFile());
+        OutputStream fout = Files.newOutputStream(file);
         hashingOutputStream = new HashingOutputStream(wholeFileDigest, fout);
         BufferedOutputStream bout = new BufferedOutputStream(fout);
         if (compressFile) {

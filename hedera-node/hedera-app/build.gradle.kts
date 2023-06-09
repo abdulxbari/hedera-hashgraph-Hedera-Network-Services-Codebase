@@ -29,6 +29,7 @@ dependencies {
         testImplementation(testFixtures(project(":hedera-node:node-config")))
         testImplementation(testFixtures(project(":hedera-node:node-app-service-mono")))
         testImplementation(testFixtures(project(":hedera-node:node-app-spi")))
+        testImplementation(gav("com.google.jimfs"))
         testImplementation(gav("com.swirlds.base"))
         testImplementation(gav("io.github.classgraph"))
         testImplementation(gav("org.assertj.core"))

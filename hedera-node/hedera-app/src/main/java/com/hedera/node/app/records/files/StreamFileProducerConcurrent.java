@@ -9,7 +9,9 @@ import com.hedera.node.config.ConfigProvider;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.stream.Signer;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 
+import java.nio.file.FileSystem;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
@@ -49,13 +51,19 @@ public final class StreamFileProducerConcurrent extends StreamFileProducerBase {
     /**
      * Construct StreamFileProducerConcurrent
      *
+     * @param configProvider the configuration to read from
+     * @param nodeInfo the current node information
+     * @param signer the signer to use for signing in signature files
+     * @param fileSystem the file system to use, needed for testing to be able to use a non-standard file
+     *                   system. If null default is used.
      * @param executorService The executor service to use for background threads
      */
     public StreamFileProducerConcurrent(@NonNull final ConfigProvider configProvider,
                                         @NonNull final NodeInfo nodeInfo,
                                         @NonNull final Signer signer,
+                                        @Nullable final FileSystem fileSystem,
                                         @NonNull final ExecutorService executorService) {
-        super(configProvider, nodeInfo, signer);
+        super(configProvider, nodeInfo, signer, fileSystem);
         this.executorService = executorService;
         this.hapiVersion = nodeInfo.hapiVersion();
     }

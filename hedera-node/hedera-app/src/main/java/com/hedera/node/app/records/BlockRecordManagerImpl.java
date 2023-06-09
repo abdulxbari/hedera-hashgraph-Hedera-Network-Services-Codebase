@@ -23,6 +23,7 @@ import org.apache.logging.log4j.Logger;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.nio.file.FileSystem;
 import java.time.Instant;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Stream;
@@ -83,12 +84,15 @@ public class BlockRecordManagerImpl implements BlockRecordManager{
      * @param configProvider The configuration provider
      * @param nodeInfo The node info
      * @param signer The signer for signing files
+     * @param fileSystem the file system to use, needed for testing to be able to use a non-standard file
+     *                   system. If null default is used.
      * @param workingStateAccessor The working state accessor, for accessing state adhoc
      */
     @Inject
     public BlockRecordManagerImpl(@NonNull final ConfigProvider configProvider,
                                   @NonNull final NodeInfo nodeInfo,
                                   @NonNull final Signer signer,
+                                  @Nullable final FileSystem fileSystem,
                                   @NonNull final WorkingStateAccessor workingStateAccessor) {
         this.configProvider = requireNonNull(configProvider);
         this.workingStateAccessor = requireNonNull(workingStateAccessor);
@@ -96,6 +100,7 @@ public class BlockRecordManagerImpl implements BlockRecordManager{
                 configProvider,
                 requireNonNull(nodeInfo),
                 requireNonNull(signer),
+                fileSystem,
                 ForkJoinPool.commonPool());
         // check if we were started in event recover mode and if event recovery needs to be completed before we write
         // any new records to stream

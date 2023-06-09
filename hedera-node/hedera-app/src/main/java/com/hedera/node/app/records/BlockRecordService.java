@@ -49,27 +49,19 @@ public class BlockRecordService implements Service {
              * called with the {@link ReadableStates} of the previous version of the {@link Schema}. If
              * there was no previous version, then {@code previousStates} will be empty, but not null.
              *
-             * @param previousStates The {@link ReadableStates} of the previous {@link Schema} version
-             * @param newStates      {@link WritableStates} for this schema.
+             * @param ctx {@link MigrationContext} for this schema migration
              */
             @Override
-            public void migrate(@NonNull ReadableStates previousStates, @NonNull WritableStates newStates) {
-                final var runningHashState = newStates.getSingleton(RUNNING_HASHES_STATE_KEY);
+            public void migrate(@NonNull MigrationContext ctx) {
+                final var runningHashState = ctx.newStates().getSingleton(RUNNING_HASHES_STATE_KEY);
                 final var runningHashes = new RunningHashes(GENESIS_HASH, null, null, null);
                 runningHashState.put(runningHashes);
 
-                final var blocksState = newStates.getSingleton(BLOCK_INFO_STATE_KEY);
+                final var blocksState = ctx.newStates().getSingleton(BLOCK_INFO_STATE_KEY);
                 // Last block is set to -1 because the first valid block is 0
                 final var blocks = new BlockInfo(-1,null,Bytes.EMPTY);
                 blocksState.put(blocks);
             }
         });
     }
-
-    /**
-     * Not Needed
-     */
-    @SuppressWarnings("removal")
-    @Override
-    public void registerMonoAdapterSchemas(@NonNull SchemaRegistry registry) {}
 }

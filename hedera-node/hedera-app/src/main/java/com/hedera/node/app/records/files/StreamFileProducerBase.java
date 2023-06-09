@@ -16,6 +16,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -35,6 +36,7 @@ import static com.swirlds.common.stream.LinkedObjectStreamUtilities.convertInsta
  *     This base class has no mutable state, all methods should be stateless so they can be called from any thread in subclasses.
  * </p>
  */
+@SuppressWarnings("SwitchStatementWithTooFewBranches")
 public abstract class StreamFileProducerBase {
     protected static final Logger log = LogManager.getLogger(StreamFileProducerBase.class);
     /** The file extension for record files */
@@ -67,10 +69,13 @@ public abstract class StreamFileProducerBase {
      * @param configProvider the configuration to read from
      * @param nodeInfo the current node information
      * @param signer the signer to use for signing in signature files
+     * @param fileSystem the file system to use, needed for testing to be able to use a non-standard file
+     *                   system. If null default is used.
      */
     public StreamFileProducerBase(@NonNull final ConfigProvider configProvider,
                                   @NonNull final NodeInfo nodeInfo,
-                                  @NonNull final Signer signer) {
+                                  @NonNull final Signer signer,
+                                  @Nullable final FileSystem fileSystem) {
         this.signer = signer;
         // read configuration
         RecordStreamConfig recordStreamConfig = configProvider.getConfiguration().getConfigData(RecordStreamConfig.class);
@@ -81,12 +86,12 @@ public abstract class StreamFileProducerBase {
         // get hapi version
         hapiVersion = nodeInfo.hapiVersion();
         // compute directories for record and sidecar files
-        nodeScopedRecordLogDir = Path.of(recordStreamConfig.logDir()).resolve("record" + nodeInfo.accountMemo());
+        final Path logDir = fileSystem != null ? fileSystem.getPath(recordStreamConfig.logDir()) : Path.of(recordStreamConfig.logDir());
+        nodeScopedRecordLogDir = logDir.resolve("record" + nodeInfo.accountMemo());
         nodeScopedSidecarDir = nodeScopedRecordLogDir.resolve(recordStreamConfig.sidecarDir());
         // pick record file format
         recordFileFormat = switch(recordFileVersion) {
             case 6 -> RecordFileFormatV6.INSTANCE;
-            case 7 -> RecordFileFormatV7.INSTANCE;
             default -> throw new IllegalArgumentException("Unknown record file version: " + recordFileVersion);
         };
     }

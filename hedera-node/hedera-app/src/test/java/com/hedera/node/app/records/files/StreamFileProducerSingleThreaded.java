@@ -8,7 +8,9 @@ import com.hedera.node.config.ConfigProvider;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.stream.Signer;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 
+import java.nio.file.FileSystem;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Stream;
@@ -32,11 +34,18 @@ public final class StreamFileProducerSingleThreaded extends StreamFileProducerBa
 
     /**
      * Construct RecordManager and start background thread
+     *
+     * @param configProvider the configuration to read from
+     * @param nodeInfo the current node information
+     * @param signer the signer to use for signing in signature files
+     * @param fileSystem the file system to use, needed for testing to be able to use a non-standard file
+     *                   system. If null default is used.
      */
     public StreamFileProducerSingleThreaded(@NonNull final ConfigProvider configProvider,
                                             @NonNull final NodeInfo nodeInfo,
-                                            @NonNull final Signer signer) {
-        super(configProvider, nodeInfo, signer);
+                                            @NonNull final Signer signer,
+                                            @Nullable final FileSystem fileSystem) {
+        super(configProvider, nodeInfo, signer, fileSystem);
     }
 
     // =========================================================================================================================================================================

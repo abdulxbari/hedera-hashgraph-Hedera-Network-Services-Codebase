@@ -11,10 +11,7 @@ import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.crypto.HashingOutputStream;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -42,7 +39,7 @@ public final class RecordFileWriter implements AutoCloseable {
     /** The file we are writing to */
     private final Path file;
     /** The file output stream we are writing to */
-    private final FileOutputStream fileOutputStream;
+    private final OutputStream fileOutputStream;
     /** The gzip output stream we are writing to, wraps {@code fileOutputStream} */
     private final GZIPOutputStream gzipOutputStream;
     /** HashingOutputStream for hashing the file contents, wraps {@code gzipOutputStream} or {@code fileOutputStream} */
@@ -86,7 +83,7 @@ public final class RecordFileWriter implements AutoCloseable {
             // create parent directories if needed
             Files.createDirectories(file.getParent());
             // create stream chain
-            fileOutputStream = new FileOutputStream(file.toFile());
+            fileOutputStream = Files.newOutputStream(file);
             if(compressFile) {
                 gzipOutputStream = new GZIPOutputStream(fileOutputStream);
                 hashingOutputStream = new HashingOutputStream(wholeFileDigest,gzipOutputStream);

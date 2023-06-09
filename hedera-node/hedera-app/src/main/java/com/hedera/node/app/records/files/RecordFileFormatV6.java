@@ -59,9 +59,8 @@ public class RecordFileFormatV6 implements RecordFileFormat {
             buf.putLong(Hash.CLASS_ID);
             buf.putInt(new Hash().getVersion());
             HASH_HEADER = buf.array();
-            if (!Arrays.equals(HASH_HEADER, HexFormat.of().parseHex("1e7451a283da22f401000000"))) {
-                throw new IllegalStateException("Hash object header is not the expected 1e7451a283da22f401000000");
-            }
+            assert Arrays.equals(HASH_HEADER, HexFormat.of().parseHex("1e7451a283da22f401000000")) :
+                    "Hash object header is not the expected 1e7451a283da22f401000000";
             // compute RecordStreamObject header
             ByteArrayOutputStream bout = new ByteArrayOutputStream();
             SerializableDataOutputStream sout = new SerializableDataOutputStream(bout);
@@ -69,9 +68,8 @@ public class RecordFileFormatV6 implements RecordFileFormat {
             sout.writeLong(RecordStreamObject.CLASS_ID);
             sout.writeInt(RecordStreamObject.CLASS_VERSION);
             RECORD_STREAM_OBJECT_HEADER = bout.toByteArray();
-            if (!Arrays.equals(RECORD_STREAM_OBJECT_HEADER, HexFormat.of().parseHex("e370929ba5429d8b00000001"))) {
-                throw new IllegalStateException("RecordStreamObject header is not the expected e370929ba5429d8b00000001");
-            }
+            assert Arrays.equals(RECORD_STREAM_OBJECT_HEADER, HexFormat.of().parseHex("e370929ba5429d8b00000001")) :
+                    "RecordStreamObject header is not the expected e370929ba5429d8b00000001";
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

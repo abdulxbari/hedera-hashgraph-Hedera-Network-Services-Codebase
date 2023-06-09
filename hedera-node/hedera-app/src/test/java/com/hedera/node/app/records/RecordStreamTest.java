@@ -203,7 +203,7 @@ public class RecordStreamTest {
         when(nodeInfo.hapiVersion()).thenReturn(testRecordStreamFile.hapiProtoVersion());
         // create StreamFileProducer
         StreamFileProducerSingleThreaded streamFileProducerSingleThreaded =
-                new StreamFileProducerSingleThreaded(configProvider, nodeInfo, signer);
+                new StreamFileProducerSingleThreaded(configProvider, nodeInfo, signer, null);
         // set the StreamFileProducer's starting running hash to match
         streamFileProducerSingleThreaded.setRunningHash(testRecordStreamFile.startObjectRunningHash().hash());
         // get the consensus time of the first transaction

@@ -148,6 +148,7 @@ dependencyResolutionManagement {
             version("com.github.docker.java.api", "3.2.13")
             version("com.github.spotbugs.annotations", "4.7.3")
             version("com.google.common", "31.1-jre")
+            version("com.google.jimfs", "1.2")
             version("com.google.protobuf", "3.19.4")
             version("com.google.protobuf.util", "3.19.2")
             version("com.hedera.pbj.runtime", "0.6.1")
