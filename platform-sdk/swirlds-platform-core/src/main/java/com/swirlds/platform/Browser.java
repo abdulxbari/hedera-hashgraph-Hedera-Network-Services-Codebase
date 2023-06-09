@@ -74,6 +74,7 @@ import com.swirlds.fchashmap.config.FCHashMapConfig;
 import com.swirlds.jasperdb.config.JasperDbConfig;
 import com.swirlds.logging.payloads.NodeAddressMismatchPayload;
 import com.swirlds.logging.payloads.NodeStartPayload;
+import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.p2p.portforwarding.PortForwarder;
 import com.swirlds.p2p.portforwarding.PortMapping;
 import com.swirlds.platform.config.AddressBookConfig;
@@ -219,6 +220,7 @@ public class Browser {
                 .withConfigDataType(ReconnectConfig.class)
                 .withConfigDataType(FCHashMapConfig.class)
                 .withConfigDataType(JasperDbConfig.class)
+                .withConfigDataType(MerkleDbConfig.class)
                 .withConfigDataType(ChatterConfig.class)
                 .withConfigDataType(AddressBookConfig.class)
                 .withConfigDataType(VirtualMapConfig.class)
