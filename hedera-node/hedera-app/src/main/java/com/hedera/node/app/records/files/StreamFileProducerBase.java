@@ -260,7 +260,9 @@ public abstract class StreamFileProducerBase implements AutoCloseable {
         try {
             for (final SerializedSingleTransactionRecord serializedSingleTransactionRecord :
                     serializedSingleTransactionRecords) {
-                for (int i = 0; i < serializedSingleTransactionRecord.sideCarItemsBytes().size(); i++) {
+                final int numOfSidecarItems =
+                        serializedSingleTransactionRecord.sideCarItemsBytes().size();
+                for (int i = 0; i < numOfSidecarItems; i++) {
                     // get the sidecar record
                     final Bytes sidecarRecordBytes = serializedSingleTransactionRecord
                             .sideCarItemsBytes()

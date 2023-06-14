@@ -258,7 +258,8 @@ public final class BlockRecordManagerImpl implements BlockRecordManager {
             this.eventRecoveryCompleted = true;
         }
         // pass to record stream writer to handle
-        streamFileProducer.writeRecordStreamItems(provisionalCurrentBlockNumber, provisionalCurrentBlockFirstTransactionTime, recordStreamItems);
+        streamFileProducer.writeRecordStreamItems(
+                provisionalCurrentBlockNumber, provisionalCurrentBlockFirstTransactionTime, recordStreamItems);
     }
 
     /**

@@ -209,7 +209,8 @@ public class RecordTestData {
         for (int i = 0; i < TEST_BLOCKS.size(); i++) {
             final var blockData = TEST_BLOCKS.get(i);
             final boolean hasSidecars = TEST_BLOCKS_WITH_SIDECARS[i];
-            final Instant firstBlockTimestamp = fromTimestamp(blockData.get(0).record().consensusTimestamp());
+            final Instant firstBlockTimestamp =
+                    fromTimestamp(blockData.get(0).record().consensusTimestamp());
             final Path recordFile1 = getRecordFilePath(recordsDir, firstBlockTimestamp, compressed);
             runningHash = validateRecordFile(
                     i,

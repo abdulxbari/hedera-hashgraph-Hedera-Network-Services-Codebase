@@ -225,27 +225,25 @@ public class BlockRecordManagerTest {
 
         // print out all files
         try (var pathStream = Files.walk(fs.getPath("/temp"))) {
-            pathStream
-                    .filter(Files::isRegularFile)
-                    .forEach(file -> {
+            pathStream.filter(Files::isRegularFile).forEach(file -> {
+                try {
+                    if (file.getFileName().toString().endsWith("Z.rcd.gz")) {
                         try {
-                            if (file.getFileName().toString().endsWith("Z.rcd.gz")) {
-                                try {
-                                    int count = RecordFileReaderV6.read(file)
-                                            .recordStreamItems()
-                                            .size();
-                                    System.out.println(
-                                            file.toAbsolutePath() + " - (" + Files.size(file) + ")   count = " + count);
-                                } catch (Exception e) {
-                                    throw new RuntimeException(e);
-                                }
-                            } else {
-                                System.out.println(file.toAbsolutePath() + " - (" + Files.size(file) + ")");
-                            }
-                        } catch (IOException e) {
+                            int count = RecordFileReaderV6.read(file)
+                                    .recordStreamItems()
+                                    .size();
+                            System.out.println(
+                                    file.toAbsolutePath() + " - (" + Files.size(file) + ")   count = " + count);
+                        } catch (Exception e) {
                             throw new RuntimeException(e);
                         }
-                    });
+                    } else {
+                        System.out.println(file.toAbsolutePath() + " - (" + Files.size(file) + ")");
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
         // check record files
         final var recordStreamConfig = versionedConfiguration.getConfigData(RecordStreamConfig.class);

@@ -16,6 +16,10 @@
 
 package com.hedera.node.app.records.files;
 
+import static com.hedera.node.app.records.files.RecordTestData.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
+
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.hedera.hapi.node.base.Timestamp;
@@ -31,14 +35,6 @@ import com.swirlds.platform.crypto.PlatformSigner;
 import com.swirlds.platform.crypto.PublicStores;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -51,10 +47,13 @@ import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Stream;
-
-import static com.hedera.node.app.records.files.RecordTestData.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @SuppressWarnings("DataFlowIssue")
 @ExtendWith(MockitoExtension.class)
@@ -89,19 +88,8 @@ public class StreamFileProducerTest {
         Files.createDirectory(tempDir);
 
         // setup config
-        final RecordStreamConfig recordStreamConfig =
-                new RecordStreamConfig(
-                        true,
-                        tempDir.toString(),
-                        "sidecar",
-                        2,
-                        5000,
-                        false,
-                        sidecarMaxSizeMb,
-                        6,
-                        6,
-                        true,
-                        true);
+        final RecordStreamConfig recordStreamConfig = new RecordStreamConfig(
+                true, tempDir.toString(), "sidecar", 2, 5000, false, sidecarMaxSizeMb, 6, 6, true, true);
         // setup mocks
         when(versionedConfiguration.getConfigData(RecordStreamConfig.class)).thenReturn(recordStreamConfig);
         when(configProvider.getConfiguration()).thenReturn(versionedConfiguration);
@@ -117,9 +105,9 @@ public class StreamFileProducerTest {
     /** BlockRecordManager mostly writes records one at a time so simulate that here */
     @ParameterizedTest
     @CsvSource({
-            "StreamFileProducerSingleThreaded, 256",
-            "StreamFileProducerConcurrent,256",
-            "StreamFileProducerConcurrent,1"
+        "StreamFileProducerSingleThreaded, 256",
+        "StreamFileProducerConcurrent,256",
+        "StreamFileProducerConcurrent,1"
     })
     public void oneTransactionAtATime(final String streamFileProducerClassName, int sidecarMaxSizeMb) throws Exception {
         setUpEach(sidecarMaxSizeMb);
@@ -135,9 +123,9 @@ public class StreamFileProducerTest {
     /** It is also interesting to test as larger batches because in theory 1 user transaction could be 1000 transactions */
     @ParameterizedTest
     @CsvSource({
-            "StreamFileProducerSingleThreaded, 256",
-            "StreamFileProducerConcurrent,256",
-            "StreamFileProducerConcurrent,1"
+        "StreamFileProducerSingleThreaded, 256",
+        "StreamFileProducerConcurrent,256",
+        "StreamFileProducerConcurrent,1"
     })
     public void batchOfTransactions(final String streamFileProducerClassName, int sidecarMaxSizeMb) throws Exception {
         setUpEach(sidecarMaxSizeMb);
@@ -154,16 +142,17 @@ public class StreamFileProducerTest {
      * @param streamFileProducerClassName the class name for the StreamFileProducer
      * @param blockWriter the block writer to use
      */
-    private void doTestCommon(final String streamFileProducerClassName, BlockWriter blockWriter)
-            throws Exception {
+    private void doTestCommon(final String streamFileProducerClassName, BlockWriter blockWriter) throws Exception {
         Bytes finalRunningHash;
-        try (StreamFileProducerBase streamFileProducer = switch(streamFileProducerClassName) {
-            case "StreamFileProducerSingleThreaded" -> new StreamFileProducerSingleThreaded(
-                    configProvider, nodeInfo, signer, fs);
-            case "StreamFileProducerConcurrent" -> new StreamFileProducerConcurrent(
-                    configProvider, nodeInfo, signer, fs, ForkJoinPool.commonPool());
-            default -> throw new IllegalArgumentException("Unknown streamFileProducerClassName: " + streamFileProducerClassName);
-        }) {
+        try (StreamFileProducerBase streamFileProducer =
+                switch (streamFileProducerClassName) {
+                    case "StreamFileProducerSingleThreaded" -> new StreamFileProducerSingleThreaded(
+                            configProvider, nodeInfo, signer, fs);
+                    case "StreamFileProducerConcurrent" -> new StreamFileProducerConcurrent(
+                            configProvider, nodeInfo, signer, fs, ForkJoinPool.commonPool());
+                    default -> throw new IllegalArgumentException(
+                            "Unknown streamFileProducerClassName: " + streamFileProducerClassName);
+                }) {
             streamFileProducer.setRunningHash(STARTING_RUNNING_HASH_OBJ.hash());
             System.out.println("STARTING_RUNNING_HASH_OBJ = "
                     + STARTING_RUNNING_HASH_OBJ.hash().toHex());
@@ -192,8 +181,7 @@ public class StreamFileProducerTest {
                 finalRunningHash.toHex());
         // print out all files
         try (var pathStream = Files.walk(fs.getPath("/temp"))) {
-            pathStream.filter(Files::isRegularFile)
-                    .forEach(file -> {
+            pathStream.filter(Files::isRegularFile).forEach(file -> {
                 try {
                     System.out.println(file.toAbsolutePath() + " - (" + Files.size(file) + ")");
                 } catch (IOException e) {
