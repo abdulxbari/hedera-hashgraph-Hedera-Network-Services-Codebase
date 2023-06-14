@@ -51,7 +51,7 @@ public class TransactionSubmitter {
 
     private volatile long customizedTPS = 0;
 
-    private static final double ALLOWED_CATCHUP_DELTA = 1.3;
+    private static final double ALLOWED_CATCHUP_DELTA = 1.2;
 
     /**
      * Force canSubmitMore to halt temporarily or allow it to run normally
