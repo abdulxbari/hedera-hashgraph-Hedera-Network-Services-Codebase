@@ -38,8 +38,6 @@ import com.hedera.hapi.node.base.ResponseCodeEnum;
 import com.hedera.node.app.AppTestBase;
 import com.hedera.node.app.config.VersionedConfigImpl;
 import com.hedera.node.app.records.BlockRecordManager;
-import com.hedera.node.app.service.mono.state.virtual.EntityNumValue;
-import com.hedera.node.app.service.mono.state.virtual.EntityNumVirtualKey;
 import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.service.token.impl.WritableAccountStore;
 import com.hedera.node.app.services.ServiceScopeLookup;

@@ -59,7 +59,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.EnumSet;
-import java.util.HexFormat;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Predicate;
 import java.util.zip.GZIPOutputStream;
@@ -442,7 +441,7 @@ public class RecordStreamFileWriter implements LinkedObjectStream<RecordStreamOb
                     }
                     currentSidecarFileSize += sidecarSizeInBytes;
                     sidecarFileBuilder.addSidecarRecords(sidecar);
-                } else {// TODO this error should be the same
+                } else { // TODO this error should be the same
                     LOG.warn("A sidecar record without an actual sidecar has been received");
                 }
             }

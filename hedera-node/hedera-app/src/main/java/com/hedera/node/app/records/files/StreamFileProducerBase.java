@@ -1,4 +1,23 @@
+/*
+ * Copyright (C) 2023 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hedera.node.app.records.files;
+
+import static com.hedera.node.app.records.files.SignatureFileWriter.writeSignatureFile;
+import static com.swirlds.common.stream.LinkedObjectStreamUtilities.convertInstantToStringWithPadding;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.streams.HashAlgorithm;
@@ -13,18 +32,14 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.stream.Signer;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
-import static com.hedera.node.app.records.files.SignatureFileWriter.writeSignatureFile;
-import static com.swirlds.common.stream.LinkedObjectStreamUtilities.convertInstantToStringWithPadding;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Base class for StreamFileProducers that produce record and sidecar streams.
@@ -37,7 +52,7 @@ import static com.swirlds.common.stream.LinkedObjectStreamUtilities.convertInsta
  * </p>
  */
 @SuppressWarnings("SwitchStatementWithTooFewBranches")
-public abstract class StreamFileProducerBase {
+public abstract class StreamFileProducerBase implements AutoCloseable {
     protected static final Logger log = LogManager.getLogger(StreamFileProducerBase.class);
     /** The file extension for record files */
     public static final String RECORD_EXTENSION = "rcd";
@@ -55,7 +70,7 @@ public abstract class StreamFileProducerBase {
     /** The maximum size of a sidecar file in bytes */
     private final int maxSideCarSizeInBytes;
     /** The directory where record files are written */
-    private final Path nodeScopedRecordLogDir;
+    protected final Path nodeScopedRecordLogDir;
     /** The directory where sidecar files are written */
     private final Path nodeScopedSidecarDir;
     /** True if record files should be compressed on creation */
@@ -72,13 +87,15 @@ public abstract class StreamFileProducerBase {
      * @param fileSystem the file system to use, needed for testing to be able to use a non-standard file
      *                   system. If null default is used.
      */
-    public StreamFileProducerBase(@NonNull final ConfigProvider configProvider,
-                                  @NonNull final NodeInfo nodeInfo,
-                                  @NonNull final Signer signer,
-                                  @Nullable final FileSystem fileSystem) {
+    public StreamFileProducerBase(
+            @NonNull final ConfigProvider configProvider,
+            @NonNull final NodeInfo nodeInfo,
+            @NonNull final Signer signer,
+            @Nullable final FileSystem fileSystem) {
         this.signer = signer;
         // read configuration
-        RecordStreamConfig recordStreamConfig = configProvider.getConfiguration().getConfigData(RecordStreamConfig.class);
+        RecordStreamConfig recordStreamConfig =
+                configProvider.getConfiguration().getConfigData(RecordStreamConfig.class);
         recordFileVersion = recordStreamConfig.recordFileVersion();
         signatureFileVersion = recordStreamConfig.signatureFileVersion();
         compressFilesOnCreation = recordStreamConfig.compressFilesOnCreation();
@@ -86,14 +103,15 @@ public abstract class StreamFileProducerBase {
         // get hapi version
         hapiVersion = nodeInfo.hapiVersion();
         // compute directories for record and sidecar files
-        final Path logDir = fileSystem != null ? fileSystem.getPath(recordStreamConfig.logDir()) : Path.of(recordStreamConfig.logDir());
+        final Path logDir = fileSystem != null
+                ? fileSystem.getPath(recordStreamConfig.logDir())
+                : Path.of(recordStreamConfig.logDir());
         nodeScopedRecordLogDir = logDir.resolve("record" + nodeInfo.accountMemo());
         nodeScopedSidecarDir = nodeScopedRecordLogDir.resolve(recordStreamConfig.sidecarDir());
         // pick record file format
-        recordFileFormat = switch(recordFileVersion) {
+        recordFileFormat = switch (recordFileVersion) {
             case 6 -> RecordFileFormatV6.INSTANCE;
-            default -> throw new IllegalArgumentException("Unknown record file version: " + recordFileVersion);
-        };
+            default -> throw new IllegalArgumentException("Unknown record file version: " + recordFileVersion);};
     }
 
     // =========================================================================================================================================================================
@@ -126,7 +144,8 @@ public abstract class StreamFileProducerBase {
      *                                              adjusted consensus time not the platform assigned consensus time. Assuming
      *                                              the two are different.
      */
-    public abstract void switchBlocks(long lastBlockNumber, long newBlockNumber, Instant newBlockFirstTransactionConsensusTime);
+    public abstract void switchBlocks(
+            long lastBlockNumber, long newBlockNumber, Instant newBlockFirstTransactionConsensusTime);
 
     /**
      * Write record items to stream files. They must be in exact consensus time order! This must only be called after the user
@@ -141,15 +160,14 @@ public abstract class StreamFileProducerBase {
             @NonNull Instant blockFirstTransactionConsensusTime,
             @NonNull final Stream<SingleTransactionRecord> recordStreamItems);
 
+    /**
+     * Closes this StreamFileProducerBase wait for any background thread, close all files etc.
+     */
+    @Override
+    public abstract void close() throws Exception;
+
     // =========================================================================================================================================================================
     // common protected methods used by subclasses
-
-    /**
-     * Wait for any background threads to complete, needed for tests
-     */
-    protected void waitForComplete() {
-        // no-op
-    }
 
     /**
      * Close the current block, this:
@@ -160,17 +178,21 @@ public abstract class StreamFileProducerBase {
      *     <li>signs the hashes and write signature file</li>
      * </ul>
      *
-     * @param blockNumber             the block number for this block we are closing
      * @param startingRunningHash     the starting running hash before thr first record stream item of this block
      * @param finalRunningHash        the final running hash of record stream items at the end of the block
      * @param currentRecordFileWriter the current open record file writer
      * @param sidecarFileWriters      list of sidecar file writers for this block, null if there are none
      */
-    protected final void closeBlock(final long blockNumber,
-                                    @NonNull final Bytes startingRunningHash,
-                                    @NonNull final Bytes finalRunningHash,
-                                    @NonNull final RecordFileWriter currentRecordFileWriter,
-                                    @Nullable final List<SidecarFileWriter> sidecarFileWriters) {
+    protected final void closeBlock(
+            @NonNull final Bytes startingRunningHash,
+            @NonNull final Bytes finalRunningHash,
+            @NonNull final RecordFileWriter currentRecordFileWriter,
+            @Nullable final List<SidecarFileWriter> sidecarFileWriters) {
+        final long blockNumber = currentRecordFileWriter.blockNumber();
+        System.out.println(
+                "closeBlock: blockNumber=" + blockNumber + ", startingRunningHash=" + startingRunningHash.toHex()
+                        + ", finalRunningHash=" + finalRunningHash.toHex() + ", currentRecordFileWriter="
+                        + currentRecordFileWriter + ", sidecarFileWriters=" + sidecarFileWriters);
         try {
             // close any open sidecar writers and add sidecar metadata to record file
             final List<SidecarMetadata> sidecarMetadata = new ArrayList<>();
@@ -190,8 +212,7 @@ public abstract class StreamFileProducerBase {
             }
             // write the stream footer
             currentRecordFileWriter.writeFooter(
-                    new HashObject(HashAlgorithm.SHA_384, (int)finalRunningHash.length(), finalRunningHash),
-                    blockNumber,
+                    new HashObject(HashAlgorithm.SHA_384, (int) finalRunningHash.length(), finalRunningHash),
                     sidecarMetadata);
             currentRecordFileWriter.close();
             // write signature file, this tells the uploader that this record file set is complete
@@ -205,8 +226,7 @@ public abstract class StreamFileProducerBase {
                     hapiVersion,
                     blockNumber,
                     startingRunningHash,
-                    currentRecordFileWriter.endObjectRunningHash().hash()
-            );
+                    currentRecordFileWriter.endObjectRunningHash().hash());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -226,21 +246,28 @@ public abstract class StreamFileProducerBase {
      * @param serializedSingleTransactionRecords List of serialized data from transactions
      * @return the updated list of sidecar files written. Could be the same as passed in or have new ones added.
      */
-    protected final List<SidecarFileWriter> handleSidecarItems(@NonNull final Instant currentRecordFileFirstTransactionConsensusTimestamp,
-                                                               @Nullable final List<SidecarFileWriter> currentSidecarFileWriters,
-                                                               @NonNull final List<SerializedSingleTransactionRecord> serializedSingleTransactionRecords) {
+    protected final List<SidecarFileWriter> handleSidecarItems(
+            @NonNull final Instant currentRecordFileFirstTransactionConsensusTimestamp,
+            @Nullable final List<SidecarFileWriter> currentSidecarFileWriters,
+            @NonNull final List<SerializedSingleTransactionRecord> serializedSingleTransactionRecords) {
         // get or create the latest sidecar file writer
-        final List<SidecarFileWriter> sidecarFileWriters = currentSidecarFileWriters != null ? new ArrayList<>(currentSidecarFileWriters) : new ArrayList<>();
-        SidecarFileWriter latestSidecarWriter = sidecarFileWriters.isEmpty() ? null : sidecarFileWriters.get(sidecarFileWriters.size()-1);
-        // iterate over the sidecar records, trying to write each one to sidecar file, creating new sidecar file if needed
+        final List<SidecarFileWriter> sidecarFileWriters =
+                currentSidecarFileWriters != null ? new ArrayList<>(currentSidecarFileWriters) : new ArrayList<>();
+        SidecarFileWriter latestSidecarWriter =
+                sidecarFileWriters.isEmpty() ? null : sidecarFileWriters.get(sidecarFileWriters.size() - 1);
+        // iterate over the sidecar records, trying to write each one to sidecar file, creating new sidecar file if
+        // needed
         try {
-            for(final SerializedSingleTransactionRecord serializedSingleTransactionRecord : serializedSingleTransactionRecords) {
-                for(int i = 0; i < serializedSingleTransactionRecord.sideCarItemsBytes().size(); i++) {
+            for (final SerializedSingleTransactionRecord serializedSingleTransactionRecord :
+                    serializedSingleTransactionRecords) {
+                for (int i = 0; i < serializedSingleTransactionRecord.sideCarItemsBytes().size(); i++) {
                     // get the sidecar record
-                    final Bytes sidecarRecordBytes = serializedSingleTransactionRecord.sideCarItemsBytes().get(i);
+                    final Bytes sidecarRecordBytes = serializedSingleTransactionRecord
+                            .sideCarItemsBytes()
+                            .get(i);
                     // get the serialized bytes
-                    final TransactionSidecarRecord sideCarItem = serializedSingleTransactionRecord.sideCarItems().get(i);
-
+                    final TransactionSidecarRecord sideCarItem =
+                            serializedSingleTransactionRecord.sideCarItems().get(i);
 
                     // get the kind of the sidecar record
                     final var kind = sideCarItem.sidecarRecords().kind();
@@ -248,21 +275,28 @@ public abstract class StreamFileProducerBase {
                     if (latestSidecarWriter == null) {
                         // create a new writer
                         latestSidecarWriter = new SidecarFileWriter(
-                                getSidecarFilePath(currentRecordFileFirstTransactionConsensusTimestamp,sidecarFileWriters.size()+1),
-                                compressFilesOnCreation, maxSideCarSizeInBytes);
+                                getSidecarFilePath(
+                                        currentRecordFileFirstTransactionConsensusTimestamp,
+                                        sidecarFileWriters.size() + 1),
+                                compressFilesOnCreation,
+                                maxSideCarSizeInBytes);
                         // add writer to list
                         sidecarFileWriters.add(latestSidecarWriter);
                     }
                     // try writing to the latest sidecar file writer
-                    final boolean wasWritten = latestSidecarWriter.writeTransactionSidecarRecord(kind, sidecarRecordBytes);
+                    final boolean wasWritten =
+                            latestSidecarWriter.writeTransactionSidecarRecord(kind, sidecarRecordBytes);
                     // if it was not written then the file is full, so create a new one and write to it
                     if (!wasWritten) {
                         // close existing sidecar file writer
                         latestSidecarWriter.close();
                         // create a new writer
                         latestSidecarWriter = new SidecarFileWriter(
-                                getSidecarFilePath(currentRecordFileFirstTransactionConsensusTimestamp,sidecarFileWriters.size()+1),
-                                compressFilesOnCreation, maxSideCarSizeInBytes);
+                                getSidecarFilePath(
+                                        currentRecordFileFirstTransactionConsensusTimestamp,
+                                        sidecarFileWriters.size() + 1),
+                                compressFilesOnCreation,
+                                maxSideCarSizeInBytes);
                         // add writer to list
                         sidecarFileWriters.add(latestSidecarWriter);
                         // now write item to the new writer
@@ -283,9 +317,10 @@ public abstract class StreamFileProducerBase {
      * @return Path to a record file for that consensus time
      */
     protected Path getRecordFilePath(final Instant consensusTime) {
-        return nodeScopedRecordLogDir.resolve(
-                convertInstantToStringWithPadding(consensusTime) + "." + RECORD_EXTENSION
-                    + (compressFilesOnCreation ? COMPRESSION_ALGORITHM_EXTENSION : "")); // TODO I assume we need extension here, what happens for signature file names?
+        return nodeScopedRecordLogDir.resolve(convertInstantToStringWithPadding(consensusTime) + "." + RECORD_EXTENSION
+                + (compressFilesOnCreation
+                        ? COMPRESSION_ALGORITHM_EXTENSION
+                        : "")); // TODO I assume we need extension here, what happens for signature file names?
     }
 
     /**
@@ -296,8 +331,8 @@ public abstract class StreamFileProducerBase {
      * @param sidecarId                                           the sidecar id of this sidecar file
      * @return the new sidecar file path
      */
-    protected Path getSidecarFilePath(@NonNull final Instant currentRecordFileFirstTransactionConsensusTimestamp,
-                                    final int sidecarId) {
+    protected Path getSidecarFilePath(
+            @NonNull final Instant currentRecordFileFirstTransactionConsensusTimestamp, final int sidecarId) {
         return nodeScopedSidecarDir.resolve(
                 convertInstantToStringWithPadding(currentRecordFileFirstTransactionConsensusTimestamp)
                         + "_"
@@ -306,5 +341,4 @@ public abstract class StreamFileProducerBase {
                         + RECORD_EXTENSION
                         + (compressFilesOnCreation ? COMPRESSION_ALGORITHM_EXTENSION : ""));
     }
-
 }

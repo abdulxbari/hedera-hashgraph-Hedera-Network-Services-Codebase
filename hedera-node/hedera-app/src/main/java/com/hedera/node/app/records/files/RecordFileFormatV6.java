@@ -1,4 +1,24 @@
+/*
+ * Copyright (C) 2023 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hedera.node.app.records.files;
+
+import static com.hedera.hapi.streams.schema.RecordStreamFileSchema.HAPI_PROTO_VERSION;
+import static com.hedera.hapi.streams.schema.RecordStreamFileSchema.START_OBJECT_RUNNING_HASH;
+import static com.hedera.pbj.runtime.ProtoWriterTools.writeMessage;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Transaction;
@@ -14,7 +34,6 @@ import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -25,10 +44,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
-
-import static com.hedera.hapi.streams.schema.RecordStreamFileSchema.HAPI_PROTO_VERSION;
-import static com.hedera.hapi.streams.schema.RecordStreamFileSchema.START_OBJECT_RUNNING_HASH;
-import static com.hedera.pbj.runtime.ProtoWriterTools.writeMessage;
 
 /**
  * RecordFileWriter for V6 record file format.
@@ -59,8 +74,8 @@ public class RecordFileFormatV6 implements RecordFileFormat {
             buf.putLong(Hash.CLASS_ID);
             buf.putInt(new Hash().getVersion());
             HASH_HEADER = buf.array();
-            assert Arrays.equals(HASH_HEADER, HexFormat.of().parseHex("1e7451a283da22f401000000")) :
-                    "Hash object header is not the expected 1e7451a283da22f401000000";
+            assert Arrays.equals(HASH_HEADER, HexFormat.of().parseHex("1e7451a283da22f401000000"))
+                    : "Hash object header is not the expected 1e7451a283da22f401000000";
             // compute RecordStreamObject header
             ByteArrayOutputStream bout = new ByteArrayOutputStream();
             SerializableDataOutputStream sout = new SerializableDataOutputStream(bout);
@@ -68,8 +83,8 @@ public class RecordFileFormatV6 implements RecordFileFormat {
             sout.writeLong(RecordStreamObject.CLASS_ID);
             sout.writeInt(RecordStreamObject.CLASS_VERSION);
             RECORD_STREAM_OBJECT_HEADER = bout.toByteArray();
-            assert Arrays.equals(RECORD_STREAM_OBJECT_HEADER, HexFormat.of().parseHex("e370929ba5429d8b00000001")) :
-                    "RecordStreamObject header is not the expected e370929ba5429d8b00000001";
+            assert Arrays.equals(RECORD_STREAM_OBJECT_HEADER, HexFormat.of().parseHex("e370929ba5429d8b00000001"))
+                    : "RecordStreamObject header is not the expected e370929ba5429d8b00000001";
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -94,10 +109,8 @@ public class RecordFileFormatV6 implements RecordFileFormat {
             @NonNull final SemanticVersion hapiVersion) {
         try {
             // create RecordStreamItem
-            final RecordStreamItem recordStreamItem = new RecordStreamItem(
-                    singleTransactionRecord.transaction(),
-                    singleTransactionRecord.record()
-            );
+            final RecordStreamItem recordStreamItem =
+                    new RecordStreamItem(singleTransactionRecord.transaction(), singleTransactionRecord.record());
             // serialize in format for hashing
             // the format is SelfSerializable header and then protobuf fields in reverse order with no protobuf tag
             final var bout = new ByteArrayOutputStream();
@@ -118,12 +131,14 @@ public class RecordFileFormatV6 implements RecordFileFormat {
             // serialize in protobuf format
             final Bytes protobufItemBytes = RecordStreamItem.PROTOBUF.toBytes(recordStreamItem);
             // serialize sidecar items to protobuf
-            List<Bytes> sideCarItems = singleTransactionRecord.transactionSidecarRecords().stream().map(TransactionSidecarRecord.PROTOBUF::toBytes).toList();
+            List<Bytes> sideCarItems = singleTransactionRecord.transactionSidecarRecords().stream()
+                    .map(TransactionSidecarRecord.PROTOBUF::toBytes)
+                    .toList();
             // return SerializedSingleTransactionRecord
             return new SerializedSingleTransactionRecord(
-                    Bytes.wrap(bout.toByteArray()), 
-                    protobufItemBytes, 
-                    sideCarItems, 
+                    Bytes.wrap(bout.toByteArray()),
+                    protobufItemBytes,
+                    sideCarItems,
                     singleTransactionRecord.transactionSidecarRecords());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -142,7 +157,9 @@ public class RecordFileFormatV6 implements RecordFileFormat {
      * @return the new running hash, or startRunningHash if there were no items to add
      */
     @Override
-    public Bytes computeNewRunningHash(@NonNull final Bytes startRunningHash, @NonNull final List<SerializedSingleTransactionRecord> serializedItems) {
+    public Bytes computeNewRunningHash(
+            @NonNull final Bytes startRunningHash,
+            @NonNull final List<SerializedSingleTransactionRecord> serializedItems) {
         try {
             byte[] previousHash = startRunningHash.toByteArray();
             final MessageDigest messageDigest = MessageDigest.getInstance(DigestType.SHA_384.algorithmName());
@@ -174,18 +191,25 @@ public class RecordFileFormatV6 implements RecordFileFormat {
      * @param startObjectRunningHash the starting running hash at the end of previous record file
      */
     @Override
-    public void writeHeader(@NonNull final WritableStreamingData outputStream,
-                            @NonNull final SemanticVersion hapiProtoVersion,
-                            @NonNull final HashObject startObjectRunningHash) {
+    public void writeHeader(
+            @NonNull final WritableStreamingData outputStream,
+            @NonNull final SemanticVersion hapiProtoVersion,
+            @NonNull final HashObject startObjectRunningHash) {
         try {
             // Write the record file version int first to start of file
             outputStream.writeInt(VERSION);
             // [1] - hapi_proto_version
-            writeMessage(outputStream, HAPI_PROTO_VERSION, hapiProtoVersion,
+            writeMessage(
+                    outputStream,
+                    HAPI_PROTO_VERSION,
+                    hapiProtoVersion,
                     com.hedera.hapi.node.base.SemanticVersion.PROTOBUF::write,
                     com.hedera.hapi.node.base.SemanticVersion.PROTOBUF::measureRecord);
             // [2] - start_object_running_hash
-            writeMessage(outputStream, START_OBJECT_RUNNING_HASH, startObjectRunningHash,
+            writeMessage(
+                    outputStream,
+                    START_OBJECT_RUNNING_HASH,
+                    startObjectRunningHash,
                     com.hedera.hapi.streams.HashObject.PROTOBUF::write,
                     com.hedera.hapi.streams.HashObject.PROTOBUF::measureRecord);
         } catch (IOException e) {

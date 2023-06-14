@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2023 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hedera.node.app.records.files;
 
 import com.hedera.hapi.node.base.SemanticVersion;
@@ -11,7 +27,9 @@ import com.swirlds.common.stream.Signer;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 
+import java.io.IOException;
 import java.nio.file.FileSystem;
+import java.nio.file.Files;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
@@ -35,7 +53,7 @@ import java.util.stream.Stream;
 @SuppressWarnings({"CodeBlock2Expr"})
 public final class StreamFileProducerConcurrent extends StreamFileProducerBase {
     /** Simple pair class */
-    record TwoResults<A,B>(A a, B b) {}
+    record TwoResults<A, B>(A a, B b) {}
 
     /** The hapi version of the node */
     private final SemanticVersion hapiVersion;
@@ -58,11 +76,12 @@ public final class StreamFileProducerConcurrent extends StreamFileProducerBase {
      *                   system. If null default is used.
      * @param executorService The executor service to use for background threads
      */
-    public StreamFileProducerConcurrent(@NonNull final ConfigProvider configProvider,
-                                        @NonNull final NodeInfo nodeInfo,
-                                        @NonNull final Signer signer,
-                                        @Nullable final FileSystem fileSystem,
-                                        @NonNull final ExecutorService executorService) {
+    public StreamFileProducerConcurrent(
+            @NonNull final ConfigProvider configProvider,
+            @NonNull final NodeInfo nodeInfo,
+            @NonNull final Signer signer,
+            @Nullable final FileSystem fileSystem,
+            @NonNull final ExecutorService executorService) {
         super(configProvider, nodeInfo, signer, fileSystem);
         this.executorService = executorService;
         this.hapiVersion = nodeInfo.hapiVersion();
@@ -102,18 +121,21 @@ public final class StreamFileProducerConcurrent extends StreamFileProducerBase {
      *                                              the two are different.
      */
     @Override
-    public void switchBlocks(final long lastBlockNumber,
-                             final long newBlockNumber,
-                             @NonNull final Instant newBlockFirstTransactionConsensusTime) {
-        if(lastRecordHashingResult == null) {
+    public void switchBlocks(
+            final long lastBlockNumber,
+            final long newBlockNumber,
+            @NonNull final Instant newBlockFirstTransactionConsensusTime) {
+        System.out.println("StreamFileProducerConcurrent.switchBlocks lastBlockNumber=" + lastBlockNumber + " newBlockNumber=" + newBlockNumber + " newBlockFirstTransactionConsensusTime=" + newBlockFirstTransactionConsensusTime);
+        if (lastRecordHashingResult == null) {
             throw new RuntimeException("setRunningHash() must be called before switchBlocks()");
         }
         if (currentRecordFileWriter == null) {
-            // we are at the start of a new block and there is no old one to close or wait for. So just create a new one which creates a
+            // we are at the start of a new block and there is no old one to close or wait for. So just create a new one
+            // which creates a
             // new file and writes header in background.
             currentRecordFileWriter = lastRecordHashingResult.thenApply(lastRunningHash -> {
-                    return createRecordFileWriter(newBlockFirstTransactionConsensusTime, lastRunningHash);
-                });
+                return createRecordFileWriter(newBlockFirstTransactionConsensusTime, lastRunningHash, newBlockNumber);
+            });
         } else {
             // it is important to capture references to these variables as they are at this point in time synchronously
             // because we will use them in the asynchronous background task and by the time they are used there they
@@ -126,21 +148,29 @@ public final class StreamFileProducerConcurrent extends StreamFileProducerBase {
             // new writing will need to start a new set of sidecars.
             sidecarHandlingFuture = CompletableFuture.completedFuture(null);
             // wait for all background threads to finish, then in new background task finish the current block
-            currentRecordFileWriter = CompletableFuture
-                    .allOf(lastRecordHashingResultLOCAL, currentRecordFileWriterLOCAL,sidecarHandlingFutureLOCAL)
-                    .thenApplyAsync(aVoid -> {
-                        final Bytes lastRunningHash = lastRecordHashingResultLOCAL.join();
-                        final RecordFileWriter recordFileWriter = currentRecordFileWriterLOCAL.join();
-                        final List<SidecarFileWriter> sidecarFileWriters = sidecarHandlingFutureLOCAL.join();
-                        // close current block
-                        closeBlock(lastBlockNumber,
-                                recordFileWriter.startObjectRunningHash().hash(),
-                                lastRunningHash,
-                                recordFileWriter,
-                                sidecarFileWriters);
-                        // create new record file writer
-                        return createRecordFileWriter(newBlockFirstTransactionConsensusTime, lastRunningHash);
-                    }, executorService);
+
+//            System.out.println("****** switchBlocks DEPENDS ON "+currentRecordFileWriterLOCAL);
+            currentRecordFileWriter = CompletableFuture.allOf(
+                            lastRecordHashingResultLOCAL, currentRecordFileWriterLOCAL, sidecarHandlingFutureLOCAL)
+                    .thenApplyAsync(
+                            aVoid -> {
+                                final Bytes lastRunningHash = lastRecordHashingResultLOCAL.join();
+                                final RecordFileWriter recordFileWriter = currentRecordFileWriterLOCAL.join();
+                                final List<SidecarFileWriter> sidecarFileWriters = sidecarHandlingFutureLOCAL.join();
+                                // close current block
+                                closeBlock(
+                                        recordFileWriter
+                                                .startObjectRunningHash()
+                                                .hash(),
+                                        lastRunningHash,
+                                        recordFileWriter,
+                                        sidecarFileWriters);
+                                // create new record file writer
+                                return createRecordFileWriter(
+                                        newBlockFirstTransactionConsensusTime, lastRunningHash, newBlockNumber);
+                            },
+                            executorService);
+//            System.out.println("****** switchBlocks PRODUCED "+currentRecordFileWriter);
         }
     }
 
@@ -154,14 +184,17 @@ public final class StreamFileProducerConcurrent extends StreamFileProducerBase {
      * @param lastRunningHash the last running hash of the previous block to write into file header
      * @return the new record stream writer
      */
-    private RecordFileWriter createRecordFileWriter(Instant newBlockFirstTransactionConsensusTime, Bytes lastRunningHash) {
+    private RecordFileWriter createRecordFileWriter(
+            @NonNull final Instant newBlockFirstTransactionConsensusTime,
+            @NonNull final Bytes lastRunningHash,
+            final long blockNumber) {
         final var recordFileWriter = new RecordFileWriter(
-                    getRecordFilePath(newBlockFirstTransactionConsensusTime),
-                    recordFileFormat,
-                    compressFilesOnCreation);
+                getRecordFilePath(newBlockFirstTransactionConsensusTime),
+                recordFileFormat,
+                compressFilesOnCreation,
+                blockNumber);
         recordFileWriter.writeHeader(
-                hapiVersion,
-                new HashObject(HashAlgorithm.SHA_384,(int)lastRunningHash.length(),lastRunningHash));
+                hapiVersion, new HashObject(HashAlgorithm.SHA_384, (int) lastRunningHash.length(), lastRunningHash));
         return recordFileWriter;
     }
 
@@ -183,54 +216,87 @@ public final class StreamFileProducerConcurrent extends StreamFileProducerBase {
         }
         // serialize all the record stream items in background thread into SerializedSingleTransaction objects
         CompletableFuture<List<SerializedSingleTransactionRecord>> futureSerializedRecords =
-                CompletableFuture.supplyAsync(() -> {
-                    return recordStreamItems
-                            .map(item -> recordFileFormat.serialize(item, blockNumber, hapiVersion))
-                            .toList();
-                }, executorService);
-        // when serialization is done and previous running hash is computed, we can compute new running hash and write serialized
+                CompletableFuture.supplyAsync(
+                        () -> {
+                            return recordStreamItems
+                                    .map(item -> recordFileFormat.serialize(item, blockNumber, hapiVersion))
+                                    .toList();
+                        },
+                        executorService);
+        // when serialization is done and previous running hash is computed, we can compute new running hash and write
+        // serialized
         // items to record file in parallel update running hash in a background thread
         lastRecordHashingResult = lastRecordHashingResult
                 .thenCombine(futureSerializedRecords, TwoResults::new)
-                .thenApplyAsync(twoResults -> {
-                    final Bytes lastRecordHashingResult =  twoResults.a();
-                    final List<SerializedSingleTransactionRecord> serializedItems =  twoResults.b();
-                    return recordFileFormat.computeNewRunningHash(lastRecordHashingResult, serializedItems);
-                }, executorService);
+                .thenApplyAsync(
+                        twoResults -> {
+                            final Bytes lastRecordHashingResult = twoResults.a();
+                            final List<SerializedSingleTransactionRecord> serializedItems = twoResults.b();
+                            return recordFileFormat.computeNewRunningHash(lastRecordHashingResult, serializedItems);
+                        },
+                        executorService);
         // write serialized items to record file in a background thread
+//        System.out.println("****** writeRecordStreamItems DEPENDS ON "+currentRecordFileWriter);
         currentRecordFileWriter = currentRecordFileWriter
                 .thenCombine(futureSerializedRecords, TwoResults::new)
-                .thenApplyAsync(twoResults -> {
-                    final RecordFileWriter recordFileWriter =  twoResults.a();
-                    final List<SerializedSingleTransactionRecord> serializedItems =  twoResults.b();
-                    serializedItems.forEach(recordFileWriter::writeRecordStreamItem);
-                    return recordFileWriter;
-                }, executorService);
+                .thenApplyAsync(
+                        twoResults -> {
+                            final RecordFileWriter recordFileWriter = twoResults.a();
+                            final List<SerializedSingleTransactionRecord> serializedItems = twoResults.b();
+                            serializedItems.forEach(recordFileWriter::writeRecordStreamItem);
+                            return recordFileWriter;
+                        },
+                        executorService);
+//        System.out.println("****** writeRecordStreamItems PRODUCED "+currentRecordFileWriter);
         // write serialized sidecar items to sidecar files in a background thread
+//        System.out.println("****** sidecarHandlingFuture DEPENDS ON "+sidecarHandlingFuture);
         sidecarHandlingFuture = sidecarHandlingFuture
                 .thenCombine(futureSerializedRecords, TwoResults::new)
-                .thenApplyAsync(twoResults -> {
-                    final List<SidecarFileWriter> sidecarFileWriters = twoResults.a();
-                    final List<SerializedSingleTransactionRecord> serializedItems =  twoResults.b();
-                    return handleSidecarItems(
-                            blockFirstTransactionConsensusTime,
-                            sidecarFileWriters,
-                            serializedItems);
-                }, executorService);
+                .thenApplyAsync(
+                        twoResults -> {
+                            final List<SidecarFileWriter> sidecarFileWriters = twoResults.a();
+                            final List<SerializedSingleTransactionRecord> serializedItems = twoResults.b();
+                            return handleSidecarItems(
+                                    blockFirstTransactionConsensusTime, sidecarFileWriters, serializedItems);
+                        },
+                        executorService);
+//        System.out.println("****** sidecarHandlingFuture PRODUCED "+sidecarHandlingFuture);
     }
 
     /**
-     * Wait for any background threads to complete, needed for tests
-     * TODO this will need to be called before shutdown to make sure all data is written
+     * Closes this StreamFileProducerBase wait for any background thread, close all files etc. This method is
+     * synchronous, so waits for all background threads to finish and files to be closed.
      */
     @Override
-    protected void waitForComplete() {
-        try {
-            CompletableFuture
-                    .allOf(lastRecordHashingResult, currentRecordFileWriter, sidecarHandlingFuture)
-                    .get(10, TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            throw new RuntimeException(e);
-        }
+    public void close() throws Exception {
+        // it is important to capture references to these variables as they are at this point in time synchronously
+        // because we will use them in the asynchronous background task and by the time they are used there they
+        // could have changed. Even more they could have been changed by us, so we can end up joining on ourselves
+        // and deadlocking. This is important for the use of allOf() as it does not pass the results down.
+        final var lastRecordHashingResultLOCAL = lastRecordHashingResult;
+        final var currentRecordFileWriterLOCAL = currentRecordFileWriter;
+        final var sidecarHandlingFutureLOCAL = sidecarHandlingFuture;
+        // set currentRecordFileWriter to null as we are closing it
+        currentRecordFileWriter = null;
+        // wait for all background threads to finish, then in new background task finish the current block
+//        System.out.println("****** close DEPENDS ON Writers  :: "+currentRecordFileWriterLOCAL);
+//        System.out.println("****** close DEPENDS ON SideCars :: "+sidecarHandlingFutureLOCAL);
+        CompletableFuture.allOf(lastRecordHashingResultLOCAL, currentRecordFileWriterLOCAL, sidecarHandlingFutureLOCAL)
+                .thenAccept(aVoid -> {
+                    final Bytes lastRunningHash = lastRecordHashingResultLOCAL.join();
+                    final RecordFileWriter recordFileWriter = currentRecordFileWriterLOCAL.join();
+                    final List<SidecarFileWriter> sidecarFileWriters = sidecarHandlingFutureLOCAL.join();
+                    System.out.println("lastRecordHashingResultLOCAL.isDone() = " + lastRecordHashingResultLOCAL.isDone());
+                    System.out.println("currentRecordFileWriterLOCAL.isDone() = " + currentRecordFileWriterLOCAL.isDone());
+                    System.out.println("sidecarHandlingFutureLOCAL["+sidecarHandlingFutureLOCAL+"].isDone() = " + sidecarHandlingFutureLOCAL.isDone());
+                    System.out.println("sidecarFileWriters.size() = " + sidecarFileWriters.size());
+                    // close current block
+                    closeBlock(
+                            recordFileWriter.startObjectRunningHash().hash(),
+                            lastRunningHash,
+                            recordFileWriter,
+                            sidecarFileWriters);
+                })
+                .join(); // join() is needed to wait for allOf() to finish
     }
 }

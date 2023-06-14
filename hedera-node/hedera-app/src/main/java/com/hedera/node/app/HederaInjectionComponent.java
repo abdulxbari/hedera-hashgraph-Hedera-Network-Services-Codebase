@@ -27,6 +27,7 @@ import com.hedera.node.app.config.GenesisUsage;
 import com.hedera.node.app.fees.FeesInjectionModule;
 import com.hedera.node.app.info.InfoInjectionModule;
 import com.hedera.node.app.metrics.MetricsInjectionModule;
+import com.hedera.node.app.records.RecordsInjectionModule;
 import com.hedera.node.app.service.mono.LegacyMonoInjectionModule;
 import com.hedera.node.app.service.mono.ServicesApp;
 import com.hedera.node.app.service.mono.context.annotations.BootstrapProps;
@@ -69,6 +70,7 @@ import javax.inject.Singleton;
             MetricsInjectionModule.class,
             AuthorizerInjectionModule.class,
             InfoInjectionModule.class,
+            RecordsInjectionModule.class,
             ThrottleInjectionModule.class,
             SolvencyInjectionModule.class,
             ConfigModule.class

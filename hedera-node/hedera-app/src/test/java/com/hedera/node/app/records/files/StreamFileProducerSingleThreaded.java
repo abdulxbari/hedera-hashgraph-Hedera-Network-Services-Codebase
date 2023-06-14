@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2023 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hedera.node.app.records.files;
 
 import com.hedera.hapi.streams.HashAlgorithm;
@@ -9,7 +25,6 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.stream.Signer;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-
 import java.nio.file.FileSystem;
 import java.time.Instant;
 import java.util.List;
@@ -41,15 +56,32 @@ public final class StreamFileProducerSingleThreaded extends StreamFileProducerBa
      * @param fileSystem the file system to use, needed for testing to be able to use a non-standard file
      *                   system. If null default is used.
      */
-    public StreamFileProducerSingleThreaded(@NonNull final ConfigProvider configProvider,
-                                            @NonNull final NodeInfo nodeInfo,
-                                            @NonNull final Signer signer,
-                                            @Nullable final FileSystem fileSystem) {
+    public StreamFileProducerSingleThreaded(
+            @NonNull final ConfigProvider configProvider,
+            @NonNull final NodeInfo nodeInfo,
+            @NonNull final Signer signer,
+            @Nullable final FileSystem fileSystem) {
         super(configProvider, nodeInfo, signer, fileSystem);
     }
 
     // =========================================================================================================================================================================
     // public methods
+
+    /**
+     * Closes this StreamFileProducerBase wait for any background thread, close all files etc.
+     */
+    @Override
+    public void close() {
+        if (currentRecordFileWriter != null) {
+            closeBlock(
+                    currentRecordFileWriter.startObjectRunningHash().hash(),
+                    currentRunningHash,
+                    currentRecordFileWriter,
+                    sidecarFileWriters);
+            // start a new set of file writers for new block
+            sidecarFileWriters = null;
+        }
+    }
 
     /**
      * Set the current running hash of record stream items. This is called only once to initialize the running hash on startup.
@@ -87,7 +119,7 @@ public final class StreamFileProducerSingleThreaded extends StreamFileProducerBa
     @Override
     public void switchBlocks(long lastBlockNumber, long newBlockNumber, Instant newBlockFirstTransactionConsensusTime) {
         if (currentRecordFileWriter != null) {
-            closeBlock(lastBlockNumber,
+            closeBlock(
                     currentRecordFileWriter.startObjectRunningHash().hash(),
                     currentRunningHash,
                     currentRecordFileWriter,
@@ -98,12 +130,13 @@ public final class StreamFileProducerSingleThreaded extends StreamFileProducerBa
         // open new block record file and write header
         currentRecordFileWriterFirstTransactionConsensusTime = newBlockFirstTransactionConsensusTime;
         currentRecordFileWriter = new RecordFileWriter(
-                    getRecordFilePath(newBlockFirstTransactionConsensusTime),
-                    recordFileFormat,
-                    compressFilesOnCreation);
+                getRecordFilePath(newBlockFirstTransactionConsensusTime),
+                recordFileFormat,
+                compressFilesOnCreation,
+                newBlockNumber);
         currentRecordFileWriter.writeHeader(
                 hapiVersion,
-                new HashObject(HashAlgorithm.SHA_384,(int)currentRunningHash.length(),currentRunningHash));
+                new HashObject(HashAlgorithm.SHA_384, (int) currentRunningHash.length(), currentRunningHash));
     }
 
     /**
@@ -124,13 +157,11 @@ public final class StreamFileProducerSingleThreaded extends StreamFileProducerBa
                 .map(item -> recordFileFormat.serialize(item, blockNumber, hapiVersion))
                 .toList();
         // compute new running hash, by adding each serialized record stream item to the current running hash
-        currentRunningHash = recordFileFormat.computeNewRunningHash(currentRunningHash,serializedItems);
+        currentRunningHash = recordFileFormat.computeNewRunningHash(currentRunningHash, serializedItems);
         // write serialized items to record file
-        serializedItems.forEach(item-> currentRecordFileWriter.writeRecordStreamItem(item));
+        serializedItems.forEach(item -> currentRecordFileWriter.writeRecordStreamItem(item));
         // handle sidecar items
         sidecarFileWriters = handleSidecarItems(
-                        currentRecordFileWriterFirstTransactionConsensusTime,
-                        sidecarFileWriters,
-                        serializedItems);
+                currentRecordFileWriterFirstTransactionConsensusTime, sidecarFileWriters, serializedItems);
     }
 }

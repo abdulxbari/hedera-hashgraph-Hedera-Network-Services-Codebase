@@ -1,16 +1,29 @@
+/*
+ * Copyright (C) 2023 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hedera.node.app.records.files;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.streams.HashObject;
 import com.hedera.hapi.streams.SidecarMetadata;
-import com.hedera.node.app.spi.records.SingleTransactionRecord;
-import com.hedera.pbj.runtime.ProtoWriterTools;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
 import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.crypto.HashingOutputStream;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,10 +31,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
-
-import static com.hedera.hapi.streams.schema.RecordStreamFileSchema.*;
-import static com.hedera.pbj.runtime.ProtoWriterTools.writeLong;
-import static com.hedera.pbj.runtime.ProtoWriterTools.writeMessage;
 
 /**
  * An incremental record file writer that writes a single RecordStreamItem at a time. It also maintains
@@ -38,6 +47,8 @@ import static com.hedera.pbj.runtime.ProtoWriterTools.writeMessage;
 public final class RecordFileWriter implements AutoCloseable {
     /** The file we are writing to */
     private final Path file;
+    /** The block number for the file we are writing */
+    private final long blockNumber;
     /** The file output stream we are writing to */
     private final OutputStream fileOutputStream;
     /** The gzip output stream we are writing to, wraps {@code fileOutputStream} */
@@ -61,15 +72,19 @@ public final class RecordFileWriter implements AutoCloseable {
     /**
      * Creates a new incremental record file writer on a new file. Writing the header fields of
      *
-     * @param file The path to the record file to create and write
+     * @param file             The path to the record file to create and write
      * @param recordFileFormat The format of the record file to write
-     * @param compressFile true if the file should be gzip compressed
+     * @param compressFile     True if the file should be gzip compressed
+     * @param blockNumber      The block number for the file we are writing
      */
-    public RecordFileWriter(@NonNull final Path file,
-                            @NonNull final RecordFileFormat recordFileFormat,
-                            final boolean compressFile) {
+    public RecordFileWriter(
+            @NonNull final Path file,
+            @NonNull final RecordFileFormat recordFileFormat,
+            final boolean compressFile,
+            final long blockNumber) {
         try {
             this.file = file;
+            this.blockNumber = blockNumber;
             this.recordFileFormat = recordFileFormat;
             // create parent directories if needed
             Files.createDirectories(file.getParent());
@@ -84,12 +99,12 @@ public final class RecordFileWriter implements AutoCloseable {
             Files.createDirectories(file.getParent());
             // create stream chain
             fileOutputStream = Files.newOutputStream(file);
-            if(compressFile) {
+            if (compressFile) {
                 gzipOutputStream = new GZIPOutputStream(fileOutputStream);
-                hashingOutputStream = new HashingOutputStream(wholeFileDigest,gzipOutputStream);
+                hashingOutputStream = new HashingOutputStream(wholeFileDigest, gzipOutputStream);
             } else {
                 gzipOutputStream = null;
-                hashingOutputStream = new HashingOutputStream(wholeFileDigest,fileOutputStream);
+                hashingOutputStream = new HashingOutputStream(wholeFileDigest, fileOutputStream);
             }
             bufferedOutputStream = new BufferedOutputStream(hashingOutputStream);
             outputStream = new WritableStreamingData(bufferedOutputStream);
@@ -106,11 +121,11 @@ public final class RecordFileWriter implements AutoCloseable {
         // There are a lot of flushes and closes here, but unfortunately it is not guaranteed that a OutputStream will
         // propagate though a chain of streams. So we have to flush and close each one individually.
         bufferedOutputStream.flush();
-        if(gzipOutputStream != null) gzipOutputStream.flush();
+        if (gzipOutputStream != null) gzipOutputStream.flush();
         fileOutputStream.flush();
         outputStream.close();
         bufferedOutputStream.close();
-        if(gzipOutputStream != null) gzipOutputStream.close();
+        if (gzipOutputStream != null) gzipOutputStream.close();
         fileOutputStream.close();
         hash = Bytes.wrap(hashingOutputStream.getDigest());
     }
@@ -137,6 +152,15 @@ public final class RecordFileWriter implements AutoCloseable {
     }
 
     /**
+     * Get the block number for the file being written
+     *
+     * @return the block number for the file
+     */
+    public long blockNumber() {
+        return blockNumber;
+    }
+
+    /**
      * Get the starting running hash
      *
      * @return the starting running hash
@@ -160,8 +184,8 @@ public final class RecordFileWriter implements AutoCloseable {
      * @param hapiProtoVersion the HAPI version of protobuf
      * @param startObjectRunningHash the starting running hash at the end of previous record file
      */
-    public void writeHeader(@NonNull final SemanticVersion hapiProtoVersion,
-                     @NonNull final HashObject startObjectRunningHash) {
+    public void writeHeader(
+            @NonNull final SemanticVersion hapiProtoVersion, @NonNull final HashObject startObjectRunningHash) {
         this.startObjectRunningHash = startObjectRunningHash;
         recordFileFormat.writeHeader(outputStream, hapiProtoVersion, startObjectRunningHash);
     }
@@ -178,13 +202,11 @@ public final class RecordFileWriter implements AutoCloseable {
     /**
      * Write the footer to the file
      *
-     * @param endRunningHash the ending running hash after the last record stream item
-     * @param blockNumber the block number of this file
+     * @param endRunningHash  the ending running hash after the last record stream item
      * @param sidecarMetadata The sidecar metadata to write
      */
-    public void writeFooter(@NonNull final HashObject endRunningHash,
-                             final long blockNumber,
-                             @NonNull final List<SidecarMetadata> sidecarMetadata) {
+    public void writeFooter(
+            @NonNull final HashObject endRunningHash, @NonNull final List<SidecarMetadata> sidecarMetadata) {
         this.endObjectRunningHash = endRunningHash;
         recordFileFormat.writeFooter(outputStream, endRunningHash, blockNumber, sidecarMetadata);
     }

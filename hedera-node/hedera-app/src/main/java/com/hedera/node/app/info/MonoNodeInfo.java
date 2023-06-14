@@ -18,12 +18,12 @@ package com.hedera.node.app.info;
 
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.AccountID;
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.node.app.service.mono.pbj.PbjConverter;
 import com.hedera.node.app.spi.info.NodeInfo;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import com.swirlds.common.system.InitTrigger;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Implementation of {@link NodeInfo} that delegates to the mono-service.
@@ -40,8 +40,9 @@ public class MonoNodeInfo implements NodeInfo {
      * @param initTrigger the init trigger for access to node starting state
      * @throws NullPointerException if {@code delegate} is {@code null}
      */
-    public MonoNodeInfo(@NonNull com.hedera.node.app.service.mono.context.NodeInfo delegate,
-                        @NonNull final InitTrigger initTrigger) {
+    public MonoNodeInfo(
+            @NonNull com.hedera.node.app.service.mono.context.NodeInfo delegate,
+            @NonNull final InitTrigger initTrigger) {
         this.delegate = requireNonNull(delegate);
         this.initTrigger = initTrigger;
     }
@@ -56,15 +57,15 @@ public class MonoNodeInfo implements NodeInfo {
         return PbjConverter.toPbj(delegate.accountOf(nodeId));
     }
 
-//    /**
-//     * Convenience method to get this node's account number from the address book.
-//     *
-//     * @return this node's account number from the address book.
-//     */
-//    @Override
-//    public long accountNum() {
-//        return delegate.selfAccount().getAccountNum();
-//    }
+    //    /**
+    //     * Convenience method to get this node's account number from the address book.
+    //     *
+    //     * @return this node's account number from the address book.
+    //     */
+    //    @Override
+    //    public long accountNum() {
+    //        return delegate.selfAccount().getAccountNum();
+    //    }
 
     /**
      * Convenience method to get the memo of this node's account which is in the address book.
@@ -94,6 +95,6 @@ public class MonoNodeInfo implements NodeInfo {
     @Override
     public SemanticVersion hapiVersion() {
         // TODO where should this come from?
-        return new SemanticVersion(0,38,0,null, null);
+        return new SemanticVersion(0, 38, 0, null, null);
     }
 }

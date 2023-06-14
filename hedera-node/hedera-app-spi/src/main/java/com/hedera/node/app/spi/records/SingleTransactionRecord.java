@@ -20,11 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.Transaction;
 import com.hedera.hapi.node.transaction.TransactionRecord;
-import com.hedera.hapi.streams.RecordStreamItem;
 import com.hedera.hapi.streams.TransactionSidecarRecord;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
-
 import java.util.List;
 
 /**

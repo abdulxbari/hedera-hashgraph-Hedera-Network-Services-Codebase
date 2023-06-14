@@ -41,7 +41,6 @@ import com.hedera.hapi.node.transaction.TransactionRecord.EntropyOneOfType;
 import com.hedera.hapi.streams.ContractActions;
 import com.hedera.hapi.streams.ContractBytecode;
 import com.hedera.hapi.streams.ContractStateChanges;
-import com.hedera.hapi.streams.RecordStreamItem;
 import com.hedera.hapi.streams.TransactionSidecarRecord;
 import com.hedera.node.app.service.consensus.impl.records.ConsensusCreateTopicRecordBuilder;
 import com.hedera.node.app.service.consensus.impl.records.ConsensusSubmitMessageRecordBuilder;

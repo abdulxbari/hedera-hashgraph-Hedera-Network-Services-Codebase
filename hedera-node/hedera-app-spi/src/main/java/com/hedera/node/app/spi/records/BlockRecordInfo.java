@@ -1,8 +1,23 @@
+/*
+ * Copyright (C) 2023 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hedera.node.app.spi.records;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.Nullable;
-
 import java.time.Instant;
 
 /**
@@ -27,7 +42,8 @@ public interface BlockRecordInfo {
      *
      * @return the previous, previous, previous runningHash of all RecordStreamObject
      */
-    @Nullable Bytes getNMinus3RunningHash();
+    @Nullable
+    Bytes getNMinus3RunningHash();
 
     // ========================================================================================================
     // Block Methods
@@ -44,15 +60,16 @@ public interface BlockRecordInfo {
      *
      * @return the consensus time of the first transaction of the last block
      */
-    @Nullable Instant firstConsTimeOfLastBlock();
+    @Nullable
+    Instant firstConsTimeOfLastBlock();
 
     /**
      * Gets the hash of the last block
      *
      * @return the last block hash, null if no blocks have been created
      */
-    @Nullable Bytes lastBlockHash();
-
+    @Nullable
+    Bytes lastBlockHash();
 
     /**
      * Returns the hash of the given block number, or {@code null} if unavailable.
@@ -60,5 +77,6 @@ public interface BlockRecordInfo {
      * @param blockNo the block number of interest, must be within range of (current_block - 1) -> (current_block - 254)
      * @return its hash, if available otherwise null
      */
-    @Nullable Bytes blockHashByBlockNumber(final long blockNo);
+    @Nullable
+    Bytes blockHashByBlockNumber(final long blockNo);
 }

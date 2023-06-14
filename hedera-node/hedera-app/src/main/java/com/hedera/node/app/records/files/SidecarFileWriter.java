@@ -1,4 +1,24 @@
+/*
+ * Copyright (C) 2023 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hedera.node.app.records.files;
+
+import static com.hedera.hapi.streams.schema.SidecarFileSchema.SIDECAR_RECORDS;
+import static com.hedera.node.app.records.files.RecordFileFormat.TAG_TYPE_BITS;
+import static com.hedera.node.app.records.files.RecordFileFormat.WIRE_TYPE_DELIMITED;
 
 import com.hedera.hapi.streams.SidecarType;
 import com.hedera.hapi.streams.TransactionSidecarRecord;
@@ -6,9 +26,7 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
 import com.swirlds.common.crypto.HashingOutputStream;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -18,10 +36,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
-
-import static com.hedera.hapi.streams.schema.SidecarFileSchema.SIDECAR_RECORDS;
-import static com.hedera.node.app.records.files.RecordFileFormat.TAG_TYPE_BITS;
-import static com.hedera.node.app.records.files.RecordFileFormat.WIRE_TYPE_DELIMITED;
 
 /**
  * An incremental sidecar file writer that writes a single TransactionSidecarRecord at a time. It also maintains
@@ -80,8 +94,9 @@ public class SidecarFileWriter implements AutoCloseable {
      * @param transactionSidecarRecord the TransactionSidecarRecord to write to file
      * @return true if the record was written, false if it was not written as it would cause the file to exceed the maximum size
      */
-    public boolean writeTransactionSidecarRecord(@NonNull final TransactionSidecarRecord.SidecarRecordsOneOfType sidecarType,
-                                                 @NonNull final Bytes transactionSidecarRecord) {
+    public boolean writeTransactionSidecarRecord(
+            @NonNull final TransactionSidecarRecord.SidecarRecordsOneOfType sidecarType,
+            @NonNull final Bytes transactionSidecarRecord) {
         if ((bytesWritten + transactionSidecarRecord.length()) > maxSideCarSizeInBytes) {
             // return false as writing the record was not possible as it would cause the file to exceed the maximum size
             return false;
@@ -95,9 +110,10 @@ public class SidecarFileWriter implements AutoCloseable {
         // update bytes written counter
         bytesWritten += transactionSidecarRecord.length();
         // write protobuf format to file
-        // TODO can change once https://github.com/hashgraph/pbj/issues/44 is fixed to: ProtoWriterTools.writeTag(outputStream, SIDECAR_RECORDS, WIRE_TYPE_DELIMITED);;
+        // TODO can change once https://github.com/hashgraph/pbj/issues/44 is fixed to:
+        // ProtoWriterTools.writeTag(outputStream, SIDECAR_RECORDS, WIRE_TYPE_DELIMITED);;
         outputStream.writeVarInt((SIDECAR_RECORDS.number() << TAG_TYPE_BITS) | WIRE_TYPE_DELIMITED, false);
-        outputStream.writeVarInt((int)transactionSidecarRecord.length(), false);
+        outputStream.writeVarInt((int) transactionSidecarRecord.length(), false);
         outputStream.writeBytes(transactionSidecarRecord);
         // return true as we have written the record
         return true;
