@@ -16,6 +16,7 @@
 
 package com.hedera.node.app.records;
 
+import static com.hedera.node.app.records.files.RecordStreamV6Verifier.validateRecordStreamFiles;
 import static com.hedera.node.app.records.files.RecordTestData.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
@@ -38,25 +39,17 @@ import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfiguration;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.stream.Signer;
-import com.swirlds.platform.crypto.KeysAndCerts;
-import com.swirlds.platform.crypto.PlatformSigner;
-import com.swirlds.platform.crypto.PublicStores;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.interfaces.EdECPrivateKey;
-import java.security.interfaces.EdECPublicKey;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -75,8 +68,6 @@ public class BlockRecordManagerTest {
     private @Mock WorkingStateAccessor workingStateAccessor;
     private WritableSingletonState<BlockInfo> blockInfoWritableSingletonState;
     private WritableSingletonState<RunningHashes> runningHashesWritableSingletonState;
-    private static Signer signer;
-    private static EdECPublicKey userPublicKey;
 
     /** Temporary in memory file system used for testing */
     private FileSystem fs;
@@ -123,18 +114,6 @@ public class BlockRecordManagerTest {
     ////                });
     //    }
     // 841449612 -> 841449620
-    @BeforeAll
-    static void setUp() throws Exception {
-        // generate test user keys
-        final KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("Ed25519");
-        final KeyPair keyPair = keyPairGenerator.generateKeyPair();
-        EdECPrivateKey userPrivateKey = (EdECPrivateKey) keyPair.getPrivate();
-        userPublicKey = (EdECPublicKey) keyPair.getPublic();
-        // generate node keys and signer
-        final KeysAndCerts keysAndCerts = KeysAndCerts.generate(
-                "a-name", userPrivateKey.getEncoded(), EMPTY_ARRAY, EMPTY_ARRAY, new PublicStores());
-        signer = new PlatformSigner(keysAndCerts);
-    }
 
     @BeforeEach
     void setUpEach() throws Exception {
@@ -183,7 +162,7 @@ public class BlockRecordManagerTest {
     public void BlockRecordManager() throws Exception {
         Bytes finalRunningHash;
         try (BlockRecordManager blockRecordManager =
-                new BlockRecordManagerImpl(configProvider, nodeInfo, signer, fs, workingStateAccessor)) {
+                new BlockRecordManagerImpl(configProvider, nodeInfo, SIGNER, fs, workingStateAccessor)) {
             // check starting hash, we need to be using the correct starting hash for the tests to work
             assertEquals(
                     STARTING_RUNNING_HASH_OBJ.hash().toHex(),
@@ -249,11 +228,10 @@ public class BlockRecordManagerTest {
         final var recordStreamConfig = versionedConfiguration.getConfigData(RecordStreamConfig.class);
         validateRecordStreamFiles(
                 fs.getPath(recordStreamConfig.logDir()).resolve("record" + nodeInfo.accountMemo()),
-                fs.getPath(recordStreamConfig.logDir())
-                        .resolve("record" + nodeInfo.accountMemo())
-                        .resolve(recordStreamConfig.sidecarDir()),
-                true,
-                userPublicKey);
+                recordStreamConfig,
+                USER_PUBLIC_KEY,
+                TEST_BLOCKS,
+                BLOCK_NUM);
     }
 
     /** Given a list of items and a starting hash calculate the running hash at the end */

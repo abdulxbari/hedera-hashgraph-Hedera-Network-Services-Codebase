@@ -16,12 +16,7 @@
 
 package com.hedera.node.app.records.files;
 
-import static com.hedera.node.app.records.files.StreamFileProducerBase.COMPRESSION_ALGORITHM_EXTENSION;
-import static com.hedera.node.app.records.files.StreamFileProducerBase.RECORD_EXTENSION;
-import static com.swirlds.common.stream.LinkedObjectStreamUtilities.convertInstantToStringWithPadding;
 import static com.swirlds.common.stream.LinkedObjectStreamUtilities.getPeriod;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Timestamp;
@@ -36,11 +31,13 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
 import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.crypto.Hash;
-import edu.umd.cs.findbugs.annotations.NonNull;
+import com.swirlds.common.stream.Signer;
+import com.swirlds.platform.crypto.KeysAndCerts;
+import com.swirlds.platform.crypto.PlatformSigner;
+import com.swirlds.platform.crypto.PublicStores;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.interfaces.EdECPublicKey;
+import java.security.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,24 +45,32 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Test data for record stream file tests
+ * Test data for record stream file tests. It starts with a single JSON dump of a read main net record file in
+ * resources. From the transactions in that record file it generates a number of blocks of transactions. Some
+ * with sidecar files and some without.
  */
 @SuppressWarnings("DataFlowIssue")
 public class RecordTestData {
+    /** Empty byte array */
+    private static final byte[] EMPTY_ARRAY = new byte[] {};
+    /** Random with fixed seed for reproducibility of test data generated */
     private static final Random RANDOM = new Random(123456789L);
 
+    /** Helper to generate random Bytes */
+    @SuppressWarnings("SameParameterValue")
     private static Bytes randomBytes(int numBytes) {
         final byte[] bytes = new byte[numBytes];
         RANDOM.nextBytes(bytes);
         return Bytes.wrap(bytes);
     }
+
     /** Test Block Num **/
     public static final long BLOCK_NUM = RANDOM.nextInt(0, Integer.MAX_VALUE);
     /** Test Version */
     public static final SemanticVersion VERSION = new SemanticVersion(1, 2, 3, "", "");
     /** A hash used as the start of running hash changes in tests */
     public static final Hash STARTING_RUNNING_HASH;
-
+    /** A hash used as the start of running hash changes in tests, in HashObject format */
     public static final HashObject STARTING_RUNNING_HASH_OBJ;
 
     /** List of test blocks, each containing a number of transaction records */
@@ -76,8 +81,24 @@ public class RecordTestData {
             new boolean[] {false, true, true, true, false, true, false, false, true};
     //    block seconds       24,   26,   28,   30,    32,   34,    36,    38,   40
 
+    /** Test Signer for signing record stream files */
+    public static final Signer SIGNER;
+    /** Test user public key */
+    public static final PublicKey USER_PUBLIC_KEY;
+
     static {
         try {
+            // generate test user keys
+            final KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            final KeyPair keyPair = keyPairGenerator.generateKeyPair();
+            // generate node keys and signer
+            final KeysAndCerts keysAndCerts =
+                    KeysAndCerts.generate("a-name", EMPTY_ARRAY, EMPTY_ARRAY, EMPTY_ARRAY, new PublicStores());
+            // get public key that was generated for the user
+            USER_PUBLIC_KEY = keysAndCerts.sigKeyPair().getPublic();
+            // create signer
+            SIGNER = new PlatformSigner(keysAndCerts);
+            /// create blocks
             final List<List<SingleTransactionRecord>> testBlocks = new ArrayList<>();
             // load real record stream items from a JSON resource file
             final Path jsonPath = Path.of(RecordStreamV6Test.class
@@ -197,135 +218,5 @@ public class RecordTestData {
         }
         // return new SingleTransactionRecord
         return new SingleTransactionRecord(newTransaction, newTransactionRecord, sidecarItems);
-    }
-
-    /** Validate record stream generated with the test data in this file */
-    public static void validateRecordStreamFiles(
-            Path recordsDir, Path sidecarsDir, boolean compressed, EdECPublicKey userPublicKey) throws Exception {
-        // start running hashes
-        Bytes runningHash = STARTING_RUNNING_HASH_OBJ.hash();
-        // now check the generated record files
-
-        for (int i = 0; i < TEST_BLOCKS.size(); i++) {
-            final var blockData = TEST_BLOCKS.get(i);
-            final boolean hasSidecars = TEST_BLOCKS_WITH_SIDECARS[i];
-            final Instant firstBlockTimestamp =
-                    fromTimestamp(blockData.get(0).record().consensusTimestamp());
-            final Path recordFile1 = getRecordFilePath(recordsDir, firstBlockTimestamp, compressed);
-            runningHash = validateRecordFile(
-                    i,
-                    firstBlockTimestamp,
-                    runningHash,
-                    recordFile1,
-                    sidecarsDir,
-                    hasSidecars,
-                    SignatureFileWriter.getSigFilePath(recordFile1),
-                    blockData,
-                    compressed);
-            // TODO validate signature file
-        }
-    }
-
-    /**
-     * Check the record file, sidecar file and signature file exist and are not empty. Validate their contents and
-     * return the running hash at the end of the file.
-     */
-    public static Bytes validateRecordFile(
-            final int blockIndex,
-            final Instant firstBlockTimestamp,
-            final Bytes startingRunningHash,
-            final Path recordFilePath,
-            final Path sidecarsDir,
-            final boolean hasSideCars,
-            final Path recordFileSigPath,
-            final List<SingleTransactionRecord> transactionRecordList,
-            boolean compressed)
-            throws Exception {
-        // check record file
-        assertTrue(
-                Files.exists(recordFilePath),
-                "expected record file [" + recordFilePath + "] in blockIndex[" + blockIndex + "] to exist");
-        assertTrue(
-                Files.size(recordFilePath) > 0,
-                "expected record file [" + recordFilePath + "] in blockIndex[" + blockIndex + "] to not be empty");
-        var recordFile = RecordFileReaderV6.read(recordFilePath);
-        RecordFileReaderV6.validateHashes(recordFile);
-        assertEquals(
-                startingRunningHash.toHex(),
-                recordFile.startObjectRunningHash().hash().toHex(),
-                "expected record file start running hash to be correct, blockIndex[" + blockIndex
-                        + "], recordFilePath=[" + recordFilePath + "]");
-        // check sideCar file
-        if (hasSideCars) {
-            // TODO find way to validate all side cars, for now check first one exists and is not empty
-            final Path sidecarFilePath = getSidecarFilePath(sidecarsDir, firstBlockTimestamp, compressed, 1);
-            assertTrue(
-                    Files.exists(sidecarFilePath),
-                    "expected side car file [" + sidecarFilePath + "] in blockIndex[" + blockIndex + "] to exist");
-            assertTrue(
-                    Files.size(sidecarFilePath) > 0,
-                    "expected side car file [" + sidecarFilePath + "] in blockIndex[" + blockIndex
-                            + "] to not be empty");
-        }
-        // check signature file
-        assertTrue(
-                Files.exists(recordFileSigPath),
-                "expected signature file [" + recordFileSigPath + "] in blockIndex[" + blockIndex + "] to exist");
-        assertTrue(
-                Files.size(recordFileSigPath) > 0,
-                "expected signature file [" + recordFileSigPath + "] in blockIndex[" + blockIndex
-                        + "] to not be empty");
-        // return running hash
-        return recordFile.endObjectRunningHash().hash();
-    }
-
-    /** Given a list of items and a starting hash calculate the running hash at the end */
-    public Bytes computeRunningHash(
-            final Bytes startingHash, final List<SingleTransactionRecord> transactionRecordList) {
-        return RecordFileFormatV6.INSTANCE.computeNewRunningHash(
-                startingHash,
-                transactionRecordList.stream()
-                        .map(str -> RecordFileFormatV6.INSTANCE.serialize(str, BLOCK_NUM, VERSION))
-                        .toList());
-    }
-
-    public static Instant fromTimestamp(final Timestamp timestamp) {
-        return Instant.ofEpochSecond(timestamp.seconds(), timestamp.nanos());
-    }
-
-    /**
-     * Get the record file path for a record file with the given consensus time
-     *
-     * @param consensusTime  a consensus timestamp of the first object to be written in the file
-     * @return Path to a record file for that consensus time
-     */
-    private static Path getRecordFilePath(
-            @NonNull final Path nodeScopedRecordLogDir,
-            @NonNull final Instant consensusTime,
-            final boolean compressFilesOnCreation) {
-        return nodeScopedRecordLogDir.resolve(convertInstantToStringWithPadding(consensusTime) + "." + RECORD_EXTENSION
-                + (compressFilesOnCreation ? COMPRESSION_ALGORITHM_EXTENSION : ""));
-    }
-
-    /**
-     * Get full sidecar file path from given Instant object
-     *
-     * @param currentRecordFileFirstTransactionConsensusTimestamp the consensus timestamp of the first transaction in the
-     *                                                            record file this sidecar file is associated with
-     * @param sidecarId                                           the sidecar id of this sidecar file
-     * @return the new sidecar file path
-     */
-    protected static Path getSidecarFilePath(
-            @NonNull final Path nodeScopedSidecarDir,
-            @NonNull final Instant currentRecordFileFirstTransactionConsensusTimestamp,
-            final boolean compressFilesOnCreation,
-            final int sidecarId) {
-        return nodeScopedSidecarDir.resolve(
-                convertInstantToStringWithPadding(currentRecordFileFirstTransactionConsensusTimestamp)
-                        + "_"
-                        + String.format("%02d", sidecarId)
-                        + "."
-                        + RECORD_EXTENSION
-                        + (compressFilesOnCreation ? COMPRESSION_ALGORITHM_EXTENSION : ""));
     }
 }

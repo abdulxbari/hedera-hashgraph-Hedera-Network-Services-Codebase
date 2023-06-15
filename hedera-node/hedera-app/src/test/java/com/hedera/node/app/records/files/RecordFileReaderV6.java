@@ -24,6 +24,7 @@ import com.hedera.hapi.node.transaction.TransactionRecord;
 import com.hedera.hapi.streams.RecordStreamFile;
 import com.hedera.hapi.streams.RecordStreamItem;
 import com.hedera.node.app.service.mono.stream.RecordStreamObject;
+import com.hedera.pbj.runtime.io.buffer.BufferedData;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
 import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
@@ -111,6 +112,20 @@ public class RecordFileReaderV6 {
             fail("Unknown file type: " + filePath.getFileName());
             return null;
         }
+    }
+
+    /**
+     * Read and parse a record stream file and validate the file version.
+     *
+     * @param uncompressedData The uncompressed record file data
+     * @return The parsed record stream file
+     * @throws Exception If there is an error reading the file
+     */
+    public static RecordStreamFile read(byte[] uncompressedData) throws Exception {
+        final BufferedData in = BufferedData.wrap(uncompressedData);
+        int version = in.readInt();
+        assertEquals(VERSION, version, "File version does not match");
+        return RecordStreamFile.PROTOBUF.parse(in);
     }
 
     /**

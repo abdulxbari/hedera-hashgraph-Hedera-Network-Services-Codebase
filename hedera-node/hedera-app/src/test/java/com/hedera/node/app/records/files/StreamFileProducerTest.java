@@ -16,6 +16,7 @@
 
 package com.hedera.node.app.records.files;
 
+import static com.hedera.node.app.records.files.RecordStreamV6Verifier.validateRecordStreamFiles;
 import static com.hedera.node.app.records.files.RecordTestData.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
@@ -29,26 +30,17 @@ import com.hedera.node.app.spi.records.SingleTransactionRecord;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfiguration;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.stream.Signer;
-import com.swirlds.platform.crypto.KeysAndCerts;
-import com.swirlds.platform.crypto.PlatformSigner;
-import com.swirlds.platform.crypto.PublicStores;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.interfaces.EdECPrivateKey;
-import java.security.interfaces.EdECPublicKey;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -58,28 +50,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @SuppressWarnings("DataFlowIssue")
 @ExtendWith(MockitoExtension.class)
 public class StreamFileProducerTest {
-    private static final byte[] EMPTY_ARRAY = new byte[] {};
     private @Mock ConfigProvider configProvider;
     private @Mock VersionedConfiguration versionedConfiguration;
     private @Mock NodeInfo nodeInfo;
-    private static Signer signer;
-    private static EdECPublicKey userPublicKey;
 
     /** Temporary in memory file system used for testing */
     private FileSystem fs;
-
-    @BeforeAll
-    static void setUp() throws Exception {
-        // generate test user keys
-        final KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("Ed25519");
-        final KeyPair keyPair = keyPairGenerator.generateKeyPair();
-        EdECPrivateKey userPrivateKey = (EdECPrivateKey) keyPair.getPrivate();
-        userPublicKey = (EdECPublicKey) keyPair.getPublic();
-        // generate node keys and signer
-        final KeysAndCerts keysAndCerts = KeysAndCerts.generate(
-                "a-name", userPrivateKey.getEncoded(), EMPTY_ARRAY, EMPTY_ARRAY, new PublicStores());
-        signer = new PlatformSigner(keysAndCerts);
-    }
 
     void setUpEach(int sidecarMaxSizeMb) throws Exception {
         // create in memory temp dir
@@ -147,9 +123,9 @@ public class StreamFileProducerTest {
         try (StreamFileProducerBase streamFileProducer =
                 switch (streamFileProducerClassName) {
                     case "StreamFileProducerSingleThreaded" -> new StreamFileProducerSingleThreaded(
-                            configProvider, nodeInfo, signer, fs);
+                            configProvider, nodeInfo, SIGNER, fs);
                     case "StreamFileProducerConcurrent" -> new StreamFileProducerConcurrent(
-                            configProvider, nodeInfo, signer, fs, ForkJoinPool.commonPool());
+                            configProvider, nodeInfo, SIGNER, fs, ForkJoinPool.commonPool());
                     default -> throw new IllegalArgumentException(
                             "Unknown streamFileProducerClassName: " + streamFileProducerClassName);
                 }) {
@@ -193,11 +169,10 @@ public class StreamFileProducerTest {
         final var recordStreamConfig = versionedConfiguration.getConfigData(RecordStreamConfig.class);
         validateRecordStreamFiles(
                 fs.getPath(recordStreamConfig.logDir()).resolve("record" + nodeInfo.accountMemo()),
-                fs.getPath(recordStreamConfig.logDir())
-                        .resolve("record" + nodeInfo.accountMemo())
-                        .resolve(recordStreamConfig.sidecarDir()),
-                true,
-                userPublicKey);
+                recordStreamConfig,
+                USER_PUBLIC_KEY,
+                TEST_BLOCKS,
+                BLOCK_NUM);
     }
 
     /** Given a list of items and a starting hash calculate the running hash at the end */
