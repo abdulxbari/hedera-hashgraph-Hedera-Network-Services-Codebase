@@ -126,11 +126,24 @@ public abstract class StreamFileProducerBase implements AutoCloseable {
     public abstract void setRunningHash(Bytes recordStreamItemRunningHash);
 
     /**
-     * Get the current running hash of record stream items. This is called on handle transaction thread. It will block if background thread is still hashing.
+     * Get the current running hash of record stream items. This is called on handle transaction thread. It will block
+     * if background thread is still hashing. It will always return the running hash after the last user transaction
+     * was added. Hence, any pre-transactions or others not yet committed via
+     * {@link StreamFileProducerBase#writeRecordStreamItems(long, Instant, Stream)} will not be included.
      *
      * @return The current running hash upto and including the last record stream item sent in writeRecordStreamItems().
      */
-    public abstract Bytes getCurrentRunningHash();
+    @Nullable
+    public abstract Bytes getRunningHash();
+
+    /**
+     * Get the previous, previous, previous runningHash of all RecordStreamObject. This will block if
+     * the running hash has not yet been computed for the most recent user transaction.
+     *
+     * @return the previous, previous, previous runningHash of all RecordStreamObject
+     */
+    @Nullable
+    public abstract Bytes getNMinus3RunningHash();
 
     /**
      * Called at the end of a block and start of next block.
@@ -149,7 +162,9 @@ public abstract class StreamFileProducerBase implements AutoCloseable {
 
     /**
      * Write record items to stream files. They must be in exact consensus time order! This must only be called after the user
-     * transaction has been committed to state and is 100% done.
+     * transaction has been committed to state and is 100% done. So is called exactly once per user transaction at the end
+     * after it has been committed to state. Each call is for a complete set of transactions that represent a single user
+     * transaction and its pre-transactions and child-transactions.
      *
      * @param blockNumber the block number for this block that we are writing record stream items for
      * @param blockFirstTransactionConsensusTime the consensus time of the first transaction in the block
@@ -189,10 +204,6 @@ public abstract class StreamFileProducerBase implements AutoCloseable {
             @NonNull final RecordFileWriter currentRecordFileWriter,
             @Nullable final List<SidecarFileWriter> sidecarFileWriters) {
         final long blockNumber = currentRecordFileWriter.blockNumber();
-        System.out.println(
-                "closeBlock: blockNumber=" + blockNumber + ", startingRunningHash=" + startingRunningHash.toHex()
-                        + ", finalRunningHash=" + finalRunningHash.toHex() + ", currentRecordFileWriter="
-                        + currentRecordFileWriter + ", sidecarFileWriters=" + sidecarFileWriters);
         try {
             // close any open sidecar writers and add sidecar metadata to record file
             final List<SidecarMetadata> sidecarMetadata = new ArrayList<>();
@@ -320,9 +331,7 @@ public abstract class StreamFileProducerBase implements AutoCloseable {
      */
     protected Path getRecordFilePath(final Instant consensusTime) {
         return nodeScopedRecordLogDir.resolve(convertInstantToStringWithPadding(consensusTime) + "." + RECORD_EXTENSION
-                + (compressFilesOnCreation
-                        ? COMPRESSION_ALGORITHM_EXTENSION
-                        : "")); // TODO I assume we need extension here, what happens for signature file names?
+                + (compressFilesOnCreation ? COMPRESSION_ALGORITHM_EXTENSION : ""));
     }
 
     /**

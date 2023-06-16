@@ -38,8 +38,14 @@ import java.util.stream.Stream;
  * </p>
  */
 public final class StreamFileProducerSingleThreaded extends StreamFileProducerBase {
-    /** The current running hash */
-    private Bytes currentRunningHash = null;
+    /** The running hash at end of last user transaction */
+    private Bytes runningHash = null;
+    /** The previous running hash */
+    private Bytes runningHashNMinus1 = null;
+    /** The previous, previous running hash */
+    private Bytes runningHashNMinus2 = null;
+    /** The previous, previous, previous running hash */
+    private Bytes runningHashNMinus3 = null;
     /** The consensus time of the first transaction in the current record file */
     private Instant currentRecordFileWriterFirstTransactionConsensusTime = null;
     /** The current record file writer */
@@ -75,7 +81,7 @@ public final class StreamFileProducerSingleThreaded extends StreamFileProducerBa
         if (currentRecordFileWriter != null) {
             closeBlock(
                     currentRecordFileWriter.startObjectRunningHash().hash(),
-                    currentRunningHash,
+                    runningHash,
                     currentRecordFileWriter,
                     sidecarFileWriters);
             // start a new set of file writers for new block
@@ -91,17 +97,36 @@ public final class StreamFileProducerSingleThreaded extends StreamFileProducerBa
      */
     @Override
     public void setRunningHash(Bytes recordStreamItemRunningHash) {
-        currentRunningHash = recordStreamItemRunningHash;
+        runningHash = recordStreamItemRunningHash;
+        runningHashNMinus1 = null;
+        runningHashNMinus2 = null;
+        runningHashNMinus3 = null;
     }
 
     /**
-     * Get the current running hash of record stream items. This is called on handle transaction thread. It will block if background thread is still hashing.
+     * Get the current running hash of record stream items. This is called on handle transaction thread. It will block
+     * if background thread is still hashing. It will always return the running hash after the last user transaction
+     * was added. Hence, any pre-transactions or others not yet committed via
+     * {@link StreamFileProducerBase#writeRecordStreamItems(long, Instant, Stream)} will not be included.
      *
      * @return The current running hash upto and including the last record stream item sent in writeRecordStreamItems().
      */
+    @Nullable
     @Override
-    public Bytes getCurrentRunningHash() {
-        return currentRunningHash;
+    public Bytes getRunningHash() {
+        return runningHash;
+    }
+
+    /**
+     * Get the previous, previous, previous runningHash of all RecordStreamObject. This will block if
+     * the running hash has not yet been computed for the most recent user transaction.
+     *
+     * @return the previous, previous, previous runningHash of all RecordStreamObject
+     */
+    @Nullable
+    @Override
+    public Bytes getNMinus3RunningHash() {
+        return runningHashNMinus3;
     }
 
     /**
@@ -121,7 +146,7 @@ public final class StreamFileProducerSingleThreaded extends StreamFileProducerBa
         if (currentRecordFileWriter != null) {
             closeBlock(
                     currentRecordFileWriter.startObjectRunningHash().hash(),
-                    currentRunningHash,
+                    runningHash,
                     currentRecordFileWriter,
                     sidecarFileWriters);
             // start a new set of file writers for new block
@@ -135,8 +160,7 @@ public final class StreamFileProducerSingleThreaded extends StreamFileProducerBa
                 compressFilesOnCreation,
                 newBlockNumber);
         currentRecordFileWriter.writeHeader(
-                hapiVersion,
-                new HashObject(HashAlgorithm.SHA_384, (int) currentRunningHash.length(), currentRunningHash));
+                hapiVersion, new HashObject(HashAlgorithm.SHA_384, (int) runningHash.length(), runningHash));
     }
 
     /**
@@ -157,7 +181,10 @@ public final class StreamFileProducerSingleThreaded extends StreamFileProducerBa
                 .map(item -> recordFileFormat.serialize(item, blockNumber, hapiVersion))
                 .toList();
         // compute new running hash, by adding each serialized record stream item to the current running hash
-        currentRunningHash = recordFileFormat.computeNewRunningHash(currentRunningHash, serializedItems);
+        runningHashNMinus3 = runningHashNMinus2;
+        runningHashNMinus2 = runningHashNMinus1;
+        runningHashNMinus1 = runningHash;
+        runningHash = recordFileFormat.computeNewRunningHash(runningHash, serializedItems);
         // write serialized items to record file
         serializedItems.forEach(item -> currentRecordFileWriter.writeRecordStreamItem(item));
         // handle sidecar items

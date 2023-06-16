@@ -76,7 +76,7 @@ public final class BlockRecordManagerImpl implements BlockRecordManager {
     /** The hash size in bytes, normally 48 for SHA384 */
     private static final int HASH_SIZE = DigestType.SHA_384.digestLength();
     /** how many block hash history to keep in memory */
-    private static final int NUM_BLOCK_HASHES_TO_KEEP = 256;
+    public static final int NUM_BLOCK_HASHES_TO_KEEP = 256;
     /** Number of blocks to keep multiplied by hash size */
     private static final int NUM_BLOCK_HASHES_TO_KEEP_BYTES = NUM_BLOCK_HASHES_TO_KEEP * HASH_SIZE;
 
@@ -174,7 +174,6 @@ public final class BlockRecordManagerImpl implements BlockRecordManager {
         final Timestamp firstConsTimeOfLastBlock = blockInfo.firstConsTimeOfLastBlock();
         if (firstConsTimeOfLastBlock == null || firstConsTimeOfLastBlock.seconds() == 0) {
             // we are in genesis, so create a new block 1
-            System.out.println("GENESIS firstConsTimeOfLastBlock= " + firstConsTimeOfLastBlock);
             streamFileProducer.switchBlocks(0, 1, consensusTime);
             // set this transaction as the first transaction in the current block
             provisionalCurrentBlockFirstTransactionTime = consensusTime;
@@ -188,29 +187,21 @@ public final class BlockRecordManagerImpl implements BlockRecordManager {
                 // we are in a new block, so close the previous one if we are not the first block after startup
                 // otherwise load the block info from state for the last block before the node was started.
                 final long lastBlockNo;
-                final Bytes lastBlockHashBytes;
                 if (provisionalCurrentBlockFirstTransactionTime == null) {
                     // last block was the last block saved in state before the node started, so load it from state
                     lastBlockNo = blockInfo.lastBlockNo();
-                    lastBlockHashBytes = getLastBlockHash(blockInfo);
-                    System.out.println("***************************************** !!!!");
                 } else {
                     // last block has finished so compute newly closed block number
                     lastBlockNo = blockInfo.lastBlockNo() + 1;
                     // compute block hash of the newly closed block, this is the running hash after the last transaction
                     // record.
-                    lastBlockHashBytes = streamFileProducer.getCurrentRunningHash();
-                    System.out.println("lastBlockNo = " + lastBlockNo);
+                    final Bytes lastBlockHashBytes = streamFileProducer.getRunningHash();
+                    assert lastBlockHashBytes != null
+                            : "lastBlockHashBytes should never be null, we only get here "
+                                    + "if we have completed a block";
                     // update the first transaction time of the last block
                     final Instant lastBlockFirstTransactionTime = provisionalCurrentBlockFirstTransactionTime;
                     // update BlockInfo state
-                    System.out.println(
-                            "updateBlockInfo(blockInfo, lastBlockNo, lastBlockFirstTransactionTime, lastBlockHashBytes) = "
-                                    + updateBlockInfo(
-                                            blockInfo, lastBlockNo, lastBlockFirstTransactionTime, lastBlockHashBytes));
-                    System.out.println(
-                            "    lastBlockFirstTransactionTime = " + lastBlockFirstTransactionTime.getEpochSecond()
-                                    + " :: " + lastBlockFirstTransactionTime.getNano());
                     blockInfoWritableSingletonState.put(
                             updateBlockInfo(blockInfo, lastBlockNo, lastBlockFirstTransactionTime, lastBlockHashBytes));
                     // log end of block if needed
@@ -253,8 +244,8 @@ public final class BlockRecordManagerImpl implements BlockRecordManager {
             @NonNull final Stream<SingleTransactionRecord> recordStreamItems, @NonNull final HederaState state) {
         // check if we need to run event recovery before we can write any new records to stream
         if (!this.eventRecoveryCompleted) {
-            // TODO create event recovery class and call it here
-            // TODO should this be in startUserTransaction()?
+            // FUTURE create event recovery class and call it here
+            // FUTURE should this be in startUserTransaction()?
             this.eventRecoveryCompleted = true;
         }
         // pass to record stream writer to handle
@@ -271,7 +262,7 @@ public final class BlockRecordManagerImpl implements BlockRecordManager {
     public void endRound(HederaState hederaState) {
         // We get the latest running hash from the StreamFileProducer blocking if needed
         // for it to be computed.
-        final Bytes currentRunningHash = streamFileProducer.getCurrentRunningHash();
+        final Bytes currentRunningHash = streamFileProducer.getRunningHash();
         // update running hashes in state with the latest running hash and the previous 3
         // running hashes.
         final WritableStates states = hederaState.createWritableStates(BlockRecordService.NAME);
@@ -280,8 +271,10 @@ public final class BlockRecordManagerImpl implements BlockRecordManager {
         final RunningHashes existingRunningHashes = runningHashesState.get();
         if (existingRunningHashes == null) {
             runningHashesState.put(new RunningHashes(currentRunningHash, null, null, null));
-        } else if (!currentRunningHash.equals(
-                existingRunningHashes.runningHash())) { // only update if running hash has changed
+        } else if (currentRunningHash != null
+                && !currentRunningHash.equals(
+                        existingRunningHashes
+                                .runningHash())) { // only update if running hash has changed and is not null
             runningHashesState.put(new RunningHashes(
                     currentRunningHash,
                     existingRunningHashes.runningHash(),
@@ -302,22 +295,7 @@ public final class BlockRecordManagerImpl implements BlockRecordManager {
     @Nullable
     @Override
     public Bytes getRunningHash() {
-        System.out.println("BlockRecordManagerImpl.getRunningHash");
-        final var hederaState = workingStateAccessor.getHederaState();
-        if (hederaState == null) {
-            throw new RuntimeException("HederaState is null. This can only happen very early during bootstrapping");
-        }
-        final var states = hederaState.createReadableStates(BlockRecordService.NAME);
-        final ReadableSingletonState<RunningHashes> runningHashesState =
-                states.getSingleton(BlockRecordService.RUNNING_HASHES_STATE_KEY);
-        final RunningHashes runningHashes = runningHashesState.get();
-        System.out.println("    runningHashes.runningHash() = "
-                + runningHashes.runningHash().toHex());
-        if (runningHashes != null) {
-            return runningHashes.runningHash();
-        } else {
-            return null;
-        }
+        return streamFileProducer.getRunningHash();
     }
 
     /**
@@ -329,19 +307,7 @@ public final class BlockRecordManagerImpl implements BlockRecordManager {
     @Nullable
     @Override
     public Bytes getNMinus3RunningHash() {
-        final var hederaState = workingStateAccessor.getHederaState();
-        if (hederaState == null) {
-            throw new RuntimeException("HederaState is null. This can only happen very early during bootstrapping");
-        }
-        final var states = hederaState.createReadableStates(BlockRecordService.NAME);
-        final ReadableSingletonState<RunningHashes> runningHashesState =
-                states.getSingleton(BlockRecordService.RUNNING_HASHES_STATE_KEY);
-        final RunningHashes runningHashes = runningHashesState.get();
-        if (runningHashes != null) {
-            return runningHashes.nMinus3RunningHash();
-        } else {
-            return null;
-        }
+        return streamFileProducer.getNMinus3RunningHash();
     }
 
     // ========================================================================================================
@@ -439,10 +405,10 @@ public final class BlockRecordManagerImpl implements BlockRecordManager {
             return null;
         }
         final long lastBlockNo = blockInfo.lastBlockNo();
-        final long firstAvailableBlockNo = lastBlockNo - blocksAvailable;
+        final long firstAvailableBlockNo = lastBlockNo - blocksAvailable + 1;
         // If blocksAvailable == 0, then firstAvailable == blockNo; and all numbers are
         // either less than or greater than or equal to blockNo, so we return unavailable
-        if (blockNo < firstAvailableBlockNo || blockNo >= lastBlockNo) {
+        if (blockNo < firstAvailableBlockNo || blockNo > lastBlockNo) {
             return null;
         } else {
             long offset = (blockNo - firstAvailableBlockNo) * HASH_SIZE;
@@ -455,24 +421,12 @@ public final class BlockRecordManagerImpl implements BlockRecordManager {
 
     /**
      * Get the block period from consensus timestamp. Based on {@link LinkedObjectStreamUtilities#getPeriod(Instant, long)}
-     * but updated to work on {@link Timestamp}.
-     *
-     * @param consensusTimestamp The consensus timestamp
-     * @return The block period from epoc the consensus timestamp is in
-     */
-    public long getBlockPeriod(Timestamp consensusTimestamp) {
-        long nanos = consensusTimestamp.seconds() * 1000000000L + (long) consensusTimestamp.nanos();
-        return nanos / 1000000L / blockPeriodInMilliSeconds;
-    }
-
-    /**
-     * Get the block period from consensus timestamp. Based on {@link LinkedObjectStreamUtilities#getPeriod(Instant, long)}
      * but updated to work on {@link Instant}.
      *
      * @param consensusTimestamp The consensus timestamp
      * @return The block period from epoc the consensus timestamp is in
      */
-    public long getBlockPeriod(Instant consensusTimestamp) {
+    private long getBlockPeriod(Instant consensusTimestamp) {
         if (consensusTimestamp == null) return 0;
         long nanos = consensusTimestamp.getEpochSecond() * 1000000000L + (long) consensusTimestamp.getNano();
         return nanos / 1000000L / blockPeriodInMilliSeconds;

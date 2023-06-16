@@ -56,14 +56,6 @@ public class RecordTestData {
     /** Random with fixed seed for reproducibility of test data generated */
     private static final Random RANDOM = new Random(123456789L);
 
-    /** Helper to generate random Bytes */
-    @SuppressWarnings("SameParameterValue")
-    private static Bytes randomBytes(int numBytes) {
-        final byte[] bytes = new byte[numBytes];
-        RANDOM.nextBytes(bytes);
-        return Bytes.wrap(bytes);
-    }
-
     /** Test Block Num **/
     public static final long BLOCK_NUM = RANDOM.nextInt(0, Integer.MAX_VALUE);
     /** Test Version */
@@ -72,6 +64,8 @@ public class RecordTestData {
     public static final Hash STARTING_RUNNING_HASH;
     /** A hash used as the start of running hash changes in tests, in HashObject format */
     public static final HashObject STARTING_RUNNING_HASH_OBJ;
+    /** A expected hash to get at the end of all transactions in all blocks */
+    public static final Bytes ENDING_RUNNING_HASH;
 
     /** List of test blocks, each containing a number of transaction records */
     public static final List<List<SingleTransactionRecord>> TEST_BLOCKS;
@@ -90,7 +84,6 @@ public class RecordTestData {
         try {
             // generate test user keys
             final KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-            final KeyPair keyPair = keyPairGenerator.generateKeyPair();
             // generate node keys and signer
             final KeysAndCerts keysAndCerts =
                     KeysAndCerts.generate("a-name", EMPTY_ARRAY, EMPTY_ARRAY, EMPTY_ARRAY, new PublicStores());
@@ -110,6 +103,13 @@ public class RecordTestData {
                     .map(item ->
                             new SingleTransactionRecord(item.transaction(), item.record(), Collections.emptyList()))
                     .toList();
+            // load real sidecar items from a JSON resource file
+            final Path sidecarPath = Path.of(RecordStreamV6Test.class
+                    .getResource("/record-files/sidecar/2023-04-21T08_14_02.002040003Z_01.json")
+                    .toURI());
+            final SidecarFile sidecarFile =
+                    SidecarFile.JSON.parse(new ReadableStreamingData(Files.newInputStream(sidecarPath)));
+            final List<TransactionSidecarRecord> exampleSidecarItems = sidecarFile.sidecarRecords();
 
             // for the first block, use the loaded transactions as is
             testBlocks.add(realRecordStreamItems);
@@ -127,7 +127,7 @@ public class RecordTestData {
                     SingleTransactionRecord item =
                             realRecordStreamItems.get(RANDOM.nextInt(realRecordStreamItems.size()));
                     items.add(changeTransactionConsensusTimeAndGenerateSideCarItems(
-                            consenusTime, item, generateSidecarItems));
+                            consenusTime, item, generateSidecarItems, exampleSidecarItems));
                     consenusTime = consenusTime.plusNanos(10);
                 }
                 testBlocks.add(items);
@@ -145,7 +145,6 @@ public class RecordTestData {
                                 item.record().consensusTimestamp().nanos()))
                         .filter(time2 -> getPeriod(time2, 2000) != period)
                         .count();
-                System.out.println("count = " + count);
                 assert count == 0 : "Found at least one transaction in wrong block, count = " + count;
             });
             // create a random hash for running hash start
@@ -157,6 +156,13 @@ public class RecordTestData {
             STARTING_RUNNING_HASH = new Hash(runningHashStart, DigestType.SHA_384);
             STARTING_RUNNING_HASH_OBJ =
                     new HashObject(HashAlgorithm.SHA_384, runningHashStart.length, Bytes.wrap(runningHashStart));
+            // compute end hash
+            ENDING_RUNNING_HASH = RecordFileFormatV6.INSTANCE.computeNewRunningHash(
+                    STARTING_RUNNING_HASH_OBJ.hash(),
+                    TEST_BLOCKS.stream()
+                            .flatMap(List::stream)
+                            .map(str -> RecordFileFormatV6.INSTANCE.serialize(str, BLOCK_NUM, VERSION))
+                            .toList());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -166,7 +172,8 @@ public class RecordTestData {
     private static SingleTransactionRecord changeTransactionConsensusTimeAndGenerateSideCarItems(
             final Instant newConsensusTime,
             final SingleTransactionRecord singleTransactionRecord,
-            final boolean generateSideCarItems)
+            final boolean generateSideCarItems,
+            final List<TransactionSidecarRecord> exampleSidecarItems)
             throws Exception {
         final Timestamp consensusTimestamp = Timestamp.newBuilder()
                 .seconds(newConsensusTime.getEpochSecond())
@@ -203,16 +210,18 @@ public class RecordTestData {
         // generate random number 0-5 of sidecar items
         final ArrayList<TransactionSidecarRecord> sidecarItems = new ArrayList<>();
         if (generateSideCarItems) {
-            for (int j = 0; j < RANDOM.nextInt(5); j++) {
-                sidecarItems.add(TransactionSidecarRecord.newBuilder()
+            for (int j = 0; j < RANDOM.nextInt(2); j++) {
+                final TransactionSidecarRecord exampleSideCar;
+                // use less of the last 50% of items as they are larger
+                if (RANDOM.nextDouble() > 0.8) {
+                    exampleSideCar = exampleSidecarItems.get(
+                            RANDOM.nextInt(exampleSidecarItems.size() / 2, exampleSidecarItems.size()));
+                } else {
+                    exampleSideCar = exampleSidecarItems.get(RANDOM.nextInt(0, exampleSidecarItems.size() / 2));
+                }
+                sidecarItems.add(exampleSideCar
+                        .copyBuilder()
                         .consensusTimestamp(consensusTimestamp)
-                        .actions(ContractActions.newBuilder()
-                                .contractActions(ContractAction.newBuilder()
-                                        .gas(RANDOM.nextInt(1000))
-                                        .callType(ContractActionType.CALL)
-                                        .input(randomBytes(1_000))
-                                        .output(randomBytes(1_000))
-                                        .build()))
                         .build());
             }
         }

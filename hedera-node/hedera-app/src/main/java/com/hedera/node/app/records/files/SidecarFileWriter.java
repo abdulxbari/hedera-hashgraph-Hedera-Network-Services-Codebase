@@ -111,7 +111,7 @@ public class SidecarFileWriter implements AutoCloseable {
         bytesWritten += transactionSidecarRecord.length();
         // write protobuf format to file
         // TODO can change once https://github.com/hashgraph/pbj/issues/44 is fixed to:
-        // ProtoWriterTools.writeTag(outputStream, SIDECAR_RECORDS, WIRE_TYPE_DELIMITED);;
+        // ProtoWriterTools.writeTag(outputStream, SIDECAR_RECORDS, WIRE_TYPE_DELIMITED);
         outputStream.writeVarInt((SIDECAR_RECORDS.number() << TAG_TYPE_BITS) | WIRE_TYPE_DELIMITED, false);
         outputStream.writeVarInt((int) transactionSidecarRecord.length(), false);
         outputStream.writeBytes(transactionSidecarRecord);

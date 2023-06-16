@@ -18,10 +18,8 @@ package com.hedera.node.app.records.files;
 
 import static com.hedera.node.app.records.files.StreamFileProducerBase.COMPRESSION_ALGORITHM_EXTENSION;
 import static com.hedera.node.app.records.files.StreamFileProducerBase.RECORD_EXTENSION;
-import static com.swirlds.common.stream.LinkedObjectStreamUtilities.convertInstantToStringWithPadding;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.streams.*;
 import com.hedera.node.app.records.RecordStreamConfig;
 import com.hedera.node.app.spi.records.SingleTransactionRecord;
@@ -32,7 +30,6 @@ import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.crypto.HashingOutputStream;
 import com.swirlds.common.crypto.SignatureType;
 import com.swirlds.common.io.streams.SerializableDataOutputStream;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -40,7 +37,6 @@ import java.nio.file.Path;
 import java.security.*;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.X509EncodedKeySpec;
-import java.time.Instant;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 
@@ -84,7 +80,6 @@ public class RecordStreamV6Verifier {
     }
 
     private record RecordFileSet(Path recordFile, Path signatureFile, Path[] sidecarFiles) {}
-    ;
 
     /**
      * Validate record stream generated with the test data in this file
@@ -93,7 +88,6 @@ public class RecordStreamV6Verifier {
      * @param recordStreamConfig Config for record stream
      * @param userPublicKey The public key that is part of key pair used for signing record files
      * @param expectedDataBlocks OPTIONAL if null will not check contents
-     * @throws Exception
      */
     public static void validateRecordStreamFiles(
             final Path recordsDir,
@@ -111,7 +105,6 @@ public class RecordStreamV6Verifier {
         // now check the generated record files
         for (int i = 0; i < recordFileSets.size(); i++) {
             RecordFileSet recordFileSet = recordFileSets.get(i);
-            System.out.println("[" + i + "] recordFileSet = " + recordFileSet);
             List<SingleTransactionRecord> expectedData = expectedDataBlocks == null ? null : expectedDataBlocks.get(i);
             runningHash = validateRecordAndSignatureFile(
                     i,
@@ -252,8 +245,6 @@ public class RecordStreamV6Verifier {
             final RecordStreamFile recordFile,
             final List<SingleTransactionRecord> transactionRecordList)
             throws Exception {
-        System.out.println("RecordStreamV6Verifier.validateRecordFile blockIndex[" + blockIndex + "], recordFilePath=["
-                + recordFilePath + "]");
         // check starting running hash
         if (startingRunningHash != null) {
             // validate staring running hash is what we expect
@@ -361,45 +352,5 @@ public class RecordStreamV6Verifier {
             fail("Unknown file type: " + recordFilePath.getFileName());
             return null;
         }
-    }
-
-    /**
-     * Get the record file path for a record file with the given consensus time
-     *
-     * @param consensusTime  a consensus timestamp of the first object to be written in the file
-     * @return Path to a record file for that consensus time
-     */
-    private static Path getRecordFilePath(
-            @NonNull final Path nodeScopedRecordLogDir,
-            @NonNull final Instant consensusTime,
-            final boolean compressFilesOnCreation) {
-        return nodeScopedRecordLogDir.resolve(convertInstantToStringWithPadding(consensusTime) + "." + RECORD_EXTENSION
-                + (compressFilesOnCreation ? COMPRESSION_ALGORITHM_EXTENSION : ""));
-    }
-
-    /**
-     * Get full sidecar file path from given Instant object
-     *
-     * @param currentRecordFileFirstTransactionConsensusTimestamp the consensus timestamp of the first transaction in the
-     *                                                            record file this sidecar file is associated with
-     * @param sidecarId                                           the sidecar id of this sidecar file
-     * @return the new sidecar file path
-     */
-    private static Path getSidecarFilePath(
-            @NonNull final Path nodeScopedSidecarDir,
-            @NonNull final Instant currentRecordFileFirstTransactionConsensusTimestamp,
-            final boolean compressFilesOnCreation,
-            final int sidecarId) {
-        return nodeScopedSidecarDir.resolve(
-                convertInstantToStringWithPadding(currentRecordFileFirstTransactionConsensusTimestamp)
-                        + "_"
-                        + String.format("%02d", sidecarId)
-                        + "."
-                        + RECORD_EXTENSION
-                        + (compressFilesOnCreation ? COMPRESSION_ALGORITHM_EXTENSION : ""));
-    }
-
-    private static Instant fromTimestamp(final Timestamp timestamp) {
-        return Instant.ofEpochSecond(timestamp.seconds(), timestamp.nanos());
     }
 }

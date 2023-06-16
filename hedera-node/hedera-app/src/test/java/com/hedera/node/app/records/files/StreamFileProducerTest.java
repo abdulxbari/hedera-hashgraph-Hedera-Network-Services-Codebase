@@ -19,6 +19,7 @@ package com.hedera.node.app.records.files;
 import static com.hedera.node.app.records.files.RecordStreamV6Verifier.validateRecordStreamFiles;
 import static com.hedera.node.app.records.files.RecordTestData.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
 import com.google.common.jimfs.Configuration;
@@ -38,6 +39,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
@@ -78,7 +80,9 @@ public class StreamFileProducerTest {
         fs.close();
     }
 
-    /** BlockRecordManager mostly writes records one at a time so simulate that here */
+    /**
+     * BlockRecordManager mostly writes records one at a time so simulate that here
+     */
     @ParameterizedTest
     @CsvSource({
         "StreamFileProducerSingleThreaded, 256",
@@ -96,7 +100,9 @@ public class StreamFileProducerTest {
                 });
     }
 
-    /** It is also interesting to test as larger batches because in theory 1 user transaction could be 1000 transactions */
+    /**
+     * It is also interesting to test as larger batches because in theory 1 user transaction could be 100 transactions
+     */
     @ParameterizedTest
     @CsvSource({
         "StreamFileProducerSingleThreaded, 256",
@@ -105,11 +111,18 @@ public class StreamFileProducerTest {
     })
     public void batchOfTransactions(final String streamFileProducerClassName, int sidecarMaxSizeMb) throws Exception {
         setUpEach(sidecarMaxSizeMb);
+        final Random random = new Random(82792874);
         doTestCommon(
-                streamFileProducerClassName,
-                (streamFileProducer, blockData, block, blockFirstTransactionTimestamp) ->
+                streamFileProducerClassName, (streamFileProducer, blockData, block, blockFirstTransactionTimestamp) -> {
+                    int i = 0;
+                    while (i < blockData.size()) {
+                        // write batch == simulated user transaction
+                        final int batchSize = Math.min(random.nextInt(100) + 1, blockData.size() - i);
                         streamFileProducer.writeRecordStreamItems(
-                                block, blockFirstTransactionTimestamp, blockData.stream()));
+                                block, blockFirstTransactionTimestamp, blockData.subList(i, i + batchSize).stream());
+                        i += batchSize;
+                    }
+                });
     }
 
     /**
@@ -130,10 +143,6 @@ public class StreamFileProducerTest {
                             "Unknown streamFileProducerClassName: " + streamFileProducerClassName);
                 }) {
             streamFileProducer.setRunningHash(STARTING_RUNNING_HASH_OBJ.hash());
-            System.out.println("STARTING_RUNNING_HASH_OBJ = "
-                    + STARTING_RUNNING_HASH_OBJ.hash().toHex());
-            System.out.println(
-                    "start 1 = " + streamFileProducer.getCurrentRunningHash().toHex());
             long block = BLOCK_NUM - 1;
             // write a blocks & record files
             for (var blockData : TEST_BLOCKS) {
@@ -144,11 +153,10 @@ public class StreamFileProducerTest {
                 blockWriter.write(streamFileProducer, blockData, block, blockFirstTransactionTimestamp);
             }
             // collect final running hash
-            finalRunningHash = streamFileProducer.getCurrentRunningHash();
+            finalRunningHash = streamFileProducer.getRunningHash();
         }
 
         // check running hash
-        System.out.println("END HASH = " + finalRunningHash.toHex());
         assertEquals(
                 computeRunningHash(
                                 STARTING_RUNNING_HASH_OBJ.hash(),
@@ -175,9 +183,74 @@ public class StreamFileProducerTest {
                 BLOCK_NUM);
     }
 
+    /**
+     * It is important to test the get running hash query methods return the right hashes at the right point in time.
+     * We have to simulate user transactions with more than one transaction because hashes only update once per user
+     * transaction if it is a single transaction or 10 transactions.
+     */
+    @ParameterizedTest
+    @CsvSource({"StreamFileProducerSingleThreaded", "StreamFileProducerConcurrent"})
+    public void testRunningHashes(final String streamFileProducerClassName) throws Exception {
+        setUpEach(256);
+        final Random random = new Random(82792874);
+        try (StreamFileProducerBase streamFileProducer =
+                switch (streamFileProducerClassName) {
+                    case "StreamFileProducerSingleThreaded" -> new StreamFileProducerSingleThreaded(
+                            configProvider, nodeInfo, SIGNER, fs);
+                    case "StreamFileProducerConcurrent" -> new StreamFileProducerConcurrent(
+                            configProvider, nodeInfo, SIGNER, fs, ForkJoinPool.commonPool());
+                    default -> throw new IllegalArgumentException(
+                            "Unknown streamFileProducerClassName: " + streamFileProducerClassName);
+                }) {
+            streamFileProducer.setRunningHash(STARTING_RUNNING_HASH_OBJ.hash());
+            long block = BLOCK_NUM - 1;
+            Bytes runningHash = STARTING_RUNNING_HASH_OBJ.hash();
+            Bytes runningHashNMinus1 = null;
+            Bytes runningHashNMinus2 = null;
+            Bytes runningHashNMinus3;
+            // write a blocks & record files
+            for (var blockData : TEST_BLOCKS) {
+                block++;
+                final Instant blockFirstTransactionTimestamp =
+                        fromTimestamp(blockData.get(0).record().consensusTimestamp());
+                streamFileProducer.switchBlocks(block - 1, block, blockFirstTransactionTimestamp);
+                // write transactions in random batches to simulate user transactions of different sizes
+                int i = 0;
+                while (i < blockData.size()) {
+                    // write batch == simulated user transaction
+                    final int batchSize = Math.min(random.nextInt(2) + 1, blockData.size() - i);
+                    streamFileProducer.writeRecordStreamItems(
+                            block, blockFirstTransactionTimestamp, blockData.subList(i, i + batchSize).stream());
+                    i += batchSize;
+                    // collect hashes
+                    runningHashNMinus3 = runningHashNMinus2;
+                    runningHashNMinus2 = runningHashNMinus1;
+                    runningHashNMinus1 = runningHash;
+                    runningHash = streamFileProducer.getRunningHash();
+                    // check running hash N - 3
+                    if (runningHashNMinus3 != null) {
+                        assertEquals(
+                                runningHashNMinus3.toHex(),
+                                streamFileProducer.getNMinus3RunningHash().toHex());
+                    } else {
+                        // check nulls as well
+                        assertNull(streamFileProducer.getNMinus3RunningHash());
+                    }
+                }
+            }
+            // check running hash
+            assertEquals(
+                    computeRunningHash(
+                                    STARTING_RUNNING_HASH_OBJ.hash(),
+                                    TEST_BLOCKS.stream().flatMap(List::stream).toList())
+                            .toHex(),
+                    runningHash.toHex());
+        }
+    }
+
     /** Given a list of items and a starting hash calculate the running hash at the end */
     private Bytes computeRunningHash(
-            final Bytes startingHash, final List<SingleTransactionRecord> transactionRecordList) throws Exception {
+            final Bytes startingHash, final List<SingleTransactionRecord> transactionRecordList) {
         return RecordFileFormatV6.INSTANCE.computeNewRunningHash(
                 startingHash,
                 transactionRecordList.stream()

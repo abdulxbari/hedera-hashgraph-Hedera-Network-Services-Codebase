@@ -28,7 +28,9 @@ import com.swirlds.common.crypto.DigestType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.List;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import org.junit.jupiter.api.io.TempDir;
@@ -172,93 +174,4 @@ public class RecordStreamV6Test {
             }
         }
     }
-    //
-    //    /**
-    //     * Write a record file old way into memory and return the hash
-    //     */
-    //    private static Bytes writeFileOldWay() throws Exception{
-    //
-    //
-    //        MessageDigest messageDigest = MessageDigest.getInstance(DigestType.SHA_384.algorithmName());
-    //        // This is complex we set up complete environment with older code base to compare with
-    //        com.hedera.services.stream.proto.RecordStreamItem recordStreamItem2 =
-    //                com.hedera.services.stream.proto.RecordStreamItem.parseFrom(protobufBytes.toByteArray());
-    //        final var consensusTime = recordStreamItem2.getRecord().getConsensusTimestamp();
-    //        final var consensusTimeInstant = Instant.ofEpochSecond(consensusTime.getSeconds(),
-    // consensusTime.getNanos());
-    //        final var recordStreamObject = new RecordStreamObject(
-    //                recordStreamItem2.getRecord(),
-    //                recordStreamItem2.getTransaction(),
-    //                consensusTimeInstant,
-    //                Collections.emptyList()
-    //        );
-    //        var bout = new ByteArrayOutputStream();
-    //        var sout = new SerializableDataOutputStream(bout);
-    //        sout.writeSerializable(recordStreamObject, true);
-    //        final var recordStreamObjectBytes = bout.toByteArray();
-    //        System.out.println("recordStreamObjectBytes = " + HEX.formatHex(recordStreamObjectBytes));
-    //        assertEquals(HEX.formatHex(recordStreamObjectBytes),
-    // HEX.formatHex(item.hashSerializedRecordStreamItem().toByteArray()));
-    //        messageDigest.update(recordStreamObjectBytes);
-    //        return Bytes.wrap(messageDigest.digest());
-    ////        // compute running hash using platform
-    ////        @SuppressWarnings("removal") final Cryptography cryptography = CryptographyHolder.get();
-    ////        var expectedRunningHash = cryptography.calcRunningHash(runningHashStartHash, recordObjectHash,
-    // DigestType.SHA_384);
-    //// now do it with new code
-    // Bytes newHash = recordFileWriterV6.computeNewRunningHash(Bytes.wrap(runningHashStart), List.of(item));
-    //    assertEquals(HEX.formatHex(expectedRunningHash.getValue()), HEX.formatHex(newHash.toByteArray()));
-    //    }
-
 }
-
-//        try{
-//            com.hedera.services.stream.proto.RecordStreamItem recordStreamItem2 =
-//                    com.hedera.services.stream.proto.RecordStreamItem.parseFrom(
-//                            PbjHelper.toByteArray(PbjHelper.toBytes(RecordStreamItem.PROTOBUF, recordStreamItem)));
-//
-//            final var consensusTime = recordStreamItem2.getRecord().getConsensusTimestamp();
-//            final var consensusTimeInstant = Instant.ofEpochSecond(consensusTime.getSeconds(),
-// consensusTime.getNanos());
-//            final var recordStreamObject = new RecordStreamObject(
-//                    recordStreamItem2.getRecord(),
-//                    recordStreamItem2.getTransaction(),
-//                    consensusTimeInstant,
-//                    Collections.emptyList()
-//            );
-//            var bout = new ByteArrayOutputStream();
-//            var sout = new SerializableDataOutputStream(bout);
-//            recordStreamObject.serialize(sout);
-//            final var recordStreamObjectBytes = bout.toByteArray();
-//            System.out.println("recordStreamObjectBytes = " + HEX.formatHex(recordStreamObjectBytes));
-//            MessageDigest messageDigest = MessageDigest.getInstance(DigestType.SHA_384.algorithmName());
-//            messageDigest.update(recordStreamObjectBytes);
-//            final var digest = messageDigest.digest();
-//            System.out.println("digest = " + HEX.formatHex(digest));
-////                    new Hash(recordStreamObjectBytes, DigestType.SHA_384);
-////
-////                    final Cryptography cryptography = CryptographyHolder.get();
-////                    cryptography.ha
-////                    runningHash = cryptography.calcRunningHash(runningHash, newHashToAdd, DigestType.SHA_384);
-//
-////                    Hash hash = recordStreamObject.getHash();
-////                    System.out.println("hash                    = " + hexFormat.formatHex(hash.getValue()));
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-
-/*
-TODO add compare hashing method to this
-
-        HexFormat hexFormat = HEX;
-        @SuppressWarnings("removal") final Cryptography cryptography = CryptographyHolder.get();
-        System.out.println("currentRunningHash = " + hexFormat.formatHex(PbjHelper.toByteArray(currentRunningHash)));
-
-            Hash HASH_previousHash = new Hash(PbjHelper.toByteArray(currentRunningHash), DigestType.SHA_384);
-            System.out.println("HASH_previousHash  = " + hexFormat.formatHex(HASH_previousHash.getValue()));
-                HASH_previousHash = cryptography.calcRunningHash(
-                        HASH_previousHash,
-                        new Hash(serializedItemHash, DigestType.SHA_384),
-                        DigestType.SHA_384);
-                System.out.println("HASH_previousHash  = " + hexFormat.formatHex(HASH_previousHash.getValue()));
- */
