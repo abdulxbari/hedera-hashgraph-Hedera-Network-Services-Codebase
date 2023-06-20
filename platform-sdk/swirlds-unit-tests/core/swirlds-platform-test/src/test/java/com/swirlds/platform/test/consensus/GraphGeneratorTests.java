@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.swirlds.common.system.NodeId;
+import com.swirlds.common.system.address.AddressBook;
 import com.swirlds.platform.test.event.DynamicValue;
 import com.swirlds.platform.test.event.DynamicValueGenerator;
 import com.swirlds.platform.test.event.IndexedEvent;
@@ -221,13 +222,14 @@ public class GraphGeneratorTests {
         System.out.println("Validate Parent Distribution");
 
         assertEquals(4, generator.getNumberOfSources());
+        final AddressBook addressBook = generator.getAddressBook();
 
         // Test even weights
         generator = generator.cleanCopy();
-        generator.getSource(0).setNewEventWeight(1.0);
-        generator.getSource(1).setNewEventWeight(1.0);
-        generator.getSource(2).setNewEventWeight(1.0);
-        generator.getSource(3).setNewEventWeight(1.0);
+        generator.getSource(addressBook.getNodeId(0)).setNewEventWeight(1.0);
+        generator.getSource(addressBook.getNodeId(1)).setNewEventWeight(1.0);
+        generator.getSource(addressBook.getNodeId(2)).setNewEventWeight(1.0);
+        generator.getSource(addressBook.getNodeId(3)).setNewEventWeight(1.0);
 
         List<IndexedEvent> events = generator.generateEvents(1000);
         verifyExpectedParentRatio(events, 0, 0.25, 0.05);
@@ -237,10 +239,10 @@ public class GraphGeneratorTests {
 
         // Test un-even weights
         generator.reset();
-        generator.getSource(0).setNewEventWeight(0.5);
-        generator.getSource(1).setNewEventWeight(1.0);
-        generator.getSource(2).setNewEventWeight(1.0);
-        generator.getSource(3).setNewEventWeight(2.0);
+        generator.getSource(addressBook.getNodeId(0)).setNewEventWeight(0.5);
+        generator.getSource(addressBook.getNodeId(1)).setNewEventWeight(1.0);
+        generator.getSource(addressBook.getNodeId(2)).setNewEventWeight(1.0);
+        generator.getSource(addressBook.getNodeId(3)).setNewEventWeight(2.0);
 
         events = generator.generateEvents(1000);
         verifyExpectedParentRatio(events, 0, 0.5 / 4.5, 0.05);
@@ -250,9 +252,9 @@ public class GraphGeneratorTests {
 
         // Test dynamic weights
         generator.reset();
-        generator.getSource(0).setNewEventWeight(1.0);
-        generator.getSource(1).setNewEventWeight(1.0);
-        generator.getSource(2).setNewEventWeight(1.0);
+        generator.getSource(addressBook.getNodeId(0)).setNewEventWeight(1.0);
+        generator.getSource(addressBook.getNodeId(1)).setNewEventWeight(1.0);
+        generator.getSource(addressBook.getNodeId(2)).setNewEventWeight(1.0);
         final DynamicValue<Double> dynamicWeight = (Random random, long eventIndex, Double previousValue) -> {
             if (eventIndex < 1000) {
                 return 0.0;
@@ -262,7 +264,7 @@ public class GraphGeneratorTests {
                 return 2.0;
             }
         };
-        generator.getSource(3).setNewEventWeight(dynamicWeight);
+        generator.getSource(addressBook.getNodeId(3)).setNewEventWeight(dynamicWeight);
 
         events = generator.generateEvents(1000);
         verifyExpectedParentRatio(events, 0, 0.33, 0.05);
@@ -454,7 +456,7 @@ public class GraphGeneratorTests {
         // validate only the last event to keep the validation simple
         assertEquals(
                 lastEvent.getGeneration(),
-                generator.getMaxGeneration(lastEvent.getCreatorId().id()),
+                generator.getMaxGeneration(lastEvent.getCreatorId()),
                 "last event should have the max generation");
         generator.reset();
     }

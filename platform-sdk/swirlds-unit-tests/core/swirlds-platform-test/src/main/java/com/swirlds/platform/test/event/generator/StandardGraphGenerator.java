@@ -27,12 +27,12 @@ import com.swirlds.platform.test.event.DynamicValue;
 import com.swirlds.platform.test.event.DynamicValueGenerator;
 import com.swirlds.platform.test.event.IndexedEvent;
 import com.swirlds.platform.test.event.source.EventSource;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 
 /**
  * A utility class for generating a graph of events.
@@ -106,13 +106,8 @@ public class StandardGraphGenerator extends AbstractGraphGenerator<StandardGraph
             throw new IllegalArgumentException("At least one event source is required");
         }
 
-        for (int index = 0; index < eventSources.size(); index++) {
-            final EventSource<?> source = eventSources.get(index);
-            source.setNodeId(new NodeId(index));
-        }
-
+        buildAddressBookInitializeEventSources(eventSources);
         buildDefaultOtherParentAffinityMatrix();
-        buildAddressBook(eventSources);
     }
 
     /**
@@ -134,24 +129,31 @@ public class StandardGraphGenerator extends AbstractGraphGenerator<StandardGraph
             final EventSource<?> copy = sourceToCopy.copy();
             this.sources.add(copy);
         }
+        this.addressBook = that.getAddressBook().copy();
         this.eventPeriodMean = that.eventPeriodMean;
         this.eventPeriodStandardDeviation = that.eventPeriodStandardDeviation;
         this.simultaneousEventFraction = that.simultaneousEventFraction;
-        buildAddressBook(this.sources);
     }
 
-    private void buildAddressBook(final List<EventSource<?>> eventSources) {
-        final Map<NodeId, Long> weightMap = new HashMap<>();
-        for (final EventSource<?> eventSource : eventSources) {
-            weightMap.put(eventSource.getNodeId(), eventSource.getWeight());
-        }
+    /**
+     * builds a random address book, updates the weight of the addresses from the event sources, and initialize the node ids of the event sources from the addresses.
+     *
+     * @param eventSources the event sources to initialize.
+     */
+    private void buildAddressBookInitializeEventSources(@NonNull final List<EventSource<?>> eventSources) {
+        Objects.requireNonNull(eventSources);
+        final int eventSourceCount = eventSources.size();
 
         addressBook = new RandomAddressBookGenerator(getRandom())
-                .setNodeIds(weightMap.keySet())
-                .setCustomWeightGenerator(weightMap::get)
+                .setSize(eventSourceCount)
                 .setHashStrategy(RandomAddressBookGenerator.HashStrategy.FAKE_HASH)
-                .setSequentialIds(false)
                 .build();
+        for (int index = 0; index < eventSourceCount; index++) {
+            final EventSource<?> source = eventSources.get(index);
+            final NodeId nodeId = addressBook.getNodeId(index);
+            addressBook.updateWeight(nodeId, source.getWeight());
+            source.setNodeId(nodeId);
+        }
     }
 
     /**
@@ -192,10 +194,12 @@ public class StandardGraphGenerator extends AbstractGraphGenerator<StandardGraph
     private void buildDefaultOtherParentAffinityMatrix() {
         final List<List<Double>> matrix = new ArrayList<>(sources.size());
 
-        for (int nodeId = 0; nodeId < sources.size(); nodeId++) {
+        for (int nodeIndex = 0; nodeIndex < sources.size(); nodeIndex++) {
+            final NodeId nodeId = addressBook.getNodeId(nodeIndex);
             final List<Double> affinityVector = new ArrayList<>(sources.size());
-            for (int index = 0; index < sources.size(); index++) {
-                if (index == nodeId) {
+            for (int otherNodeIndex = 0; otherNodeIndex < sources.size(); otherNodeIndex++) {
+                final NodeId otherNodeId = addressBook.getNodeId(otherNodeIndex);
+                if (Objects.equals(nodeId, otherNodeId)) {
                     affinityVector.add(0.0);
                 } else {
                     affinityVector.add(1.0);
@@ -282,8 +286,17 @@ public class StandardGraphGenerator extends AbstractGraphGenerator<StandardGraph
      * {@inheritDoc}
      */
     @Override
-    public EventSource<?> getSource(final int nodeID) {
-        return sources.get(nodeID);
+    public EventSource<?> getSource(final NodeId nodeID) {
+        final int nodeIndex = addressBook.getIndexOfNodeId(nodeID);
+        return sources.get(nodeIndex);
+    }
+    /**
+     * Get the event source for a particular node index.
+     *
+     * @return the event source
+     */
+    public EventSource<?> getSourceByIndex(final int nodeIndex) {
+        return sources.get(nodeIndex);
     }
 
     /**
@@ -329,7 +342,6 @@ public class StandardGraphGenerator extends AbstractGraphGenerator<StandardGraph
             source.reset();
         }
         previousTimestamp = null;
-        buildAddressBook(sources);
     }
 
     /**
